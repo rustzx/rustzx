@@ -1,0 +1,6 @@
+[package]
+name = "rustzx"
+version = "0.1.0"
+authors = ["Vladislav Nikonov <pacmancoder@gmail.com>"]
+
+[dependencies]
