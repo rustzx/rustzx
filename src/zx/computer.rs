@@ -1,3 +1,5 @@
+extern crate time;
+
 use cpu::Z80;
 use zx::ZXBus;
 
@@ -18,10 +20,13 @@ impl ZXComputer {
     }
     /// emulate max 100 ticks, just testing
     pub fn emulate(&mut self) {
-            self.cpu.emulate(&mut self.bus, 100);
+        let t1 = time::precise_time_ns();
+        self.cpu.emulate(&mut self.bus);
+        let t2 = time::precise_time_ns();
+        println!("Emulation time: {} ns", t2 - t1);
     }
     /// load default rom, just testing
     pub fn load_default_rom(&mut self) {
-        self.bus.load_rom("/home/pacman/code/z80/main.rom");
+        self.bus.load_rom("/home/pacmancoder/code/z80/main.rom");
     }
 }

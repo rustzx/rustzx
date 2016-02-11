@@ -1,3 +1,4 @@
+//! ZX Spectrum computer mod.
 mod bus;
 mod computer;
 

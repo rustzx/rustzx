@@ -1,4 +1,3 @@
-// Only if Debug
 #![allow(dead_code)]
 
 mod utils;
@@ -8,6 +7,6 @@ mod zx;
 use zx::ZXComputer;
 fn main() {
     let mut comp = ZXComputer::new();
-    // it will just execute 25 NOP's for now.
+    comp.load_default_rom();
     comp.emulate();
 }

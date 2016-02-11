@@ -14,12 +14,15 @@ pub struct ZXBus {
 }
 
 impl ZXBus {
+    /// new ZXBus
     pub fn new() -> ZXBus {
         ZXBus {
             rom: Vec::new(),
             ram: [0; RAM_SIZE],
         }
     }
+
+    /// loads rom from file
     pub fn load_rom(&mut self, file: &str) {
         let mut file = File::open(file).unwrap();
         let mut buffer = Vec::new();
@@ -28,8 +31,6 @@ impl ZXBus {
     }
 }
 
-
-/// implementation of Z80 Bus
 impl Z80Bus for ZXBus {
     fn write(&mut self, addr: u16, data: u8) {
         if addr as usize >= ROM_SIZE {
