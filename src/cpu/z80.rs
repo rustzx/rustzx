@@ -85,6 +85,13 @@ enum ExecResult {
     /// emulator fail
     Fail,
 }
+
+/// Operand for some instructions
+enum Operand8 {
+    Indirect(u16),
+    Reg(RegName8),
+}
+
 /// Modificate 8-bit register with prefix
 fn reg_with_prefix_8(reg: RegName8, pref: Prefix) -> RegName8 {
     match reg {
@@ -348,9 +355,10 @@ impl Z80 {
                     }
                     _ => unreachable!(), // q is a bit
                 };
-            },
+            }
             // [0x00yyy100], [0x00yyy101] instruction group (INC, DEC) 8 bit
             0 if (opcode.z == 4) || (opcode.z == 5) => {
+                // TODO: make use Operand8
                 let mut addr = 0xFFFF;
                 let mut reg = RegName8::A;
                 let data;
@@ -412,32 +420,36 @@ impl Z80 {
                 } else {
                     self.regs.set_reg_8(reg, result);
                 }
-            },
+            }
             // [0x00yyy110] instruction group (LD 8 bit) :
             // 0x06, 0x0E, 0x16, 0x1E, 0x26, 0x2E, 0x36, 0x3E
+            // TODO: make use Operand8
             0 if opcode.z == 6 => {
                 // <PREFIX>[0x110110]
-                if opcode.y == 6 { // indirect, LD (HL/IX+d/IY+d), nn
+                if opcode.y == 6 {
+                    // indirect, LD (HL/IX+d/IY+d), nn
                     // Get address
                     let addr = if let Some(prefix) = prefix {
                         let d = self.rom_next_byte(bus) as i8;
-                        word_displacement(
-                            self.regs.get_reg_16(reg_with_prefix_16(RegName16::HL, prefix)), d)
+                        word_displacement(self.regs.get_reg_16(reg_with_prefix_16(RegName16::HL,
+                                                                                  prefix)),
+                                          d)
                     } else {
                         // we have IND/DEC (HL)
                         self.regs.get_reg_16(RegName16::HL)
                     };
                     let data = self.rom_next_byte(bus);
                     bus.write(addr, data);
-                } else { // LD REG/IXL/IXH/IYH,IYL, nn
+                } else {
+                    // LD REG/IXL/IXH/IYH,IYL, nn
                     let mut reg = RegNameDecoder::reg_8(opcode.y);
                     if let Some(prefix) = prefix {
-                            reg = reg_with_prefix_8(reg, prefix);
+                        reg = reg_with_prefix_8(reg, prefix);
                     };
                     let data = self.rom_next_byte(bus);
                     self.regs.set_reg_8(reg, data);
                 }
-            },
+            }
             // [0x00yyy111] instruction group
             0 if opcode.z == 7 => {
                 match opcode.y {
@@ -458,7 +470,7 @@ impl Z80 {
                         self.regs.set_flag(Flag::F3, data & 0b1000 != 0); // 3 bit
                         self.regs.set_flag(Flag::F5, data & 0b100000 != 0); // 5 bit
                         self.regs.set_acc(data);
-                    },
+                    }
                     // RRCA ; Rotate right; lsb will become msb; carry = lsb
                     // [0x00001111] : 0x0F
                     1 => {
@@ -476,7 +488,7 @@ impl Z80 {
                         self.regs.set_flag(Flag::F3, data & 0b1000 != 0); // 3 bit
                         self.regs.set_flag(Flag::F5, data & 0b100000 != 0); // 5 bit
                         self.regs.set_acc(data);
-                    },
+                    }
                     // RLA Rotate left trough carry
                     // [0x00010111]: 0x17
                     2 => {
@@ -494,7 +506,7 @@ impl Z80 {
                         self.regs.set_flag(Flag::F3, data & 0b1000 != 0); // 3 bit
                         self.regs.set_flag(Flag::F5, data & 0b100000 != 0); // 5 bit
                         self.regs.set_acc(data);
-                    },
+                    }
                     // RRA Rotate right trough carry
                     // [0x00011111] : 0x1F
                     3 => {
@@ -513,8 +525,11 @@ impl Z80 {
                         self.regs.set_flag(Flag::F3, data & 0b1000 != 0); // 3 bit
                         self.regs.set_flag(Flag::F5, data & 0b100000 != 0); // 5 bit
                         self.regs.set_acc(data);
-                        println!("RRA BEGORE {:#0b} AFTER {:#0b} CARRY {}", before, data, carry);
-                    },
+                        println!("RRA BEGORE {:#0b} AFTER {:#0b} CARRY {}",
+                                 before,
+                                 data,
+                                 carry);
+                    }
                     // DAA [0x00100111] [link to the algorithm in header]
                     4 => {
 
@@ -527,7 +542,7 @@ impl Z80 {
                             correction = 0x00_u8;
                             self.regs.set_flag(Flag::Carry, false);
                         };
-                        if ((acc & 0x0F) > 0x09) ||self.regs.get_flag(Flag::HalfCarry) {
+                        if ((acc & 0x0F) > 0x09) || self.regs.get_flag(Flag::HalfCarry) {
                             correction |= 0x06;
                         }
                         let acc_new = if !self.regs.get_flag(Flag::Sub) {
@@ -544,7 +559,7 @@ impl Z80 {
                         self.regs.set_flag(Flag::F3, acc_new & 0b1000 != 0); // 3 bit
                         self.regs.set_flag(Flag::F5, acc_new & 0b100000 != 0); // 5 bit
                         self.regs.set_acc(acc_new);
-                    },
+                    }
                     // CPL Invert (Complement)
                     // [0x00101111] : 0x2F
                     5 => {
@@ -554,7 +569,7 @@ impl Z80 {
                         self.regs.set_flag(Flag::F3, data & 0b1000 != 0); // 3 bit
                         self.regs.set_flag(Flag::F5, data & 0b100000 != 0); // 5 bit
                         self.regs.set_acc(data);
-                    },
+                    }
                     // SCF  Set carry flag
                     // [0x00110111] : 0x37
                     6 => {
@@ -564,7 +579,7 @@ impl Z80 {
                         self.regs.set_flag(Flag::HalfCarry, false);
                         self.regs.set_flag(Flag::Sub, false);
                         self.regs.set_flag(Flag::Carry, true);
-                    },
+                    }
                     // CCF Invert carry flag
                     // [0x00111111] : 0x3F
                     7 => {
@@ -575,14 +590,74 @@ impl Z80 {
                         self.regs.set_flag(Flag::HalfCarry, carry);
                         self.regs.set_flag(Flag::Sub, false);
                         self.regs.set_flag(Flag::Carry, !carry);
-                    },
+                    }
                     _ => unreachable!(),
                 }
-            },
+            }
             // ---------------------------------
             // [0x01yyyzzz] instruction section
             // ---------------------------------
-            // 1 => {},
+            // LD r[y], r[z]
+            // [0x01yyyzzz]: 0x40...0x7F
+            1 if !((opcode.z == 6) && (opcode.y == 6)) => {
+                // LD r[y], r[z] without indirection
+                if (opcode.z != 6) && (opcode.y != 6) {
+                    let mut from = RegNameDecoder::reg_8(opcode.z);
+                    let mut to = RegNameDecoder::reg_8(opcode.y);
+                    if let Some(prefix) = prefix {
+                        from = reg_with_prefix_8(from, prefix);
+                        to = reg_with_prefix_8(to, prefix);
+                    };
+                    let tmp = self.regs.get_reg_8(from);
+                    self.regs.set_reg_8(to, tmp);
+                } else {
+                    // LD (HL/IX+d/IY+d), r ; LD r, (HL/IX+d/IY+d)
+                    // 0x01110zzz; 0x01yyy110
+                    let from = if opcode.z == 6 {
+                        // if prefixed - add displacement to index reg
+                        if let Some(prefix) = prefix {
+                            let d = self.rom_next_byte(bus) as i8;
+                            Operand8::Indirect(word_displacement(self.regs.get_reg_16(
+                                               reg_with_prefix_16(RegName16::HL, prefix)), d))
+                        } else {
+                            Operand8::Indirect(self.regs.get_reg_16(RegName16::HL))
+                        }
+                    } else {
+                        // H/L is not affected by prefix if already indirection
+                        Operand8::Reg(RegNameDecoder::reg_8(opcode.z))
+                    };
+                    let to = if opcode.y == 6 {
+                        // if prefixed - add displacement to index reg
+                        if let Some(prefix) = prefix {
+                            let d = self.rom_next_byte(bus) as i8;
+                            Operand8::Indirect(word_displacement(self.regs.get_reg_16(
+                                               reg_with_prefix_16(RegName16::HL, prefix)), d))
+                        } else {
+                            Operand8::Indirect(self.regs.get_reg_16(RegName16::HL))
+                        }
+                    } else {
+                        // H/L is not affected by prefix if already indirection
+                        Operand8::Reg(RegNameDecoder::reg_8(opcode.y))
+                    };
+                    let data = match from {
+                        Operand8::Indirect(addr) => bus.read(addr),
+                        Operand8::Reg(reg) => self.regs.get_reg_8(reg),
+                    };
+                    match to {
+                        Operand8::Indirect(addr) => {
+                            bus.write(addr, data);
+                        },
+                        Operand8::Reg(reg) => {
+                            self.regs.set_reg_8(reg, data);
+                        },
+                    };
+                }
+            }
+            // HALT
+            // [0x01110110] : 0x76
+            1 if (opcode.z == 6) && (opcode.y == 6) => {
+                unimplemented!();
+            }
             _ => panic!("Opcode {:#X} unimplented", opcode.to_byte()),
         };
         if let Some(_) = prefix {
@@ -682,6 +757,5 @@ impl Z80 {
             }
         } //loop
         cycle_counter
-
     }
 }

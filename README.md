@@ -42,7 +42,13 @@ __Partialy implemented__
 	- [x] LD (NN), HL/IX/IY
     - [x] LD r[y], n ; where r - 8 bit register, n - const
     - [x] LD (HL/IX+d/IY+d), n
-	- [ ] Other instructions of group (A lot of them, yep)
+    - [x] LD reg1, reg2
+    - [x] LD (HL/IX+d/IY+d), reg
+    - [x] LD reg, (HL/IX+d/IY+d)
+	- [ ] LD between A and I or R
+    - [ ] LD BC/DE/SP (NN)
+    - [ ] LD SP, HL/IX/IY
+    - [ ] LD (NN), BC/DE/SP
 - ROTATE
     - [x] RRA
     - [x] RLA

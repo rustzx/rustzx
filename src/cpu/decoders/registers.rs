@@ -5,6 +5,7 @@ impl RegNameDecoder {
     /// Gives 8 bit general purpose register name from code. Code must be lower than `0b1000`.
     /// # panics
     /// when code equals `0b110` (Indirect)
+    /// TODO: Make RegName8 method
     pub fn reg_8(code: u8) -> RegName8 {
         assert!(code <= 0b111, " Invalid (8 bit, gp) register index: {:#b}");
         match code {
@@ -21,6 +22,7 @@ impl RegNameDecoder {
     }
 
     /// Gives 16 bit general purpose register name from code. Code must be lower than `0b100`
+    /// TODO: Make RegName16 method
     pub fn reg_16_with_af(code: u8) -> RegName16 {
         assert!(code <= 0b11, " Invalid (16 bit, gp) register index: {:#b}");
         match code {
@@ -33,6 +35,7 @@ impl RegNameDecoder {
     }
 
     /// Gives 16 bit general purpose register name from code. Code must be lower than `0b100`
+    /// TODO: Make RegName16 method
     pub fn reg_16_with_sp(code: u8) -> RegName16 {
         assert!(code <= 0b11, " Invalid (16 bit, gp) register index: {:#b}");
         match code {

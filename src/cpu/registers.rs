@@ -1,5 +1,5 @@
 //! Module which contains structs for Z80 registers implementation/using
-// TODO: switch fro Wrapping<T> to WrappingOps for primitive types, make Reg fields pub (?)
+//! TODO: switch fro Wrapping<T> to WrappingOps for primitive types, make Reg fields pub (?)
 use utils::{make_word, split_word};
 use std::num::Wrapping;
 
@@ -187,7 +187,7 @@ impl Regs {
                     RegName16::HL => (self.h, self.l),
                     RegName16::IX => (self.ixh, self.ixl),
                     RegName16::IY => (self.iyh, self.iyl),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
                 Wrapping(make_word(h.0, l.0))
             }
@@ -328,7 +328,8 @@ impl Regs {
     }
 
     // TODO: Rewrite as implementation of Debug trait
-    /// prints full information
+    // prints full information
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn print(&self) {
         println!("Regs:");
         println!("pc: {:02X}; sp: {:02X}; i: {:02X}; r: {:02X}",

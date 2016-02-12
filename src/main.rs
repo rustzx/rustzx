@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-
+// TODO: Reformat all code with rustfmt
 mod utils;
 mod cpu;
 mod zx;
