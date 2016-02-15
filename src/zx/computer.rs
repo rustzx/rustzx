@@ -8,8 +8,8 @@ const ZX_FREQ: u64 = 4 * 1024 * 1024; // Hz
 
 /// ZX Spectrum computer struct
 pub struct ZXComputer {
-    cpu: Z80,
-    bus: ZXBus,
+    pub cpu: Z80,
+    pub bus: ZXBus,
 }
 impl ZXComputer {
     pub fn new() -> ZXComputer {

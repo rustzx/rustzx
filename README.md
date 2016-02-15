@@ -9,10 +9,8 @@ I writing Z80 CPU emulation part at the moment
 __Implemented__  
 - NOP
 - INC and DEC
-    - 16 bit
     - 8 bit
-    - 8 bit indirect (HL), (IX/IY+d)  
-    - undocumented (INC IXH/IXL/IYH/IYL)
+    - 16 bit
 - DJNZ  (Jump if B register is non-zero)
 - JR  
     - Relative
@@ -21,12 +19,25 @@ __Implemented__
 - CPL (Complement, NOT operation)
 - SCF (Set carry flag)
 - CCF (Invert carry flag)
+- HALT
+- ADD    
+- SUB
+	- 8 bit  
+	- 16 bit  
+- AND
+- OR
+- XOR
 
 __Partialy implemented__  
-- ADD    
-	- [ ] 8 bit  
-	- [ ] 8 bit indirect (HL), (IX/IY+d)
-	- [x] 16 bit  
+- ADC
+    - [x] 8 bit
+    - [ ] 16 bit
+- SBC
+    - [x] 8 bit
+    - [ ] 16 bit    
+- CP
+    - [x] 8 bit
+    - [ ] block instructions       
 - EX
 	- [ ] EX (SP), HL/IX/IY
 	- [x] EX AF, AF'
@@ -49,12 +60,10 @@ __Partialy implemented__
     - [ ] LD BC/DE/SP (NN)
     - [ ] LD SP, HL/IX/IY
     - [ ] LD (NN), BC/DE/SP
+    - [ ] block instructions
 - ROTATE
     - [x] RRA
     - [x] RLA
     - [x] RRCA
     - [x] RLCA
     - [ ] Other instructions of group
-
-__Not implemented__
-- A lot of other instructions :smile:  

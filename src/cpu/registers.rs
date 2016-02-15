@@ -1,22 +1,8 @@
 //! Module which contains structs for Z80 registers implementation/using
-//! TODO: switch fro Wrapping<T> to WrappingOps for primitive types, make Reg fields pub (?)
-use utils::{make_word, split_word};
-use std::num::Wrapping;
 
-
-// TODO: Move Conditions somewhere
-/// Conditions
-#[derive(Clone,Copy)]
-pub enum Condition {
-    NonZero,
-    Zero,
-    NonCary,
-    Cary,
-    ParityOdd,
-    ParityEven,
-    SignPositive,
-    SignNegative,
-}
+use utils::*;
+use std::fmt;
+use cpu::{Condition, Flag, Prefix, U2, U3};
 
 /// 8-bit registers names
 #[derive(Clone,Copy)]
@@ -28,87 +14,121 @@ pub enum RegName8 {
     H, L,
     IXH, IXL,
     IYH, IYL,
-    I,
-    R,
+    I, R,
+}
+impl RegName8 {
+    /// Returns 8 bit general purpose register name from code.
+    /// # Failures
+    /// Returns None if code equals `0b110` (Indirect)
+    pub fn from_u3(byte: U3) -> Option<Self> {
+        match byte {
+            U3::N0 => Some(RegName8::B),
+            U3::N1 => Some(RegName8::C),
+            U3::N2 => Some(RegName8::D),
+            U3::N3 => Some(RegName8::E),
+            U3::N4 => Some(RegName8::H),
+            U3::N5 => Some(RegName8::L),
+            U3::N6 => None,
+            U3::N7 => Some(RegName8::A),
+        }
+    }
+    /// Modificate 8-bit register with prefix
+    pub fn with_prefix(self, pref: Prefix) -> Self {
+        match self {
+            reg @ RegName8::H | reg @ RegName8::L => {
+                match pref {
+                    Prefix::DD => {
+                        match reg {
+                            RegName8::H => RegName8::IXH,
+                            RegName8::L => RegName8::IXL,
+                            _ => reg,
+                        }
+                    }
+                    Prefix::FD => {
+                        match reg {
+                            RegName8::H => RegName8::IYH,
+                            RegName8::L => RegName8::IYL,
+                            _ => reg,
+                        }
+                    }
+                    _ => reg,
+                }
+            }
+            _ => self,
+        }
+    }
 }
 /// 16-bit registers names
 #[derive(Clone,Copy)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum RegName16 {
-    PC,
-    SP,
-    AF,
-    BC,
-    DE,
-    HL,
-    IX,
-    IY,
+    PC, SP,
+    AF, BC,
+    DE, HL,
+    IX, IY,
 }
-
-#[derive(Clone,Copy)]
-// Flag bits by name access
-pub enum Flag {
-    Carry,
-    Sub,
-    ParityOveflow,
-    F3,
-    HalfCarry,
-    F5,
-    Zero,
-    Sign,
-}
-impl Flag {
-    /// get flag mask
-    fn mask(self) -> u8 {
-        match self {
-            Flag::Carry => 0b00000001,
-            Flag::Sub => 0b00000010,
-            Flag::ParityOveflow => 0b00000100,
-            Flag::F3 => 0b00001000,
-            Flag::HalfCarry => 0b00010000,
-            Flag::F5 => 0b00100000,
-            Flag::Zero => 0b01000000,
-            Flag::Sign => 0b10000000,
+impl RegName16 {
+    /// Returns 16 bit general purpose register name from code. featuring AF
+    pub fn from_u2_af(byte: U2) -> RegName16 {
+        match byte {
+            U2::N0 => RegName16::BC,
+            U2::N1 => RegName16::DE,
+            U2::N2 => RegName16::HL,
+            U2::N3 => RegName16::AF,
+        }
+    }
+    /// Returns 16 bit general purpose register name from code. featuring SP
+    pub fn from_u2_sp(byte: U2) -> RegName16 {
+        match byte {
+            U2::N0 => RegName16::BC,
+            U2::N1 => RegName16::DE,
+            U2::N2 => RegName16::HL,
+            U2::N3 => RegName16::SP,
+        }
+    }
+    // Modificate 16-bit register with prefix
+    pub fn with_prefix(self, pref: Prefix) -> Self {
+        match self  {
+            RegName16::HL => {
+                match pref {
+                    Prefix::DD => RegName16::IX,
+                    Prefix::FD => RegName16::IY,
+                    _ => self,
+                }
+            }
+            _ => self,
         }
     }
 }
 
-
 /// Z80 registers structure
+#[cfg_attr(rustfmt, rustfmt_skip)]
 pub struct Regs {
     /// program counter
-    pc: Wrapping<u16>,
+    pc: u16,
     /// stack pointer
-    sp: Wrapping<u16>,
+    sp: u16,
     /// index register X [Ho - Lo]
-    ixh: Wrapping<u8>,
-    ixl: Wrapping<u8>,
+    ixh: u8, ixl: u8,
     /// index register Y [Ho - Lo]
-    iyh: Wrapping<u8>,
-    iyl: Wrapping<u8>,
+    iyh: u8, iyl: u8,
     /// Memory refresh register
-    r: Wrapping<u8>,
+    r: u8,
     /// Interrupt Page Adress register
-    i: Wrapping<u8>,
-
+    i: u8,
+    /// interrupt flip-flops
+    iff1: bool, iff2: bool,
     /// general purpose regs: [A, F, B, C, D, E, H, L]
-    a: Wrapping<u8>,
-    f: Wrapping<u8>,
-    b: Wrapping<u8>,
-    c: Wrapping<u8>,
-    d: Wrapping<u8>,
-    e: Wrapping<u8>,
-    h: Wrapping<u8>,
-    l: Wrapping<u8>,
+    a: u8, f: u8,
+    b: u8, c: u8,
+    d: u8, e: u8,
+    h: u8, l: u8,
 
     /// general purpose alternative regs: [A', F', B', C', D', E', H', L']
-    a_alt: Wrapping<u8>,
-    f_alt: Wrapping<u8>,
-    b_alt: Wrapping<u8>,
-    c_alt: Wrapping<u8>,
-    d_alt: Wrapping<u8>,
-    e_alt: Wrapping<u8>,
-    h_alt: Wrapping<u8>,
-    l_alt: Wrapping<u8>,
+    a_alt: u8, f_alt: u8,
+    b_alt: u8, c_alt: u8,
+    d_alt: u8, e_alt: u8,
+    h_alt: u8, l_alt: u8,
 }
 
 impl Regs {
@@ -116,24 +136,25 @@ impl Regs {
     #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn new() -> Regs {
         Regs {
-            pc: Wrapping(0), sp: Wrapping(0),
-            ixh: Wrapping(0), ixl: Wrapping(0),
-            iyh: Wrapping(0), iyl: Wrapping(0),
-            r: Wrapping(0), i: Wrapping(0),
-            a: Wrapping(0), f: Wrapping(0),
-            b: Wrapping(0), c: Wrapping(0),
-            d: Wrapping(0), e: Wrapping(0),
-            h: Wrapping(0), l: Wrapping(0),
-            a_alt: Wrapping(0), f_alt: Wrapping(0),
-            b_alt: Wrapping(0), c_alt: Wrapping(0),
-            d_alt: Wrapping(0), e_alt: Wrapping(0),
-            h_alt: Wrapping(0), l_alt: Wrapping(0),
+            pc: 0, sp: 0,
+            ixh: 0, ixl: 0,
+            iyh: 0, iyl: 0,
+            r: 0, i: 0,
+            iff1: false, iff2: false,
+            a: 0, f: 0,
+            b: 0, c: 0,
+            d: 0, e: 0,
+            h: 0, l: 0,
+            a_alt: 0, f_alt: 0,
+            b_alt: 0, c_alt: 0,
+            d_alt: 0, e_alt: 0,
+            h_alt: 0, l_alt: 0,
         }
     }
 
     /// returns value of 8-bit register
     pub fn get_reg_8(&self, index: RegName8) -> u8 {
-        let Wrapping(value) = match index {
+        match index {
             RegName8::A => self.a,
             RegName8::F => self.f,
             RegName8::B => self.b,
@@ -148,13 +169,11 @@ impl Regs {
             RegName8::IYL => self.iyl,
             RegName8::I => self.i,
             RegName8::R => self.r,
-        };
-        value
+        }
     }
 
     /// changes value of 8-bit register
     pub fn set_reg_8(&mut self, index: RegName8, value: u8) -> u8 {
-        let value = Wrapping(value);
         match index {
             RegName8::A => self.a = value,
             RegName8::F => self.f = value,
@@ -171,12 +190,12 @@ impl Regs {
             RegName8::I => self.i = value,
             RegName8::R => self.r = value,
         };
-        value.0
+        value
     }
 
     /// returns value of 16-bit register
     pub fn get_reg_16(&self, index: RegName16) -> u16 {
-        let Wrapping(value) = match index {
+        let value = match index {
             RegName16::PC => self.pc,
             RegName16::SP => self.sp,
             _ => {
@@ -189,7 +208,7 @@ impl Regs {
                     RegName16::IY => (self.iyh, self.iyl),
                     _ => unreachable!(),
                 };
-                Wrapping(make_word(h.0, l.0))
+                make_word(h, l)
             }
         };
         value
@@ -198,10 +217,9 @@ impl Regs {
     /// changes value of 16-bit register
     pub fn set_reg_16(&mut self, index: RegName16, value: u16) -> u16 {
         let (h, l) = split_word(value);
-        let (h, l) = (Wrapping(h), Wrapping(l));
         match index {
-            RegName16::PC => self.pc = Wrapping(value),
-            RegName16::SP => self.sp = Wrapping(value),
+            RegName16::PC => self.pc = value,
+            RegName16::SP => self.sp = value,
             RegName16::IX => {
                 self.ixh = h;
                 self.ixl = l;
@@ -232,58 +250,65 @@ impl Regs {
 
     /// return program counter
     pub fn get_pc(&self) -> u16 {
-        self.pc.0
+        self.pc
     }
 
     /// increments program counter
     pub fn inc_pc(&mut self, value: u16) -> u16 {
-        self.pc = self.pc + Wrapping(value);
-        self.pc.0
+        self.pc = self.pc.wrapping_add(value);
+        self.pc
+    }
+
+    /// decrements program counter
+    pub fn dec_pc(&mut self, value: u16) -> u16 {
+        self.pc = self.pc.wrapping_sub(value);
+        self.pc
     }
 
     /// get accumulator
     pub fn get_acc(&self) -> u8 {
-        self.a.0
+        self.a
     }
 
     /// set accumulator
     pub fn set_acc(&mut self, value: u8) -> u8 {
-        self.a = Wrapping(value);
-        self.a.0
+        self.a = value;
+        self.a
     }
 
     /// inc register 8 bit
     pub fn inc_reg_8(&mut self, reg: RegName8, value: u8) -> u8 {
-        let Wrapping(new_value) = Wrapping(self.get_reg_8(reg)) + Wrapping(value);
-        self.set_reg_8(reg, new_value)
+        let data = self.get_reg_8(reg).wrapping_add(value);
+        self.set_reg_8(reg, data)
     }
     /// inc register 16 bit
     pub fn inc_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
-        let Wrapping(new_value) = Wrapping(self.get_reg_16(reg)) + Wrapping(value);
-        self.set_reg_16(reg, new_value)
+        let data =  self.get_reg_16(reg).wrapping_add(value);
+        self.set_reg_16(reg, data)
     }
     /// dec register 8 bit
     pub fn dec_reg_8(&mut self, reg: RegName8, value: u8) -> u8 {
-        let Wrapping(new_value) = Wrapping(self.get_reg_8(reg)) - Wrapping(value);
-        self.set_reg_8(reg, new_value)
+        let data = self.get_reg_8(reg).wrapping_sub(value);
+        self.set_reg_8(reg, data)
     }
     /// dec register 16 bit
     pub fn dec_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
-        let Wrapping(new_value) = Wrapping(self.get_reg_16(reg)) - Wrapping(value);
-        self.set_reg_16(reg, new_value)
+        let data = self.get_reg_16(reg).wrapping_sub(value);
+        self.set_reg_16(reg, data)
     }
 
 
     /// Shift program counter relatively with signed displacement
     pub fn shift_pc(&mut self, displacement: i8) -> u16 {
-        // TODO: Rewrite with util function
-        let mut k = Wrapping(self.get_reg_16(RegName16::PC));
-        k = if displacement >= 0 {
-            k + Wrapping(displacement as u16)
-        } else {
-            k - Wrapping(displacement.abs() as u16)
-        };
-        self.set_reg_16(RegName16::PC, k.0)
+        self.pc = word_displacement(self.sp, displacement);
+        self.pc
+    }
+
+    /// special function for incrementing only lower 7 bits of `R` register
+    pub fn inc_r(&mut self, value: u8) -> u8 {
+        let r = self.r.wrapping_add(value) & 0x7F | self.r & 0x80;
+        self.r = r;
+        r
     }
 
     // swap AF with its alternative
@@ -297,50 +322,67 @@ impl Regs {
 
     /// evalute condition on flags register
     pub fn eval_condition(&self, condition: Condition) -> bool {
-        let Wrapping(f) = self.f;
         match condition {
-            Condition::Cary => f & 0b00000001 != 0,
-            Condition::NonCary => f & 0b00000001 == 0,
-            Condition::Zero => f & 0b01000000 != 0,
-            Condition::NonZero => f & 0b01000000 == 0,
-            Condition::SignNegative => f & 0b10000000 != 0,
-            Condition::SignPositive => f & 0b10000000 == 0,
-            Condition::ParityEven => f & 0b00000100 != 0,
-            Condition::ParityOdd => f & 0b00000100 == 0,
+            Condition::Cary => self.f & 0b00000001 != 0,
+            Condition::NonCary => self.f & 0b00000001 == 0,
+            Condition::Zero => self.f & 0b01000000 != 0,
+            Condition::NonZero => self.f & 0b01000000 == 0,
+            Condition::SignNegative => self.f & 0b10000000 != 0,
+            Condition::SignPositive => self.f & 0b10000000 == 0,
+            Condition::ParityEven => self.f & 0b00000100 != 0,
+            Condition::ParityOdd => self.f & 0b00000100 == 0,
         }
     }
 
     /// returns selected flag
     pub fn get_flag(&self, flag: Flag) -> bool {
-        let Wrapping(f) = self.f;
-        f & flag.mask() != 0
+        self.f & flag.mask() != 0
     }
 
     /// changes selected flag
     pub fn set_flag(&mut self, flag: Flag, value: bool) -> bool {
-        let Wrapping(mut f) = self.f;
-        f &= !flag.mask(); // clear bit
         if value {
-            f |= flag.mask(); // set bit
+            self.f |= flag.mask(); // set bit
+        } else {
+            self.f &= !flag.mask();
         }
-        self.f = Wrapping(f);
         value
     }
 
-    // TODO: Rewrite as implementation of Debug trait
-    // prints full information
+    /// returns iff1
+    pub fn get_iff1(&self) -> bool {
+        self.iff1
+    }
+    /// returns iff2
+    pub fn get_iff2(&self) -> bool {
+        self.iff2
+    }
+    /// changes iff1
+    pub fn set_iff1(&mut self, value: bool) -> bool {
+        self.iff1 = value;
+        value
+    }
+    /// changes iff2
+    pub fn set_iff2(&mut self, value: bool) -> bool {
+        self.iff2 = value;
+        value
+    }
+}
+
+impl fmt::Display for Regs {
     #[cfg_attr(rustfmt, rustfmt_skip)]
-    pub fn print(&self) {
-        println!("Regs:");
-        println!("pc: {:02X}; sp: {:02X}; i: {:02X}; r: {:02X}",
-            self.pc.0, self.sp.0, self.i.0, self.r.0);
-        println!("ix: {:02X}{:02X}; iy: {:02X}{:02X}",
-            self.ixh.0, self.ixl.0, self.iyh.0, self.iyl.0);
-        println!("af: {:02X}{:02X}; bc: {:02X}{:02X}; de: {:02X}{:02X}; hl: {:02X}{:02X}",
-            self.a.0, self.f.0, self.b.0, self.c.0,
-            self.d.0, self.e.0, self.h.0, self.l.0);
-        println!("[ALT] af: {:02X}{:02X}; bc: {:02X}{:02X}; de: {:02X}{:02X}; hl: {:02X}{:02X}",
-            self.a_alt.0, self.f_alt.0, self.b_alt.0, self.c_alt.0,
-            self.d_alt.0, self.e_alt.0, self.h_alt.0, self.l_alt.0);
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "Regs:
+                     \tpc: {:02X}; sp: {:02X}; i: {:02X}; r: {:02X}
+                     \tix: {:02X}{:02X}; iy: {:02X}{:02X}
+                     \taf: {:02X}{:02X}; bc: {:02X}{:02X}; de: {:02X}{:02X}; hl: {:02X}{:02X}
+                     \t[ALT] af: {:02X}{:02X}; bc: {:02X}{:02X}; de: {:02X}{:02X}; hl: {:02X}{:02X}",
+                self.pc, self.sp, self.i, self.r,
+                self.ixh, self.ixl, self.iyh, self.iyl,
+                self.a, self.f, self.b, self.c,
+                self.d, self.e, self.h, self.l,
+                self.a_alt, self.f_alt, self.b_alt, self.c_alt,
+                self.d_alt, self.e_alt, self.h_alt, self.l_alt)
+
     }
 }
