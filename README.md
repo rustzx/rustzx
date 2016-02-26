@@ -8,13 +8,10 @@ I writing Z80 CPU emulation part at the moment
 ### instruction groups
 __Implemented__  
 - NOP
-- INC and DEC
-    - 8 bit
-    - 16 bit
+- INC
+- DEC
 - DJNZ  (Jump if B register is non-zero)
-- JR  
-    - Relative
-    - Relative conditional
+- JR  (Relative jumps)
 - DAA (Decimal Adjust)
 - CPL (Complement, NOT operation)
 - SCF (Set carry flag)
@@ -22,11 +19,19 @@ __Implemented__
 - HALT
 - ADD    
 - SUB
-	- 8 bit  
-	- 16 bit  
 - AND
 - OR
 - XOR
+- EX (Exchange)
+- EXX (BC, DE, HL Block exchange)
+- POP
+- PUSH
+- RET (RET, Conditional RET)
+- RST
+- JP (JUMP, conditional JUMP)
+- DI (Disable interrupts)
+- EI (Enable interrupts)
+- CALL (CALL, conditional CALL)
 
 __Partialy implemented__  
 - ADC
@@ -38,11 +43,6 @@ __Partialy implemented__
 - CP
     - [x] 8 bit
     - [ ] block instructions       
-- EX
-	- [ ] EX (SP), HL/IX/IY
-	- [x] EX AF, AF'
-	- [ ] EX DE, HL
-	- [ ] EXX
 - LD
 	- [x] LD A, (BC/DE)
 	- [x] LD A, (NN)
@@ -56,9 +56,9 @@ __Partialy implemented__
     - [x] LD reg1, reg2
     - [x] LD (HL/IX+d/IY+d), reg
     - [x] LD reg, (HL/IX+d/IY+d)
+    - [X] LD SP, HL/IX/IY
 	- [ ] LD between A and I or R
     - [ ] LD BC/DE/SP (NN)
-    - [ ] LD SP, HL/IX/IY
     - [ ] LD (NN), BC/DE/SP
     - [ ] block instructions
 - ROTATE
@@ -67,3 +67,13 @@ __Partialy implemented__
     - [x] RRCA
     - [x] RLCA
     - [ ] Other instructions of group
+- IN
+    - [x] IN A, (n)
+    - [ ] IN (C)
+    - [ ] IN r, (C)
+    - [ ] block instructions
+- OUT
+    - [x] OUT (n), A
+    - [ ] OUT (C), 0
+    - [ ] OUT (C), r
+    - [ ] block instructions

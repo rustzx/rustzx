@@ -253,6 +253,12 @@ impl Regs {
         self.pc
     }
 
+    /// changes program counter
+    pub fn set_pc(&mut self, value: u16) -> u16 {
+        self.pc = value;
+        self.pc
+    }
+
     /// increments program counter
     pub fn inc_pc(&mut self, value: u16) -> u16 {
         self.pc = self.pc.wrapping_add(value);
@@ -311,6 +317,29 @@ impl Regs {
         r
     }
 
+    /// inc stack pointer
+    pub fn inc_sp(&mut self, value: u16) -> u16 {
+        self.sp = self.sp.wrapping_add(value);
+        self.sp
+    }
+
+    /// dec stack pointer
+    pub fn dec_sp(&mut self, value: u16) -> u16 {
+        self.sp = self.sp.wrapping_sub(value);
+        self.sp
+    }
+
+    /// get stack pointer
+    pub fn get_sp(&self) -> u16 {
+        self.sp
+    }
+
+    /// set stack pointer
+    pub fn set_sp(&mut self, value: u16) -> u16 {
+        self.sp = value;
+        self.sp
+    }
+
     // swap AF with its alternative
     pub fn swap_af_alt(&mut self) {
         let (a, f) = (self.a, self.f);
@@ -318,6 +347,19 @@ impl Regs {
         self.f = self.f_alt;
         self.a_alt = a;
         self.f_alt = f;
+    }
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    pub fn exx(&mut self) {
+        let (b, c) = (self.b, self.c);
+        let (d, e) = (self.d, self.e);
+        let (h, l) = (self.h, self.l);
+        self.b = self.b_alt; self.c = self.c_alt;
+        self.d = self.d_alt; self.e = self.e_alt;
+        self.h = self.h_alt; self.l = self.l_alt;
+        self.b_alt = b; self.c_alt = c;
+        self.d_alt = d; self.e_alt = e;
+        self.h_alt = h; self.l_alt = l;
     }
 
     /// evalute condition on flags register
@@ -376,13 +418,15 @@ impl fmt::Display for Regs {
                      \tpc: {:02X}; sp: {:02X}; i: {:02X}; r: {:02X}
                      \tix: {:02X}{:02X}; iy: {:02X}{:02X}
                      \taf: {:02X}{:02X}; bc: {:02X}{:02X}; de: {:02X}{:02X}; hl: {:02X}{:02X}
-                     \t[ALT] af: {:02X}{:02X}; bc: {:02X}{:02X}; de: {:02X}{:02X}; hl: {:02X}{:02X}",
+                     \t[ALT] af: {:02X}{:02X}; bc: {:02X}{:02X}; de: {:02X}{:02X}; hl: {:02X}{:02X}
+                     \t flip-flops: {} {}",
                 self.pc, self.sp, self.i, self.r,
                 self.ixh, self.ixl, self.iyh, self.iyl,
                 self.a, self.f, self.b, self.c,
                 self.d, self.e, self.h, self.l,
                 self.a_alt, self.f_alt, self.b_alt, self.c_alt,
-                self.d_alt, self.e_alt, self.h_alt, self.l_alt)
+                self.d_alt, self.e_alt, self.h_alt, self.l_alt,
+                self.iff1, self.iff2)
 
     }
 }

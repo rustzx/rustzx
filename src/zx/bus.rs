@@ -48,4 +48,12 @@ impl Z80Bus for ZXBus {
             self.ram[addr as usize - ROM_SIZE]
         }
     }
+    fn write_io(&mut self, addr: u16, data: u8) {
+        println!("Data {:#X} was written to port {:#X}", data, addr);
+    }
+    #[allow(unused_variables)]
+    fn read_io(&mut self, addr: u16) -> u8 {
+        println!("Read from port {:#X}", addr);
+        0xCC
+    }
 }

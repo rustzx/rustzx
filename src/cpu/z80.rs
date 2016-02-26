@@ -7,6 +7,10 @@ pub trait Z80Bus {
     fn read(&self, addr: u16) -> u8;
     /// Required method for write byte to bus
     fn write(&mut self, addr: u16, data: u8);
+    // Required method for reading from io port
+    fn read_io(&mut self, addr: u16) -> u8;
+    // Required method for writing to io port
+    fn write_io(&mut self, addr: u16, data: u8);
     /// provided metod to write word, LSB first
     fn write_word(&mut self, addr: u16, data: u16) {
         let (h, l) = split_word(data);
@@ -19,6 +23,7 @@ pub trait Z80Bus {
         let h = self.read(addr.wrapping_add(1));
         make_word(h, l)
     }
+
 }
 
 
@@ -81,7 +86,7 @@ pub struct Z80 {
     /// cycles, which were uncounted from previous emulation
     uncounted_cycles: u64,
     halted: bool,
-    noni_executed: bool,
+    skip_interrupt: bool,
 }
 
 impl Z80 {
@@ -91,7 +96,7 @@ impl Z80 {
             regs: Regs::new(),
             uncounted_cycles: 0,
             halted: false,
-            noni_executed: false,
+            skip_interrupt: false,
         }
     }
 
@@ -130,21 +135,21 @@ impl Z80 {
         // 2 first bits of opcode
         match opcode.x {
             // ---------------------------------
-            // [0x00yyyzzz] instruction section
+            // [0b00yyyzzz] instruction section
             // ---------------------------------
-            // [0x00yyy000] instruction group (NOP, EX, DJNZ, JR)
+            // [0b00yyy000] instruction group (NOP, EX, DJNZ, JR)
             U2::N0 if opcode.z == U3::N0 => {
                 match opcode.y {
                     // NOP
-                    // [0x00000000] = 0x00
+                    // [0b00000000] = 0x00
                     U3::N0 => {}
                     // EX AF, AF'
-                    // [0x00001000] = 0x08
+                    // [0b00001000] = 0x08
                     U3::N1 => {
                         self.regs.swap_af_alt();
                     }
                     // DJNZ offset;   13/8 clocks
-                    // [0x00010000] = 0x10
+                    // [0b00010000] = 0x10
                     U3::N2 => {
                         let offset = self.rom_next_byte(bus) as i8;
                         // preform jump
@@ -157,13 +162,13 @@ impl Z80 {
                         // pc already pointing to next instruction
                     }
                     // JR offset
-                    // [0x00011000] = 0x18
+                    // [0b00011000] = 0x18
                     U3::N3 => {
                         let offset = self.rom_next_byte(bus) as i8;
                         self.regs.shift_pc(offset);
                     }
                     // JR condition[y-4] displacement;
-                    // NZ [0x00100000], Z [0x00101000] NC [0x00110000] C [0x00111000]
+                    // NZ [0b00100000], Z [0b00101000] NC [0b00110000] C [0b00111000]
                     U3::N4 | U3::N5 | U3::N6 | U3::N7 => {
                         // 0x20, 0x28, 0x30, 0x38
                         let offset = self.rom_next_byte(bus) as i8;
@@ -178,18 +183,18 @@ impl Z80 {
                     }
                 };
             }
-            // [0x00ppq001] instruction group (LD, ADD)
+            // [0b00ppq001] instruction group (LD, ADD)
             U2::N0 if opcode.z == U3::N1 => {
                 match opcode.q {
                     // LD rp[p], nn
-                    // [0x00pp0001] : 0x01, 0x11, 0x21, 0x31
+                    // [0b00pp0001] : 0x01, 0x11, 0x21, 0x31
                     U1::N0 => {
                         let reg = RegName16::from_u2_sp(opcode.p).with_prefix(prefix);
                         let data = self.rom_next_word(bus);
                         self.regs.set_reg_16(reg, data);
                     }
                     // ADD HL/IX/IY, ss ; ss - 16 bit with sp set
-                    // [0x00pp1001] : 0x09; 0x19; 0x29; 0x39
+                    // [0b00pp1001] : 0x09; 0x19; 0x29; 0x39
                     U1::N1 => {
                         let reg_operand = RegName16::from_u2_sp(opcode.p).with_prefix(prefix);
                         let reg_acc = RegName16::HL.with_prefix(prefix);
@@ -209,79 +214,79 @@ impl Z80 {
                     }
                 };
             }
-            // [0x00ppq010] instruction group (LD INDIRECT)
+            // [0b00ppq010] instruction group (LD INDIRECT)
             U2::N0 if opcode.z == U3::N2 => {
                 match opcode.q {
                     // LD (BC), A
-                    // [0x00000010] : 0x02
+                    // [0b00000010] : 0x02
                     U1::N0 if opcode.p == U2::N0 => {
                         bus.write(self.regs.get_reg_16(RegName16::BC),
                                   self.regs.get_reg_8(RegName8::A));
                     }
                     // LD (DE), A
-                    // [0x00010010] : 0x12
+                    // [0b00010010] : 0x12
                     U1::N0 if opcode.p == U2::N1 => {
                         bus.write(self.regs.get_reg_16(RegName16::DE),
                                   self.regs.get_reg_8(RegName8::A));
                     }
                     // LD (nn), HL/IX/IY
-                    // [0x00100010] : 0x22
+                    // [0b00100010] : 0x22
                     U1::N0 if opcode.p == U2::N2 => {
                         let addr = self.rom_next_word(bus);
                         let reg = RegName16::HL.with_prefix(prefix);
                         bus.write_word(addr, self.regs.get_reg_16(reg));
                     }
                     // LD (nn), A
-                    // [0x00110010] : 0x32
+                    // [0b00110010] : 0x32
                     U1::N0 => {
                         let addr = self.rom_next_word(bus);
                         bus.write(addr, self.regs.get_reg_8(RegName8::A));
                     }
                     // LD A, (BC)
-                    // [0x00001010] : 0x0A
+                    // [0b00001010] : 0x0A
                     U1::N1 if opcode.p == U2::N0 => {
                         let addr = self.regs.get_reg_16(RegName16::BC);
                         self.regs.set_reg_8(RegName8::A, bus.read(addr));
                     }
                     // LD A, (DE)
-                    // [0x00011010] : 0x1A
+                    // [0b00011010] : 0x1A
                     U1::N1 if opcode.p == U2::N1 => {
                         let addr = self.regs.get_reg_16(RegName16::BC);
                         self.regs.set_reg_8(RegName8::A, bus.read(addr));
                     }
                     // LD HL/IX/IY, (nn)
-                    // [0x00101010] : 0x2A
+                    // [0b00101010] : 0x2A
                     U1::N1 if opcode.p == U2::N2 => {
                         let addr = self.rom_next_word(bus);
                         let reg = RegName16::HL.with_prefix(prefix);
                         self.regs.set_reg_16(reg, bus.read_word(addr));
                     }
                     // LD A, (nn)
-                    // [0x00111010] : 0x3A
+                    // [0b00111010] : 0x3A
                     U1::N1 => {
                         let addr = self.rom_next_word(bus);
                         self.regs.set_reg_8(RegName8::A, bus.read(addr));
                     }
                 };
             }
-            // [0x00ppq011] instruction group (INC, DEC)
+            // [0b00ppq011] instruction group (INC, DEC)
             U2::N0 if opcode.z == U3::N3 => {
                 // get register by rp[pp]
                 let reg = RegName16::from_u2_sp(opcode.p).with_prefix(prefix);
                 match opcode.q {
                     // INC BC/DE/HL/IX/IY/SP
-                    // [0x00pp0011] : 0x03, 0x13, 0x23, 0x33
+                    // [0b00pp0011] : 0x03, 0x13, 0x23, 0x33
                     U1::N0 => {
                         self.regs.inc_reg_16(reg, 1);
                     }
                     // DEC BC/DE/HL/IX/IY/SP
-                    // [0x00pp1011] : 0x03, 0x13, 0x23, 0x33
+                    // [0b00pp1011] : 0x03, 0x13, 0x23, 0x33
                     U1::N1 => {
                         self.regs.dec_reg_16(reg, 1);
                     }
                 };
             }
-            // [0x00yyy100], [0x00yyy101] instruction group (INC, DEC) 8 bit
+            // [0b00yyy100], [0b00yyy101] instruction group (INC, DEC) 8 bit
             U2::N0 if (opcode.z == U3::N4) || (opcode.z == U3::N5) => {
                 let operand;
                 let data;
@@ -291,14 +296,14 @@ impl Z80 {
                 // ------------
                 if let Some(mut reg) = RegName8::from_u3(opcode.y) {
                     // INC r[y], DEC y[y] ; IX and IY also used
-                    // INC [0x00yyy100] : 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x3C
-                    // DEC [0x00yyy101] : 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x3D
+                    // INC [0b00yyy100] : 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x3C
+                    // DEC [0b00yyy101] : 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x3D
                     reg = reg.with_prefix(prefix);
                     data = self.regs.get_reg_8(reg);
                     operand = LoadOperand8::Reg(reg);
                 } else {
                     // INC (HL)/(IX + d)/(IY + d), DEC (HL)/(IX + d)/(IY + d) ; INDIRECT
-                    // INC [0x00110100], DEC [0x00110101] : 0x34, 0x35
+                    // INC [0b00110100], DEC [0b00110101] : 0x34, 0x35
                     let addr = if prefix == Prefix::None {
                         // we have IND/DEC (HL)
                         self.regs.get_reg_16(RegName16::HL)
@@ -344,14 +349,14 @@ impl Z80 {
                     }
                 };
             }
-            // [0x00yyy110] instruction group (LD R, N 8 bit) :
+            // [0b00yyy110] instruction group (LD R, N 8 bit) :
             // 0x06, 0x0E, 0x16, 0x1E, 0x26, 0x2E, 0x36, 0x3E
             U2::N0 if opcode.z == U3::N6 => {
                 let operand = if let Some(reg) = RegName8::from_u3(opcode.y) {
                     // Direct LD R, N
                     LoadOperand8::Reg(reg.with_prefix(prefix))
                 } else {
-                    // INDIRECT LD (HL/IX+d/IY+d), N <PREFIX>[0x00110110] : 0x36
+                    // INDIRECT LD (HL/IX+d/IY+d), N <PREFIX>[0b00110110] : 0x36
                     if prefix == Prefix::None {
                         // LD (HL)
                         LoadOperand8::Indirect(self.regs.get_reg_16(RegName16::HL))
@@ -374,11 +379,11 @@ impl Z80 {
                     }
                 };
             }
-            // [0x00yyy111] instruction group (Assorted)
+            // [0b00yyy111] instruction group (Assorted)
             U2::N0 => {
                 match opcode.y {
                     // RLCA ; Rotate left; msb will become lsb; carry = msb
-                    // [0x00000111] : 0x07
+                    // [0b00000111] : 0x07
                     U3::N0 => {
                         let mut data = self.regs.get_acc();
                         let carry = (data & 0x80) != 0;
@@ -396,7 +401,7 @@ impl Z80 {
                         self.regs.set_acc(data);
                     }
                     // RRCA ; Rotate right; lsb will become msb; carry = lsb
-                    // [0x00001111] : 0x0F
+                    // [0b00001111] : 0x0F
                     U3::N1 => {
                         let mut data = self.regs.get_acc();
                         let carry = (data & 0x01) != 0;
@@ -414,7 +419,7 @@ impl Z80 {
                         self.regs.set_acc(data);
                     }
                     // RLA Rotate left trough carry
-                    // [0x00010111]: 0x17
+                    // [0b00010111]: 0x17
                     U3::N2 => {
                         let mut data = self.regs.get_acc();
                         let carry = (data & 0x80) != 0;
@@ -432,7 +437,7 @@ impl Z80 {
                         self.regs.set_acc(data);
                     }
                     // RRA Rotate right trough carry
-                    // [0x00011111] : 0x1F
+                    // [0b00011111] : 0x1F
                     U3::N3 => {
                         let before = self.regs.get_acc();
                         let mut data = self.regs.get_acc();
@@ -454,7 +459,7 @@ impl Z80 {
                                  data,
                                  carry);
                     }
-                    // DAA [0x00100111] [link to the algorithm in header]
+                    // DAA [0b00100111] [link to the algorithm in header]
                     U3::N4 => {
                         let acc = self.regs.get_acc();
                         let mut correction;
@@ -484,7 +489,7 @@ impl Z80 {
                         self.regs.set_acc(acc_new);
                     }
                     // CPL Invert (Complement)
-                    // [0x00101111] : 0x2F
+                    // [0b00101111] : 0x2F
                     U3::N5 => {
                         let data = !self.regs.get_acc();
                         self.regs.set_flag(Flag::HalfCarry, true);
@@ -494,7 +499,7 @@ impl Z80 {
                         self.regs.set_acc(data);
                     }
                     // SCF  Set carry flag
-                    // [0x00110111] : 0x37
+                    // [0b00110111] : 0x37
                     U3::N6 => {
                         let data = self.regs.get_acc();
                         self.regs.set_flag(Flag::F3, data & 0b1000 != 0); // 3 bit
@@ -504,7 +509,7 @@ impl Z80 {
                         self.regs.set_flag(Flag::Carry, true);
                     }
                     // CCF Invert carry flag
-                    // [0x00111111] : 0x3F
+                    // [0b00111111] : 0x3F
                     U3::N7 => {
                         let data = self.regs.get_acc();
                         self.regs.set_flag(Flag::F3, data & 0b1000 != 0); // 3 bit
@@ -517,15 +522,15 @@ impl Z80 {
                 }
             }
             // HALT
-            // [0x01110110] : 0x76
+            // [0b01110110] : 0x76
             U2::N1 if (opcode.z == U3::N6) && (opcode.y == U3::N6) => {
                 self.halted = true;
             }
             // ---------------------------------
-            // [0x01yyyzzz] instruction section
+            // [0b01yyyzzz] instruction section
             // ---------------------------------
             // LD r[y], r[z]
-            // [0x01yyyzzz]: 0x40...0x7F
+            // [0b01yyyzzz]: 0x40...0x7F
             U2::N1 => {
                 // LD r[y], r[z] without indirection
                 if (opcode.z != U3::N6) && (opcode.y != U3::N6) {
@@ -575,7 +580,7 @@ impl Z80 {
                 }
             }
             // ---------------------------------
-            // [0x10yyyzzz] instruction section
+            // [0b10yyyzzz] instruction section
             // ---------------------------------
             // alu[y], operand[z-based]; 0x80...0xBF
             U2::N2 => {
@@ -595,14 +600,189 @@ impl Z80 {
                 self.execute_alu_8(opcode.y, operand);
             }
             // ---------------------------------
-            // [0x11yyyzzz] instruction section
+            // [0b11yyyzzz] instruction section
             // ---------------------------------
+            // RET cc[y]
+            // [0b11yyy000] : C0; C8; D0; D8; E0; E8; F0; F8;
+            U2::N3 if opcode.z == U3::N0 => {
+                if self.regs.eval_condition(Condition::from_u3(opcode.y)) {
+                    // write value from stack to pc
+                    self.execute_pop_16(bus, RegName16::PC);
+                    clocks += 11;
+                } else {
+                    clocks += 5;
+                };
+            }
+            // [0b11ppq001] instruction group
+            U2::N3 if opcode.z == U3::N1 => {
+                match opcode.q {
+                    // POP (AF/BC/DE/HL/IX/IY) ; pop 16 bit register featuring A
+                    // [0b11pp0001]: C1; D1; E1; F1;
+                    U1::N0 => {
+                        self.execute_pop_16(bus,
+                                            RegName16::from_u2_af(opcode.p).with_prefix(prefix));
+                    }
+                    // [0b11pp1001] instruction group (assorted)
+                    U1::N1 => {
+                        match opcode.p {
+                            // RET ; return
+                            // [0b11001001] : C9;
+                            U2::N0 => {
+                                self.execute_pop_16(bus, RegName16::PC);
+                            }
+                            // EXX
+                            // [0b11011001] : D9;
+                            U2::N1 => {
+                                self.regs.exx();
+                            }
+                            // JP HL/IX/IY
+                            // [0b11101001] : E9
+                            U2::N2 => {
+                                let addr = self.regs.get_reg_16(RegName16::HL.with_prefix(prefix));
+                                self.regs.set_pc(addr);
+                            }
+                            // LD SP, HL/IX/IY
+                            // [0b11111001] : F9
+                            U2::N3 => {
+                                let data = self.regs.get_reg_16(RegName16::HL.with_prefix(prefix));
+                                self.regs.set_sp(data);
+                            }
+                        }
+                    }
+                };
+            }
+            // JP cc[y], nn [timings is set to 10 anyway as showed in Z80 instruction!]
+            // [0b11yyy010]: C2,CA,D2,DA,E2,EA,F2,FA
+            // NOTE: Maybe timings incorrect
+            U2::N3 if opcode.z == U3::N2 => {
+                let addr = self.rom_next_word(bus);
+                if self.regs.eval_condition(Condition::from_u3(opcode.y)) {
+                    self.regs.set_pc(addr);
+                };
+            }
+            // [0b11yyy011] instruction group (assorted)
+            U2::N3 if opcode.z == U3::N3 => {
+                match opcode.y {
+                    // JP nn
+                    // [0b11000011]: C3
+                    U3::N0 => {
+                        let addr = self.rom_next_word(bus);
+                        self.regs.set_pc(addr);
+                    }
+                    // CB prefix
+                    U3::N1 => {
+                        panic!("CB prefix passed as non-prefixed instruction");
+                    }
+                    // OUT (n), A
+                    // [0b11010011] : D3
+                    U3::N2 => {
+                        let data = self.rom_next_byte(bus);
+                        let acc = self.regs.get_acc();
+                        // write Acc to port A*256 + operand
+                        bus.write_io(((acc as u16) << 8) | data as u16, acc);
+                    }
+                    // IN A, (n)
+                    // [0b11011011] : DB
+                    U3::N3 => {
+                        let data = self.rom_next_byte(bus);
+                        let acc = self.regs.get_acc();
+                        // read from port A*256 + operand to Acc
+                        self.regs.set_acc(bus.read_io(((acc as u16) << 8) | data as u16));
+                    }
+                    // EX (SP), HL/IX/IY
+                    // [0b11100011] : E3
+                    U3::N4 => {
+                        let reg = RegName16::HL.with_prefix(prefix);
+                        let addr = self.regs.get_sp();
+                        let tmp = bus.read_word(addr);
+                        bus.write_word(addr, self.regs.get_reg_16(reg));
+                        self.regs.set_reg_16(reg, tmp);
+                    }
+                    // EX DE, HL
+                    // [0b11101011]
+                    U3::N5 => {
+                        let de = self.regs.get_reg_16(RegName16::DE);
+                        let hl = self.regs.get_reg_16(RegName16::HL);
+                        self.regs.set_reg_16(RegName16::DE, hl);
+                        self.regs.set_reg_16(RegName16::HL, de);
+                    }
+                    // DI
+                    // [0b11110011] : F3
+                    U3::N6 => {
+                        // skip interrupt check and reset flip-flops
+                        self.skip_interrupt = true;
+                        self.regs.set_iff1(false);
+                        self.regs.set_iff2(false);
+                    }
+                    // EI
+                    // [0b11111011] : FB
+                    U3::N7 => {
+                        // skip interrupt check and set flip-flops
+                        self.skip_interrupt = true;
+                        self.regs.set_iff1(true);
+                        self.regs.set_iff2(true);
+                    }
+                }
+            }
+            // CALL cc[y], nn
+            // [0b11ccc100] : C4; CC; D4; DC; E4; EC; F4; FC
+            U2::N3 if opcode.z == U3::N4 => {
+                let addr = self.rom_next_word(bus);
+                if self.regs.eval_condition(Condition::from_u3(opcode.y)) {
+                    self.execute_push_16(bus, RegName16::PC);
+                    self.regs.set_reg_16(RegName16::PC, addr);
+                    clocks += 5;
+                } else {
+                    clocks += 3;
+                };
+            }
+            //  [0b11ppq101] opcodes group : PUSH rp2[p], CALL nn
+            U2::N3 if opcode.z == U3::N5 => {
+                match opcode.q {
+                    // PUSH rp2[p]
+                    // [0b11pp0101] : C5; D5; E5; F5;
+                    U1::N0 => {
+                        self.execute_push_16(bus,
+                                             RegName16::from_u2_af(opcode.p).with_prefix(prefix));
+                    }
+                    U1::N1 => {
+                        match opcode.p {
+                            // CALL nn
+                            // [0b11001101] : CD
+                            U2::N0 => {
+                                let addr = self.rom_next_word(bus);
+                                self.execute_push_16(bus, RegName16::PC);
+                                self.regs.set_reg_16(RegName16::PC, addr);
+                            }
+                            // [0b11011101] : DD
+                            U2::N1 => {
+                                panic!("DD prefix passed as non-prefixed instruction");
+                            }
+                            // [0b11101101] : ED
+                            U2::N2 => {
+                                panic!("ED prefix passed as non-prefixed instruction");
+                            }
+                            // [0b11111101] : FD
+                            U2::N3 => {
+                                panic!("FD prefix passed as non-prefixed instruction");
+                            }
+                        }
+                    }
+                }
+            }
             // alu[y] NN
+            // [0b11yyy110] : C6; CE; D6; DE; E6; EE; F6; FE
             U2::N3 if opcode.z == U3::N6 => {
                 let operand = self.rom_next_byte(bus);
                 self.execute_alu_8(opcode.y, operand);
             }
-            _ => panic!("Opcode {:#X} unimplented", opcode.byte),
+            // RST y*8
+            // [0b11yyy111]
+            U2::N3 => {
+                self.execute_push_16(bus, RegName16::PC);
+                // CALL y*8
+                self.regs.set_reg_16(RegName16::PC, (opcode.y.as_byte() as u16) << 3);
+            }
         };
         if prefix == Prefix::None {
             clocks += tables::CLOCKS_NORMAL[opcode.byte as usize];
@@ -613,8 +793,8 @@ impl Z80 {
         };
 
         // DEBUG
-        print!("Opcode {:#X} executed in {} clocks", opcode.byte, clocks);
-        print!("{}", self.regs);
+        //print!("Opcode {:#X} executed in {} clocks", opcode.byte, clocks);
+        //print!("{}", self.regs);
         // DEBUG
 
         ExecResult::Executed(clocks)
@@ -716,6 +896,19 @@ impl Z80 {
         self.regs.set_flag(Flag::Sign, sign);
     }
 
+    // push 16 bit value to stack
+    fn execute_push_16(&mut self, bus: &mut Z80Bus, reg: RegName16) {
+        let data = self.regs.get_reg_16(reg);
+        bus.write_word(self.regs.dec_sp(2), data);
+    }
+    // pop 16 bit value from stack
+    fn execute_pop_16(&mut self, bus: &mut Z80Bus, reg: RegName16) {
+        let data = bus.read_word(self.regs.get_sp());
+        self.regs.inc_sp(2);
+        self.regs.set_reg_16(reg, data);
+    }
+
+
     /// returns clocks, needed for executing NOP instruction
     fn execute_internal_nop(&mut self) -> u8 {
         self.regs.inc_r(1); // inc R register for emulating memory refresh
@@ -724,7 +917,7 @@ impl Z80 {
 
     /// No operation, no interrupts
     fn execute_internal_noni(&mut self) -> u8 {
-        self.noni_executed = true;
+        self.skip_interrupt = true;
         self.execute_internal_nop()
     }
 
@@ -733,12 +926,16 @@ impl Z80 {
 
         // cycle_counter initial value
         let mut cycle_counter = 0_u64; // self.uncounted_cycles;
-
+        // check interrupts
+        if !self.skip_interrupt {
+            // TODO: implement interrupts
+        } else {
+            self.skip_interrupt = false;
+        }
         if self.halted {
             // execute nop NOP
             return self.execute_internal_nop() as u64;
         };
-
         // Figure out instruction execution group:
         let byte1 = self.rom_next_byte(bus);
         let prefix_hi = Prefix::from_byte(byte1);
