@@ -71,12 +71,19 @@ enum LoadOperand8 {
     Reg(RegName8),
 }
 
+/// Operand for 8-bit Rotate instructions
+enum RotOperand8  {
+    Indirect(u16),
+    Reg(RegName8),
+}
+
 /// Operand for 8-bit ALU instructions
 enum AluOperand8 {
     Indirect(u16),
     Reg(RegName8),
     Const(u8),
 }
+
 
 
 /// Z80 Processor struct
@@ -792,12 +799,261 @@ impl Z80 {
             self.regs.inc_r(2); // DD or FD prefix double inc R reg
         };
 
-        // DEBUG
-        //print!("Opcode {:#X} executed in {} clocks", opcode.byte, clocks);
-        //print!("{}", self.regs);
+        // NOTE: DEBUG
+        print!("Opcode {:#X} executed in {} clocks", opcode.byte, clocks);
+        print!("{}", self.regs);
         // DEBUG
 
         ExecResult::Executed(clocks)
+    }
+
+    /// Instruction group which operatis with bits
+    /// Includes rotations, setting, reseting, testing.
+    /// covers CB, DDCB and FDCB execution group
+    /// `prefix` param stands for first byte in double-prefixed instructions
+    fn execute_bits(&mut self, bus: &mut Z80Bus, opcode: Opcode, prefix: Prefix) -> ExecResult {
+        // at first = check prefix. if exists - swap opcode and displacement.
+        // this must be happened because DDCB/FDCB instructions looks like
+        // DD CB displacement opcode
+        let displacement;
+        let opcode = if prefix != Prefix::None {
+            displacement = opcode.byte as i8;
+            Opcode::from_byte(self.rom_next_byte(bus))
+        } else {
+            displacement = 0i8;
+            opcode
+        };
+
+        let mut clocks = 0;
+        // determinate data to rotate
+        // (HL) selected if z is 6 in non-prefixed or if opcode is prefixed
+        let operand = if (opcode.z == U3::N6) | (prefix != Prefix::None) {
+            // of non prefixed, reg will become HL, else prefix corrects if to IX or IY
+            let reg = RegName16::HL.with_prefix(prefix);
+            // displacement will be equal zero if prefix isn't set, so next code is ok
+            let addr = word_displacement(self.regs.get_reg_16(reg), displacement);
+            RotOperand8::Indirect(addr)
+        } else {
+            // opcode.z will never be 6 at this moment, so unwrap
+            RotOperand8::Reg(RegName8::from_u3(opcode.z).unwrap())
+        };
+        // if opcode is prefixed and z != 6 then we must copy
+        // result to register (B, C, D, E, F, H, L, A), selected by z
+        let copy_reg = if (opcode.z != U3::N6) & (prefix != Prefix::None) {
+            Some(RegName8::from_u3(opcode.z).unwrap())
+        } else {
+            None
+        };
+
+        // valiable to store result of next computations,
+        // used in DDCB, FDCB opcodes for result store
+        let result;
+        // parse opcode
+        match opcode.x {
+            // Rotate group. 0x00...0x3F
+            U2::N0 => {
+                result = self.execute_rot(bus, opcode.y, operand);
+            }
+            // Bit test, set, reset group
+            U2::N1 | U2::N2 | U2::N3 => {
+                // get bit number and data byte
+                let bit_number = opcode.y.as_byte();
+                let data = match operand {
+                    RotOperand8::Indirect(addr) => {
+                        bus.read(addr)
+                    }
+                    RotOperand8::Reg(reg) => {
+                        self.regs.get_reg_8(reg)
+                    }
+                };
+                match opcode.x {
+                    // BIT y, r[z]
+                    // [0b01yyyzzz] : 0x40...0x7F
+                    U2::N1 => {
+                        let bit_is_set = data & (0x01 << bit_number) == 0;
+                        self.regs.set_flag(Flag::Sub, false);
+                        self.regs.set_flag(Flag::HalfCarry, true);
+                        self.regs.set_flag(Flag::Zero, bit_is_set);
+                        self.regs.set_flag(Flag::ParityOveflow, bit_is_set);
+                        self.regs.set_flag(Flag::Sign, bit_is_set && (bit_number == 7));
+                        if let RotOperand8::Indirect(addr) = operand {
+                            // copy of high address byte 3 and 5 bits
+                            self.regs.set_flag(Flag::F3, addr & 0x0800 != 0);
+                            self.regs.set_flag(Flag::F5, addr & 0x2000 != 0);
+                        } else {
+                            // wierd rules
+                            self.regs.set_flag(Flag::F3, bit_is_set && (bit_number == 3));
+                            self.regs.set_flag(Flag::F5, bit_is_set && (bit_number == 5));
+                        };
+                        result = 0; // mask compiler error
+                    }
+                    // RES y, r[z]
+                    // [0b10yyyzzz] : 0x80...0xBF
+                    U2::N2 => {
+                        result = data & (!(0x01 << bit_number));
+                        match operand {
+                            RotOperand8::Indirect(addr) => {
+                                bus.write(addr, result);
+                            }
+                            RotOperand8::Reg(reg) => {
+                                self.regs.set_reg_8(reg, result);
+                            }
+                        };
+                    }
+                    // SET y, r[z]
+                    // [0b01yyyzzz] : 0xC0...0xFF
+                    U2::N3 => {
+                        result = data | (0x01 << bit_number);
+                        match operand {
+                            RotOperand8::Indirect(addr) => {
+                                bus.write(addr, result);
+                            }
+                            RotOperand8::Reg(reg) => {
+                                self.regs.set_reg_8(reg, result);
+                            }
+                        };
+                    }
+                    _ => unreachable!()
+                }
+            }
+        };
+        // if result must be copied
+        if let Some(reg) = copy_reg {
+            // if operation is not BIT
+            if opcode.x != U2::N1 {
+                self.regs.set_reg_8(reg, result);
+            };
+        };
+        if prefix == Prefix::None {
+            clocks += tables::CLOCKS_CB[opcode.byte as usize];
+            self.regs.inc_r(1); // single inc
+        } else {
+            clocks += tables::CLOCKS_DDCB_FDCB[opcode.byte as usize];
+            self.regs.inc_r(2); // DDCB or FDCB prefix double inc R reg (yes, wierd enough)
+        };
+
+        // NOTE: DEBUG
+        print!("Opcode {:#X} executed in {} clocks", opcode.byte, clocks);
+        print!("{}", self.regs);
+        // DEBUG
+
+        ExecResult::Executed(clocks)
+    }
+
+    /// Extended instruction group (ED-prefixed)
+    /// Operations are assorted.
+    fn execute_extended(&mut self, bus: &mut Z80Bus, opcode: Opcode) -> ExecResult {
+        ExecResult::NonInstuction
+    }
+
+    /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)
+    /// returns result (can be useful with DDCB/FDCB instructions)
+    fn execute_rot(&mut self, bus: &mut Z80Bus, rot_code: U3, operand: RotOperand8) -> u8 {
+        // get byte which will be rotated
+        let mut data = match operand {
+            RotOperand8::Indirect(addr) => bus.read(addr),
+            RotOperand8::Reg(reg) => self.regs.get_reg_8(reg),
+        };
+        let (sign, zero, f5, f3, half_carry, pv, sub, carry);
+        match rot_code {
+            // RLC
+            U3::N0 => {
+                // get msb
+                carry = (data & 0x80) != 0;
+                // shift left and clear lowerest bit
+                data = (data << 1) & 0xFE;
+                // set lsb if msb was set
+                if carry {
+                    data |= 0x01;
+                };
+            }
+            // RRC
+            U3::N1 => {
+                // get lsb
+                carry = (data & 0x01) != 0;
+                // shift left and clear highest bit
+                data = (data >> 1) & 0x7F;
+                // set lsb if msb was set
+                if carry {
+                    data |= 0x80;
+                };
+            }
+            // RL
+            U3::N2 => {
+                // get msb
+                carry = (data & 0x80) != 0;
+                // shift left and clear lowerest bit
+                data = (data << 1) & 0xFE;
+                // set lsb if msb was set
+                if self.regs.get_flag(Flag::Carry) {
+                    data |= 0x01;
+                };
+            }
+            // RR
+            U3::N3 => {
+                // get lsb
+                carry = (data & 0x01) != 0;
+                // shift left and clear highest bit
+                data = (data >> 1) & 0x7F;
+                // set lsb if msb was set
+                if self.regs.get_flag(Flag::Carry) {
+                    data |= 0x80;
+                };
+            }
+            // SLA
+            U3::N4 => {
+                // get msb
+                carry = (data & 0x80) != 0;
+                // shift left and clear lowerest bit
+                data = (data << 1) & 0xFE;
+            }
+            // SRA
+            U3::N5 => {
+                // get lsb
+                carry = (data & 0x01) != 0;
+                // shift left and leave highest bit unchanged
+                data = ((data >> 1) & 0x7F) | (data & 0x80);
+            }
+            // SLL
+            U3::N6 => {
+                // get msb
+                carry = (data & 0x80) != 0;
+                // shift left and set lowerest bit
+                data = (data << 1) | 0x01;
+            }
+            // SRL
+            U3::N7 => {
+                // get lsb
+                carry = (data & 0x01) != 0;
+                // shift left and leave highest bit unchanged
+                data = (data >> 1) & 0x7F;
+            }
+        };
+        zero = data == 0;
+        sign = (data & 0x80) != 0;
+        half_carry = false;
+        pv = tables::PARITY_BIT[data as usize] != 0;
+        sub = false;
+        f3 = data & 0b1000 != 0;
+        f5 = data & 0b100000 != 0;
+        // write result
+        match operand {
+            RotOperand8::Indirect(addr) => {
+                bus.write(addr, data);
+            }
+            RotOperand8::Reg(reg) => {
+                self.regs.set_reg_8(reg, data);
+            }
+        };
+        self.regs.set_flag(Flag::Carry, carry);
+        self.regs.set_flag(Flag::Sub, sub);
+        self.regs.set_flag(Flag::ParityOveflow, pv);
+        self.regs.set_flag(Flag::F3, f3);
+        self.regs.set_flag(Flag::HalfCarry, half_carry);
+        self.regs.set_flag(Flag::F5, f5);
+        self.regs.set_flag(Flag::Zero, zero);
+        self.regs.set_flag(Flag::Sign, sign);
+        data
     }
 
     /// 8-bit ALU operations
@@ -887,7 +1143,7 @@ impl Z80 {
         zero = result == 0;
         sign = (result & 0x80) != 0;
         self.regs.set_flag(Flag::Carry, carry);
-        self.regs.set_flag(Flag::Sub, sub); // addition
+        self.regs.set_flag(Flag::Sub, sub);
         self.regs.set_flag(Flag::ParityOveflow, pv);
         self.regs.set_flag(Flag::F3, f3);
         self.regs.set_flag(Flag::HalfCarry, half_carry);
@@ -950,17 +1206,29 @@ impl Z80 {
                     // if second prefix finded
                     match prefix_lo {
                         Prefix::DD | Prefix::ED | Prefix::FD => {
-                            // move back, read secon prefix again on next cycle and do `noni`
+                            // move back, read second prefix again on next cycle and do `noni`
                             self.regs.dec_pc(1);
                             self.execute_internal_noni();
                         }
                         Prefix::CB if prefix_hi == Prefix::DD => {
                             // DDCB prefixed
-                            unimplemented!();
+                            // third byte is not real opcode. it will be transformed
+                            // into displacement in execute_bits
+                            let opcode = Opcode::from_byte(self.rom_next_byte(bus));
+                            if let ExecResult::Executed(exec_cycles) =
+                                self.execute_bits(bus, opcode, Prefix::DD) {
+                                cycle_counter += exec_cycles as u64;
+                            };
                         }
                         Prefix::CB => {
                             // FDCB prefixed
-                            unimplemented!();
+                            // third byte is not real opcode. it will be transformed
+                            // into displacement in execute_bits
+                            let opcode = Opcode::from_byte(self.rom_next_byte(bus));
+                            if let ExecResult::Executed(exec_cycles) =
+                                self.execute_bits(bus, opcode, Prefix::FD) {
+                                cycle_counter += exec_cycles as u64;
+                            };
                         }
                         Prefix::None => {
                             // use secon byte as opcode
@@ -986,7 +1254,13 @@ impl Z80 {
                 }
                 // CB-prefixed
                 Prefix::CB => {
-                    unimplemented!();
+                    // NOTE: DEBUG
+                    println!("Prefix: CB");
+                    let opcode = Opcode::from_byte(byte2);
+                    if let ExecResult::Executed(exec_cycles) = self.execute_bits(bus, opcode,
+                                                                                 Prefix::None) {
+                        cycle_counter += exec_cycles as u64;
+                    };
                 }
                 // ED-prefixed
                 Prefix::ED => {
@@ -1005,6 +1279,7 @@ impl Z80 {
                 cycle_counter += exec_cycles as u64;
             };
         };
+
         cycle_counter
     }
 }

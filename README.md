@@ -32,6 +32,7 @@ __Implemented__
 - DI (Disable interrupts)
 - EI (Enable interrupts)
 - CALL (CALL, conditional CALL)
+- BIT test, set, reset
 
 __Partialy implemented__  
 - ADC
@@ -61,12 +62,6 @@ __Partialy implemented__
     - [ ] LD BC/DE/SP (NN)
     - [ ] LD (NN), BC/DE/SP
     - [ ] block instructions
-- ROTATE
-    - [x] RRA
-    - [x] RLA
-    - [x] RRCA
-    - [x] RLCA
-    - [ ] Other instructions of group
 - IN
     - [x] IN A, (n)
     - [ ] IN (C)
@@ -77,3 +72,6 @@ __Partialy implemented__
     - [ ] OUT (C), 0
     - [ ] OUT (C), r
     - [ ] block instructions
+- ROTATE group
+    - [x] Almost all
+    - [ ] RRD, RLD
