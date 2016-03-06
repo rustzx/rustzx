@@ -53,7 +53,11 @@ impl Z80Bus for ZXBus {
     }
     #[allow(unused_variables)]
     fn read_io(&mut self, addr: u16) -> u8 {
-        println!("Read from port {:#X}", addr);
+        println!("Read from port {:#X}", addr);        
         0xCC
+    }
+
+    fn reti_signal(&mut self) {
+        println!("RETI BUS SIGNAL!");
     }
 }

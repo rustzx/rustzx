@@ -19,6 +19,10 @@ pub fn half_carry_8(a: u8, b: u8) -> bool {
     ((a & 0xF) + (b & 0xF)) > 0xF
 }
 /// check half_carry after 8 bit subtraction
+pub fn half_borrow_16(a: u16, b: u16) -> bool {
+    (a & 0xFFF) < (b & 0xFFF)
+}
+/// check half_carry after 8 bit subtraction
 pub fn half_borrow_8(a: u8, b: u8) -> bool {
     (a & 0xF) < (b & 0xF)
 }
@@ -79,4 +83,9 @@ pub fn bool_to_u8(value: bool) -> u8 {
         true => 1,
         false => 0,
     }
+}
+
+/// check bit in value
+pub fn bit(value: u8, bit: u8) -> bool {
+    (value & (0x01 << bit)) != 0
 }

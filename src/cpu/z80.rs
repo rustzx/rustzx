@@ -2,15 +2,23 @@ use cpu::*;
 use utils::*;
 /// Z80 processor System bus
 /// Implement it for communication with CPU.
+// TODO: display debug info only when some cfg flag activated
+// TODO: code reorganization, refactoring
+// TODO: maybe devide Z80 into set of traits from base "chip" ?
+#[allow(unused_variables)]
 pub trait Z80Bus {
     /// Required method for read byte from bus
     fn read(&self, addr: u16) -> u8;
     /// Required method for write byte to bus
     fn write(&mut self, addr: u16, data: u8);
-    // Required method for reading from io port
-    fn read_io(&mut self, addr: u16) -> u8;
+    // Method for reading from io port
+    fn read_io(&mut self, addr: u16) -> u8 {
+        0
+    }
     // Required method for writing to io port
-    fn write_io(&mut self, addr: u16, data: u8);
+    fn write_io(&mut self, addr: u16, data: u8) {
+
+    }
     /// provided metod to write word, LSB first
     fn write_word(&mut self, addr: u16, data: u16) {
         let (h, l) = split_word(data);
@@ -23,7 +31,8 @@ pub trait Z80Bus {
         let h = self.read(addr.wrapping_add(1));
         make_word(h, l)
     }
-
+    /// method, invoked by Z80 in case of RETI instruction
+    fn reti_signal(&mut self) {}
 }
 
 
@@ -84,7 +93,18 @@ enum AluOperand8 {
     Const(u8),
 }
 
+/// Interrupt mode
+enum IntMode {
+    IM0,
+    IM1,
+    IM2,
+}
 
+// direction of address cahange in block functions
+enum BlockDir {
+    Inc,
+    Dec,
+}
 
 /// Z80 Processor struct
 pub struct Z80 {
@@ -94,6 +114,7 @@ pub struct Z80 {
     uncounted_cycles: u64,
     halted: bool,
     skip_interrupt: bool,
+    int_mode: IntMode,
 }
 
 impl Z80 {
@@ -104,6 +125,7 @@ impl Z80 {
             uncounted_cycles: 0,
             halted: false,
             skip_interrupt: false,
+            int_mode: IntMode::IM0,
         }
     }
 
@@ -926,11 +948,10 @@ impl Z80 {
         };
         if prefix == Prefix::None {
             clocks += tables::CLOCKS_CB[opcode.byte as usize];
-            self.regs.inc_r(1); // single inc
         } else {
             clocks += tables::CLOCKS_DDCB_FDCB[opcode.byte as usize];
-            self.regs.inc_r(2); // DDCB or FDCB prefix double inc R reg (yes, wierd enough)
         };
+        self.regs.inc_r(2); // DDCB,FDCB or CB prefix double inc R reg (yes, wierd enough)
 
         // NOTE: DEBUG
         print!("Opcode {:#X} executed in {} clocks", opcode.byte, clocks);
@@ -943,7 +964,529 @@ impl Z80 {
     /// Extended instruction group (ED-prefixed)
     /// Operations are assorted.
     fn execute_extended(&mut self, bus: &mut Z80Bus, opcode: Opcode) -> ExecResult {
-        ExecResult::NonInstuction
+        let mut clocks = 0;
+
+        // LD A, R; LD R, A accessing R after inc
+        self.regs.inc_r(2);
+
+        match opcode.x {
+            U2::N0 | U2::N3 => {
+                // Nothing. Just nothung. Invalid opcodes.
+                // But timings in table still exsist, all ok.
+            }
+            // ---------------------------------
+            // [0b01yyyzzz] instruction section
+            // ---------------------------------
+            // Assorted operations
+            U2::N1 => {
+                match opcode.z {
+                    // IN
+                    // [0b01yyy000] : 40 48 50 58 60 68 70 78
+                    U3::N0 => {
+                        // option, if y == 6 then reg = None
+                        let reg = RegName8::from_u3(opcode.y);
+                        // put BC on bus (this how Z80 acts on real HW) and get io data
+                        let data = bus.read_io(self.regs.get_bc());
+                        if let Some(reg) = reg {
+                            self.regs.set_reg_8(reg, data);
+                        };
+                        self.regs.set_flag(Flag::Sub, false);
+                        self.regs.set_flag(Flag::HalfCarry, false);
+                        self.regs.set_flag(Flag::F3, data & 0b1000 != 0);
+                        self.regs.set_flag(Flag::F5, data & 0b100000 != 0);
+                        self.regs.set_flag(Flag::Zero, data == 0);
+                        self.regs.set_flag(Flag::Sign, data & 0x80 != 0);
+                        self.regs.set_flag(Flag::ParityOveflow,
+                                           tables::PARITY_BIT[data as usize] != 0);
+                    }
+                    // OUT
+                    // [0b01yyy001] : 41 49 51 59 61 69 71 79
+                    U3::N1 => {
+                        let data = if let Some(reg) = RegName8::from_u3(opcode.y) {
+                            self.regs.get_reg_8(reg)
+                        } else {
+                            0
+                        };
+                        bus.write_io(self.regs.get_bc(), data);
+                    }
+                    // SBC, ADC
+                    U3::N2 => {
+                        let prev_carry = bool_to_u8(self.regs.get_flag(Flag::Carry)) as u16;
+                        let operand = self.regs.get_reg_16(RegName16::from_u2_sp(opcode.p));
+                        let hl =  self.regs.get_hl();
+                        let (carry, sub, pv, half_carry);
+                        let result;
+                        match opcode.q {
+                            // SBC HL, rp[p]
+                            U1::N0 => {
+                                let (r_tmp, c1) = hl.overflowing_sub(operand);
+                                let (r, c2) = r_tmp.overflowing_sub(prev_carry);
+                                carry = c1 | c2;
+                                result = r;
+                                sub = true;
+                                pv = check_sub_overflow_16(hl as i16, operand as i16) |
+                                     check_sub_overflow_16(r_tmp as i16, prev_carry as i16);
+                                half_carry = half_borrow_16(hl, operand) |
+                                             half_borrow_16(r_tmp, prev_carry);
+                            }
+                            // ADC HL, rp[p]
+                            U1::N1 => {
+                                let (r_tmp, c1) = hl.overflowing_add(operand);
+                                let (r, c2) = r_tmp.overflowing_add(prev_carry);
+                                carry = c1 | c2;
+                                result = r;
+                                sub = false;
+                                pv = check_add_overflow_16(hl as i16, operand as i16) |
+                                     check_add_overflow_16(r_tmp as i16, prev_carry as i16);
+                                half_carry = half_carry_16(hl, operand) |
+                                             half_carry_16(r_tmp, prev_carry);
+                            }
+                        }
+                        // set f3, f5, z, s
+                        self.regs.set_flag(Flag::Carry, carry);
+                        self.regs.set_flag(Flag::Sub, sub);
+                        self.regs.set_flag(Flag::ParityOveflow, pv);
+                        self.regs.set_flag(Flag::F3, result & 0b1000 != 0);
+                        self.regs.set_flag(Flag::F5, result & 0b100000 != 0);
+                        self.regs.set_flag(Flag::HalfCarry, half_carry);
+                        self.regs.set_flag(Flag::Zero, result == 0);
+                        self.regs.set_flag(Flag::Sign, result & 0x8000 != 0);
+                        self.regs.set_hl(result);
+                    }
+                    // LD
+                    U3::N3 => {
+                        let addr = self.rom_next_word(bus);
+                        let reg = RegName16::from_u2_sp(opcode.p);
+                        match opcode.q {
+                            // LD (nn), rp[p]
+                            U1::N0 => {
+                                bus.write_word(addr, self.regs.get_reg_16(reg));
+                            }
+                            // LD rp[p], (nn)
+                            U1::N1 => {
+                                self.regs.set_reg_16(reg, bus.read_word(addr));
+                            }
+                        }
+                    }
+                    // NEG (A = 0 - A)
+                    U3::N4 => {
+                        let acc = self.regs.get_acc();
+                        let result = 0u8.wrapping_sub(acc);
+                        self.regs.set_acc(result);
+                        self.regs.set_flag(Flag::Sign, result & 0x80 != 0);
+                        self.regs.set_flag(Flag::Zero, result == 0);
+                        self.regs.set_flag(Flag::HalfCarry, half_borrow_8(0, acc));
+                        self.regs.set_flag(Flag::ParityOveflow, acc == 0x80);
+                        self.regs.set_flag(Flag::Sub, true);
+                        self.regs.set_flag(Flag::Carry, acc != 0x00);
+                        self.regs.set_flag(Flag::F3, result & 0b1000 != 0);
+                        self.regs.set_flag(Flag::F5, result & 0b100000 != 0);
+                    }
+                    // RETN, RETI
+                    U3::N5 => {
+                        // RETN and even RETI copy iff2 into iff1
+                        let iff2 = self.regs.get_iff2();
+                        self.regs.set_iff1(iff2);
+                        // restore PC
+                        self.execute_pop_16(bus, RegName16::PC);
+                        if opcode.y == U3::N1 {
+                            bus.reti_signal();
+                        }
+                    }
+                    // IM im[y]
+                    U3::N6 => {
+                        self.int_mode =  match opcode.y {
+                            U3::N0 | U3::N1 | U3::N4 | U3::N5 => {
+                                IntMode::IM0
+                            }
+                            U3::N2 | U3::N6 => {
+                                IntMode::IM1
+                            }
+                            U3::N3 | U3::N7 => {
+                                IntMode::IM2
+                            }
+                        };
+                    }
+                    // Assorted - LD,Rotates, Nop
+                    U3::N7 => {
+                        match opcode.y {
+                            // LD I, A
+                            U3::N0 => {
+                                let acc = self.regs.get_acc();
+                                self.regs.set_i(acc);
+                            }
+                            // LD R, A
+                            U3::N1 => {
+                                let acc = self.regs.get_acc();
+                                self.regs.set_r(acc);
+                            }
+                            // LD A, I
+                            U3::N2 => {
+                                let i = self.regs.get_i();
+                                self.regs.set_acc(i);
+                            }
+                            // LD A, R
+                            U3::N3 => {
+                                let r = self.regs.get_r();
+                                self.regs.set_acc(r);
+                            }
+                            // RRD
+                            U3::N4 => {
+                                let mut acc = self.regs.get_acc();
+                                let mut mem = bus.read(self.regs.get_hl());
+                                // low nimble
+                                let mem_lo = mem & 0x0F;
+                                // mem_hi to mem_lo and clear hi nimble
+                                mem = (mem >> 4) & 0x0F;
+                                // acc_lo to mem_hi
+                                mem = mem | ((acc << 4) & 0xF0);
+                                acc = (acc & 0xF0) | mem_lo;
+                                self.regs.set_acc(acc);
+                                bus.write(self.regs.get_hl(), mem);
+                                self.regs.set_flag(Flag::Sign, acc & 0x80 != 0);
+                                self.regs.set_flag(Flag::Zero, acc == 0);
+                                self.regs.set_flag(Flag::HalfCarry, false);
+                                self.regs.set_flag(Flag::ParityOveflow,
+                                                   tables::PARITY_BIT[acc as usize] != 0);
+                                self.regs.set_flag(Flag::Sub, false);
+                                self.regs.set_flag(Flag::F3, acc & 0b1000 != 0);
+                                self.regs.set_flag(Flag::F5, acc & 0b100000 != 0);
+
+                            }
+                            // RLD
+                            U3::N5 => {
+                                let mut acc = self.regs.get_acc();
+                                let mut mem = bus.read(self.regs.get_hl());
+                                // low nimble
+                                let acc_lo = acc & 0x0F;
+                                // mem_hi to acc_lo
+                                acc = (acc & 0xF0) | ((mem >> 4) & 0x0F);
+                                // mem_lo to mem_hi and tmp to mem_lo
+                                mem = ((mem << 4) & 0xF0) | acc_lo;
+                                self.regs.set_acc(acc);
+                                bus.write(self.regs.get_hl(), mem);
+                                self.regs.set_flag(Flag::Sign, acc & 0x80 != 0);
+                                self.regs.set_flag(Flag::Zero, acc == 0);
+                                self.regs.set_flag(Flag::HalfCarry, false);
+                                self.regs.set_flag(Flag::ParityOveflow,
+                                                   tables::PARITY_BIT[acc as usize] != 0);
+                                self.regs.set_flag(Flag::Sub, false);
+                                self.regs.set_flag(Flag::F3, acc & 0b1000 != 0);
+                                self.regs.set_flag(Flag::F5, acc & 0b100000 != 0);
+                            }
+                            // NOP
+                            U3::N6 | U3::N7 => {
+                                // No operation
+                            }
+                        }
+                    }
+                }
+            }
+            // ---------------------------------
+            // [0b10yyyzzz] instruction section
+            // ---------------------------------
+            // Block instructions
+            U2::N2 => {
+                match opcode.z {
+                    // LD Block group
+                    U3::N0 => {
+                        match opcode.y {
+                            // LDI
+                            U3::N4 => self.execute_ldi_ldd(bus, BlockDir::Inc),
+                            // LDD
+                            U3::N5 => self.execute_ldi_ldd(bus, BlockDir::Dec),
+                            // LDIR
+                            U3::N6 => {
+                                self.execute_ldi_ldd(bus, BlockDir::Inc);
+                                if self.regs.get_reg_16(RegName16::BC) != 0 {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21;
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // LDDR
+                            U3::N7 => {
+                                self.execute_ldi_ldd(bus, BlockDir::Dec);
+                                if self.regs.get_reg_16(RegName16::BC) != 0 {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21;
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // No operation
+                            _ => {},
+                        }
+                    }
+                    // CP Block group
+                    U3::N1 => {
+                        match opcode.y {
+                            // CPI
+                            U3::N4 => {
+                                self.execute_cpi_cpd(bus, BlockDir::Inc);
+                            }
+                            // CPD
+                            U3::N5 => {
+                                self.execute_cpi_cpd(bus, BlockDir::Dec);
+                            }
+                            // CPIR
+                            U3::N6 => {
+                                let result = self.execute_cpi_cpd(bus, BlockDir::Inc);
+                                if (self.regs.get_reg_16(RegName16::BC) != 0) & (!result) {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21;
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // CPDR
+                            U3::N7 => {
+                                let result = self.execute_cpi_cpd(bus, BlockDir::Dec);
+                                if (self.regs.get_reg_16(RegName16::BC) != 0) & (!result) {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21;
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // No operation
+                            _ => {},
+                        }
+                    }
+                    // IN Block group
+                    U3::N2 => {
+                        match opcode.y {
+                            // INI
+                            U3::N4 => self.execute_ini_ind(bus, BlockDir::Inc),
+                            // IND
+                            U3::N5 => self.execute_ini_ind(bus, BlockDir::Dec),
+                            // INIR
+                            U3::N6 => {
+                                self.execute_ini_ind(bus, BlockDir::Inc);
+                                if self.regs.get_reg_8(RegName8::B) != 0 {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // INDR
+                            U3::N7 => {
+                                self.execute_ini_ind(bus, BlockDir::Dec);
+                                if self.regs.get_reg_8(RegName8::B) != 0 {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21;
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // No operation
+                            _ => {},
+                        }
+                    }
+                    // Out Block group
+                    U3::N3 => {
+                        match opcode.y {
+                            // OUTI
+                            U3::N4 => self.execute_outi_outd(bus, BlockDir::Inc),
+                            // OUTD
+                            U3::N5 => self.execute_outi_outd(bus, BlockDir::Dec),
+                            // OTIR
+                            U3::N6 => {
+                                self.execute_outi_outd(bus, BlockDir::Inc);
+                                if self.regs.get_reg_8(RegName8::B) != 0 {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // OTDR
+                            U3::N7 => {
+                                self.execute_outi_outd(bus, BlockDir::Dec);
+                                if self.regs.get_reg_8(RegName8::B) != 0 {
+                                    self.regs.dec_pc(2);
+                                    clocks += 21;
+                                } else {
+                                    clocks += 16;
+                                };
+                            }
+                            // No operation
+                            _ => {},
+                        }
+                    }
+                    // No operation
+                    _ => {},
+                }
+            }
+        }
+
+        clocks += tables::CLOCKS_ED[opcode.byte as usize];
+
+        // NOTE: DEBUG
+        print!("Opcode {:#X} executed in {} clocks", opcode.byte, clocks);
+        print!("{}", self.regs);
+        // DEBUG
+
+        ExecResult::Executed(clocks)
+    }
+
+    /// ldi or ldd instruction
+    fn execute_ldi_ldd(&mut self, bus: &mut Z80Bus, dir: BlockDir) {
+        // read (HL)
+        let src = bus.read(self.regs.get_hl());
+        // write (HL) to (DE)
+        bus.write(self.regs.get_de(), src);
+        // inc or dec HL and DE
+        match dir {
+            BlockDir::Inc => {
+                self.regs.inc_reg_16(RegName16::HL, 1);
+                self.regs.inc_reg_16(RegName16::DE, 1);
+            }
+            BlockDir::Dec => {
+                self.regs.dec_reg_16(RegName16::HL, 1);
+                self.regs.dec_reg_16(RegName16::DE, 1);
+            }
+        }
+        // dec BC
+        let bc = self.regs.dec_reg_16(RegName16::BC, 1);
+        // flags
+        self.regs.set_flag(Flag::Sub, false);
+        self.regs.set_flag(Flag::HalfCarry, false);
+        self.regs.set_flag(Flag::ParityOveflow, bc != 0);
+        let src_plus_a = src.wrapping_add(self.regs.get_acc());
+        self.regs.set_flag(Flag::F3, (src_plus_a & 0b1000) != 0);
+        self.regs.set_flag(Flag::F5, (src_plus_a & 0b10) != 0);
+    }
+
+    /// cpi or cpd instruction
+    fn execute_cpi_cpd(&mut self, bus: &mut Z80Bus, dir: BlockDir) -> bool {
+        // read (HL)
+        let src = bus.read(self.regs.get_hl());
+        // move pointer
+        match dir {
+            BlockDir::Inc => self.regs.inc_reg_16(RegName16::HL, 1),
+            BlockDir::Dec => self.regs.dec_reg_16(RegName16::HL, 1),
+        };
+        // dec bc
+        let bc = self.regs.dec_reg_16(RegName16::BC, 1);
+        let acc = self.regs.get_acc();
+        // variable to store CP (HL) subtract result
+        let tmp = acc.wrapping_sub(src);
+        // flags
+        self.regs.set_flag(Flag::Sub, true);
+        self.regs.set_flag(Flag::ParityOveflow, bc != 0);
+        self.regs.set_flag(Flag::Zero, tmp == 0);
+        self.regs.set_flag(Flag::Sign, (tmp & 0x80) != 0);
+        let half_borrow = half_borrow_8(acc, src);
+        self.regs.set_flag(Flag::HalfCarry, half_borrow);
+        let tmp2 = if half_borrow {
+            tmp.wrapping_sub(1)
+        } else {
+            tmp
+        };
+        self.regs.set_flag(Flag::F3, (tmp2 & 0b1000) != 0);
+        self.regs.set_flag(Flag::F5, (tmp2 & 0b10) != 0);
+        tmp == 0
+    }
+
+    /// ini or ind instruction
+    fn execute_ini_ind(&mut self, bus: &mut Z80Bus, dir: BlockDir) {
+        // get input data
+        let src = bus.read_io(self.regs.get_bc());
+        // write to memory
+        bus.write(self.regs.get_hl(), src);
+        // dec b
+        let b = self.regs.dec_reg_8(RegName8::B, 1);
+        // move pointer
+        match dir {
+            BlockDir::Inc => self.regs.inc_reg_16(RegName16::HL, 1),
+            BlockDir::Dec => self.regs.dec_reg_16(RegName16::HL, 1),
+        };
+        // flags
+        self.regs.set_flag(Flag::Zero, b == 0);
+        self.regs.set_flag(Flag::Sign, (b & 0x80) != 0);
+        self.regs.set_flag(Flag::F3, (b & 0b1000) != 0);
+        self.regs.set_flag(Flag::F5, (b & 0b10) != 0);
+        self.regs.set_flag(Flag::Sub, (src & 0x80) != 0);
+        let c = self.regs.get_reg_8(RegName8::C);
+        let cc = match dir {
+            BlockDir::Inc => c.wrapping_add(1),
+            BlockDir::Dec => c.wrapping_sub(1),
+        };
+        let (_, carry) = cc.overflowing_add(src);
+        self.regs.set_flag(Flag::Carry, carry);
+        self.regs.set_flag(Flag::HalfCarry, carry);
+        // and now most hard. P/V flag :D
+        // at first, build "Temp1"
+        let temp1_operands = (bool_to_u8(bit(c, 1)) << 3) |
+                             (bool_to_u8(bit(c, 0)) << 2) |
+                             (bool_to_u8(bit(src, 1)) << 1) |
+                             (bool_to_u8(bit(src, 0)));
+        // obtain temp1
+        let temp1 = match dir {
+            BlockDir::Inc => tables::IO_INC_TEMP1[temp1_operands as usize] != 0,
+            BlockDir::Dec => tables::IO_DEC_TEMP1[temp1_operands as usize] != 0,
+        };
+        // TODO: rewrite as table, described in Z80 Undocumended documented
+        let temp2 = if (b & 0x0F) == 0 {
+            (tables::PARITY_BIT[b as usize] != 0) ^ (bit(b, 4) | (bit(b, 6) & (!bit(b, 5))))
+        } else {
+            (tables::PARITY_BIT[b as usize] != 0) ^ (bit(b, 0) | (bit(b, 2) & (!bit(b, 1))))
+        };
+        self.regs.set_flag(Flag::ParityOveflow, temp1 ^ temp2 ^ bit(c, 2) ^ bit(src, 2));
+        // Oh, this was pretty hard.
+        // TODO: place pv falag detection in separate function
+    }
+
+    /// outi or outd instruction
+    fn execute_outi_outd(&mut self, bus: &mut Z80Bus, dir: BlockDir) {
+        // get input data
+        let src = bus.read(self.regs.get_hl());
+        // acсording to the official docs, b decrements before moving it to the addres bus
+        // dec b
+        let b = self.regs.dec_reg_8(RegName8::B, 1);
+        bus.write_io(self.regs.get_bc(), src);
+        // move pointer
+        match dir {
+            BlockDir::Inc => self.regs.inc_reg_16(RegName16::HL, 1),
+            BlockDir::Dec => self.regs.dec_reg_16(RegName16::HL, 1),
+        };
+        // flags
+        self.regs.set_flag(Flag::Zero, b == 0);
+        self.regs.set_flag(Flag::Sign, (b & 0x80) != 0);
+        self.regs.set_flag(Flag::F3, (b & 0b1000) != 0);
+        self.regs.set_flag(Flag::F5, (b & 0b10) != 0);
+        self.regs.set_flag(Flag::Sub, (src & 0x80) != 0);
+        let c = self.regs.get_reg_8(RegName8::C);
+        let cc = match dir {
+            BlockDir::Inc => c.wrapping_add(1),
+            BlockDir::Dec => c.wrapping_sub(1),
+        };
+        let (_, carry) = cc.overflowing_add(src);
+        self.regs.set_flag(Flag::Carry, carry);
+        self.regs.set_flag(Flag::HalfCarry, carry);
+        // and now most hard. P/V flag :D
+        // at first, build "Temp1"
+        let temp1_operands = (bool_to_u8(bit(c, 1)) << 3) |
+                             (bool_to_u8(bit(c, 0)) << 2) |
+                             (bool_to_u8(bit(src, 1)) << 1) |
+                             (bool_to_u8(bit(src, 0)));
+        // obtain temp1
+        let temp1 = match dir {
+            BlockDir::Inc => tables::IO_INC_TEMP1[temp1_operands as usize] != 0,
+            BlockDir::Dec => tables::IO_DEC_TEMP1[temp1_operands as usize] != 0,
+        };
+        // TODO: rewrite as table, described in Z80 Undocumended documented
+        let temp2 = if (b & 0x0F) == 0 {
+            (tables::PARITY_BIT[b as usize] != 0) ^ (bit(b, 4) | (bit(b, 6) & (!bit(b, 5))))
+        } else {
+            (tables::PARITY_BIT[b as usize] != 0) ^ (bit(b, 0) | (bit(b, 2) & (!bit(b, 1))))
+        };
+        self.regs.set_flag(Flag::ParityOveflow, temp1 ^ temp2 ^ bit(c, 2) ^ bit(src, 2));
+        // Oh, this was pretty hard.
+        // TODO: place pv falag detection in separate function
     }
 
     /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)
@@ -1031,7 +1574,7 @@ impl Z80 {
         };
         zero = data == 0;
         sign = (data & 0x80) != 0;
-        half_carry = false;
+        half_carry = true;
         pv = tables::PARITY_BIT[data as usize] != 0;
         sub = false;
         f3 = data & 0b1000 != 0;
@@ -1171,6 +1714,7 @@ impl Z80 {
         tables::CLOCKS_NORMAL[0x00] // return clocks, needed for NOP
     }
 
+
     /// No operation, no interrupts
     fn execute_internal_noni(&mut self) -> u8 {
         self.skip_interrupt = true;
@@ -1264,11 +1808,14 @@ impl Z80 {
                 }
                 // ED-prefixed
                 Prefix::ED => {
-                    unimplemented!();
+                    // NOTE: DEBUG
+                    println!("Prefix: ED");
+                    let opcode = Opcode::from_byte(byte2);
+                    if let ExecResult::Executed(exec_cycles) = self.execute_extended(bus, opcode) {
+                        cycle_counter += exec_cycles as u64;
+                    };
                 }
-                Prefix::None => {
-                    unreachable!();
-                }
+                _ => unreachable!(),
             };
         } else {
             // Non-prefixed

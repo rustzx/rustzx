@@ -248,7 +248,28 @@ impl Regs {
         value
     }
 
-    /// return program counter
+    /// inc register 8 bit
+    pub fn inc_reg_8(&mut self, reg: RegName8, value: u8) -> u8 {
+        let data = self.get_reg_8(reg).wrapping_add(value);
+        self.set_reg_8(reg, data)
+    }
+    /// inc register 16 bit
+    pub fn inc_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
+        let data =  self.get_reg_16(reg).wrapping_add(value);
+        self.set_reg_16(reg, data)
+    }
+    /// dec register 8 bit
+    pub fn dec_reg_8(&mut self, reg: RegName8, value: u8) -> u8 {
+        let data = self.get_reg_8(reg).wrapping_sub(value);
+        self.set_reg_8(reg, data)
+    }
+    /// dec register 16 bit
+    pub fn dec_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
+        let data = self.get_reg_16(reg).wrapping_sub(value);
+        self.set_reg_16(reg, data)
+    }
+    
+    /// returns program counter
     pub fn get_pc(&self) -> u16 {
         self.pc
     }
@@ -282,32 +303,26 @@ impl Regs {
         self.a
     }
 
-    /// inc register 8 bit
-    pub fn inc_reg_8(&mut self, reg: RegName8, value: u8) -> u8 {
-        let data = self.get_reg_8(reg).wrapping_add(value);
-        self.set_reg_8(reg, data)
-    }
-    /// inc register 16 bit
-    pub fn inc_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
-        let data =  self.get_reg_16(reg).wrapping_add(value);
-        self.set_reg_16(reg, data)
-    }
-    /// dec register 8 bit
-    pub fn dec_reg_8(&mut self, reg: RegName8, value: u8) -> u8 {
-        let data = self.get_reg_8(reg).wrapping_sub(value);
-        self.set_reg_8(reg, data)
-    }
-    /// dec register 16 bit
-    pub fn dec_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
-        let data = self.get_reg_16(reg).wrapping_sub(value);
-        self.set_reg_16(reg, data)
+    /// get i
+    pub fn get_i(&self) -> u8 {
+        self.i
     }
 
+    /// set i
+    pub fn set_i(&mut self, value: u8) -> u8 {
+        self.i = value;
+        self.i
+    }
 
-    /// Shift program counter relatively with signed displacement
-    pub fn shift_pc(&mut self, displacement: i8) -> u16 {
-        self.pc = word_displacement(self.sp, displacement);
-        self.pc
+    /// get r
+    pub fn get_r(&self) -> u8 {
+        self.r
+    }
+
+    /// set r
+    pub fn set_r(&mut self, value: u8) -> u8 {
+        self.r = value;
+        self.r
     }
 
     /// special function for incrementing only lower 7 bits of `R` register
@@ -315,6 +330,17 @@ impl Regs {
         let r = self.r.wrapping_add(value) & 0x7F | self.r & 0x80;
         self.r = r;
         r
+    }
+
+    /// returns bc
+    pub fn get_bc(&self) -> u16 {
+        make_word(self.b, self.c)
+    }
+
+    /// Shift program counter relatively with signed displacement
+    pub fn shift_pc(&mut self, displacement: i8) -> u16 {
+        self.pc = word_displacement(self.sp, displacement);
+        self.pc
     }
 
     /// inc stack pointer
@@ -338,6 +364,32 @@ impl Regs {
     pub fn set_sp(&mut self, value: u16) -> u16 {
         self.sp = value;
         self.sp
+    }
+
+    /// get HL
+    pub fn get_hl(&self) -> u16 {
+        make_word(self.h, self.l)
+    }
+
+    /// set HL
+    pub fn set_hl(&mut self, value: u16) -> u16 {
+        let (h, l) = split_word(value);
+        self.h = h;
+        self.l = l;
+        value
+    }
+
+    /// get DE
+    pub fn get_de(&self) -> u16 {
+        make_word(self.d, self.e)
+    }
+
+    /// set DE
+    pub fn set_de(&mut self, value: u16) -> u16 {
+        let (d, e) = split_word(value);
+        self.d = d;
+        self.e = e;
+        value
     }
 
     // swap AF with its alternative
