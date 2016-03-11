@@ -1,4 +1,4 @@
-use cpu::Z80;
+use z80::Z80;
 use zx::ZXBus;
 
 /// Freq of Computer

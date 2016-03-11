@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Read;
-use cpu::Z80Bus;
+use z80::Z80Bus;
 
 /// 16K ROM SIZE
 const ROM_SIZE: usize = 1024 * 16;
@@ -53,7 +53,7 @@ impl Z80Bus for ZXBus {
     }
     #[allow(unused_variables)]
     fn read_io(&mut self, addr: u16) -> u8 {
-        println!("Read from port {:#X}", addr);        
+        println!("Read from port {:#X}", addr);
         0xCC
     }
 

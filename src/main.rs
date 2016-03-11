@@ -3,7 +3,7 @@
 extern crate time;
 
 mod utils;
-mod cpu;
+mod z80;
 mod zx;
 
 use zx::ZXComputer;

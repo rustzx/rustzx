@@ -2,7 +2,75 @@
 
 use utils::*;
 use std::fmt;
-use cpu::{Condition, Flag, Prefix, U2, U3};
+use z80::{Prefix, U2, U3};
+
+pub const CARRY_MASK: u8 = 0b00000001;
+pub const SUB_MASK: u8 = 0b00000010;
+pub const PARITY_OVERFLOW_MASK: u8 = 0b00000100;
+pub const F3_MASK: u8 = 0b00001000;
+pub const HALF_CARRY_MASK: u8 = 0b00010000;
+pub const F5_MASK: u8 = 0b00100000;
+pub const ZERO_MASK: u8 = 0b01000000;
+pub const SIGN_MASK: u8 = 0b10000000;
+
+#[derive(Clone, Copy)]
+/// Flags for F register
+pub enum Flag {
+    Carry,
+    Sub,
+    ParityOveflow,
+    F3,
+    HalfCarry,
+    F5,
+    Zero,
+    Sign,
+}
+impl Flag {
+    /// get flag mask
+    pub fn mask(self) -> u8 {
+        match self {
+            Flag::Carry => CARRY_MASK,
+            Flag::Sub => SUB_MASK,
+            Flag::ParityOveflow => PARITY_OVERFLOW_MASK,
+            Flag::F3 => F3_MASK,
+            Flag::HalfCarry => HALF_CARRY_MASK,
+            Flag::F5 => F5_MASK,
+            Flag::Zero => ZERO_MASK,
+            Flag::Sign => SIGN_MASK,
+        }
+    }
+}
+
+
+/// Conditions
+#[derive(Clone, Copy)]
+pub enum Condition {
+    NonZero,
+    Zero,
+    NonCarry,
+    Carry,
+    ParityOdd,
+    ParityEven,
+    SignPositive,
+    SignNegative,
+}
+impl Condition {
+    /// Returns condition encoded in 3 bits
+    /// # Failures
+    /// Returns `None` if value is bigger than `0b111` or equals `0b110`
+    pub fn from_u3(code: U3) -> Condition {
+        match code {
+            U3::N0 => Condition::NonZero,
+            U3::N1 => Condition::Zero,
+            U3::N2 => Condition::NonCarry,
+            U3::N3 => Condition::Carry,
+            U3::N4 => Condition::ParityOdd,
+            U3::N5 => Condition::ParityEven,
+            U3::N6 => Condition::SignPositive,
+            U3::N7 => Condition::SignNegative,
+        }
+    }
+}
 
 /// 8-bit registers names
 #[derive(Clone,Copy)]
@@ -152,6 +220,8 @@ impl Regs {
         }
     }
 
+    // general operations, name of reg as param --------------------------------------------------
+
     /// returns value of 8-bit register
     pub fn get_reg_8(&self, index: RegName8) -> u8 {
         match index {
@@ -268,7 +338,9 @@ impl Regs {
         let data = self.get_reg_16(reg).wrapping_sub(value);
         self.set_reg_16(reg, data)
     }
-    
+
+    // 16-bit individual ------------------------------------------------------------------------
+
     /// returns program counter
     pub fn get_pc(&self) -> u16 {
         self.pc
@@ -291,6 +363,78 @@ impl Regs {
         self.pc = self.pc.wrapping_sub(value);
         self.pc
     }
+
+    /// Shift program counter relatively with signed displacement
+    pub fn shift_pc(&mut self, displacement: i8) -> u16 {
+        self.pc = word_displacement(self.sp, displacement);
+        self.pc
+    }
+
+    /// returns bc
+    pub fn get_bc(&self) -> u16 {
+        make_word(self.b, self.c)
+    }
+
+
+    /// set BC
+    pub fn set_bc(&mut self, value: u16) -> u16 {
+        let (b, c) = split_word(value);
+        self.b = b;
+        self.c = c;
+        value
+    }
+
+    /// get HL
+    pub fn get_hl(&self) -> u16 {
+        make_word(self.h, self.l)
+    }
+
+    /// set HL
+    pub fn set_hl(&mut self, value: u16) -> u16 {
+        let (h, l) = split_word(value);
+        self.h = h;
+        self.l = l;
+        value
+    }
+
+    /// get DE
+    pub fn get_de(&self) -> u16 {
+        make_word(self.d, self.e)
+    }
+
+    /// set DE
+    pub fn set_de(&mut self, value: u16) -> u16 {
+        let (d, e) = split_word(value);
+        self.d = d;
+        self.e = e;
+        value
+    }
+
+
+    /// inc stack pointer
+    pub fn inc_sp(&mut self, value: u16) -> u16 {
+        self.sp = self.sp.wrapping_add(value);
+        self.sp
+    }
+
+    /// dec stack pointer
+    pub fn dec_sp(&mut self, value: u16) -> u16 {
+        self.sp = self.sp.wrapping_sub(value);
+        self.sp
+    }
+
+    /// get stack pointer
+    pub fn get_sp(&self) -> u16 {
+        self.sp
+    }
+
+    /// set stack pointer
+    pub fn set_sp(&mut self, value: u16) -> u16 {
+        self.sp = value;
+        self.sp
+    }
+
+    // 8-bit individual --------------------------------------------------------------------------
 
     /// get accumulator
     pub fn get_acc(&self) -> u8 {
@@ -332,65 +476,28 @@ impl Regs {
         r
     }
 
-    /// returns bc
-    pub fn get_bc(&self) -> u16 {
-        make_word(self.b, self.c)
-    }
+    // flip-flops --------------------------------------------------------------------------------
 
-    /// Shift program counter relatively with signed displacement
-    pub fn shift_pc(&mut self, displacement: i8) -> u16 {
-        self.pc = word_displacement(self.sp, displacement);
-        self.pc
+    /// returns iff1
+    pub fn get_iff1(&self) -> bool {
+        self.iff1
     }
-
-    /// inc stack pointer
-    pub fn inc_sp(&mut self, value: u16) -> u16 {
-        self.sp = self.sp.wrapping_add(value);
-        self.sp
+    /// returns iff2
+    pub fn get_iff2(&self) -> bool {
+        self.iff2
     }
-
-    /// dec stack pointer
-    pub fn dec_sp(&mut self, value: u16) -> u16 {
-        self.sp = self.sp.wrapping_sub(value);
-        self.sp
+    /// changes iff1
+    pub fn set_iff1(&mut self, value: bool) -> bool {
+        self.iff1 = value;
+        value
     }
-
-    /// get stack pointer
-    pub fn get_sp(&self) -> u16 {
-        self.sp
-    }
-
-    /// set stack pointer
-    pub fn set_sp(&mut self, value: u16) -> u16 {
-        self.sp = value;
-        self.sp
-    }
-
-    /// get HL
-    pub fn get_hl(&self) -> u16 {
-        make_word(self.h, self.l)
-    }
-
-    /// set HL
-    pub fn set_hl(&mut self, value: u16) -> u16 {
-        let (h, l) = split_word(value);
-        self.h = h;
-        self.l = l;
+    /// changes iff2
+    pub fn set_iff2(&mut self, value: bool) -> bool {
+        self.iff2 = value;
         value
     }
 
-    /// get DE
-    pub fn get_de(&self) -> u16 {
-        make_word(self.d, self.e)
-    }
-
-    /// set DE
-    pub fn set_de(&mut self, value: u16) -> u16 {
-        let (d, e) = split_word(value);
-        self.d = d;
-        self.e = e;
-        value
-    }
+    // swap operations ---------------------------------------------------------------------------
 
     // swap AF with its alternative
     pub fn swap_af_alt(&mut self) {
@@ -414,17 +521,19 @@ impl Regs {
         self.h_alt = h; self.l_alt = l;
     }
 
+    // flags operaions ---------------------------------------------------------------------------
+
     /// evalute condition on flags register
     pub fn eval_condition(&self, condition: Condition) -> bool {
         match condition {
-            Condition::Cary => self.f & 0b00000001 != 0,
-            Condition::NonCary => self.f & 0b00000001 == 0,
-            Condition::Zero => self.f & 0b01000000 != 0,
-            Condition::NonZero => self.f & 0b01000000 == 0,
-            Condition::SignNegative => self.f & 0b10000000 != 0,
-            Condition::SignPositive => self.f & 0b10000000 == 0,
-            Condition::ParityEven => self.f & 0b00000100 != 0,
-            Condition::ParityOdd => self.f & 0b00000100 == 0,
+            Condition::Carry => (self.f & CARRY_MASK) != 0,
+            Condition::NonCarry => (self.f & CARRY_MASK) == 0,
+            Condition::Zero => (self.f & ZERO_MASK) != 0,
+            Condition::NonZero => (self.f & ZERO_MASK) == 0,
+            Condition::SignNegative => (self.f & SIGN_MASK) != 0,
+            Condition::SignPositive => (self.f & SIGN_MASK) == 0,
+            Condition::ParityEven => (self.f & PARITY_OVERFLOW_MASK) != 0,
+            Condition::ParityOdd => (self.f & PARITY_OVERFLOW_MASK) == 0,
         }
     }
 
@@ -440,25 +549,6 @@ impl Regs {
         } else {
             self.f &= !flag.mask();
         }
-        value
-    }
-
-    /// returns iff1
-    pub fn get_iff1(&self) -> bool {
-        self.iff1
-    }
-    /// returns iff2
-    pub fn get_iff2(&self) -> bool {
-        self.iff2
-    }
-    /// changes iff1
-    pub fn set_iff1(&mut self, value: bool) -> bool {
-        self.iff1 = value;
-        value
-    }
-    /// changes iff2
-    pub fn set_iff2(&mut self, value: bool) -> bool {
-        self.iff2 = value;
         value
     }
 }
@@ -479,6 +569,5 @@ impl fmt::Display for Regs {
                 self.a_alt, self.f_alt, self.b_alt, self.c_alt,
                 self.d_alt, self.e_alt, self.h_alt, self.l_alt,
                 self.iff1, self.iff2)
-
     }
 }

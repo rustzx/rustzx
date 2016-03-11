@@ -3,9 +3,12 @@
 pub mod tables;
 mod common_types;
 mod registers;
-mod z80;
+mod bus;
+mod cpu;
+pub mod opcodes;
 
 // Bring nested types and functions to current scope
 pub use self::common_types::*;
 pub use self::registers::*;
-pub use self::z80::*;
+pub use self::bus::*;
+pub use self::cpu::*;

@@ -80,37 +80,6 @@ impl U3 {
     }
 }
 
-/// Conditions
-#[derive(Clone, Copy)]
-pub enum Condition {
-    NonZero,
-    Zero,
-    NonCary,
-    Cary,
-    ParityOdd,
-    ParityEven,
-    SignPositive,
-    SignNegative,
-}
-impl Condition {
-    /// Returns condition encoded in 3 bits
-    /// # Failures
-    /// Returns `None` if value is bigger than `0b111` or equals `0b110`
-    pub fn from_u3(code: U3) -> Condition {
-        match code {
-            U3::N0 => Condition::NonZero,
-            U3::N1 => Condition::Zero,
-            U3::N2 => Condition::NonCary,
-            U3::N3 => Condition::Cary,
-            U3::N4 => Condition::ParityOdd,
-            U3::N5 => Condition::ParityEven,
-            U3::N6 => Condition::SignPositive,
-            U3::N7 => Condition::SignNegative,
-        }
-    }
-}
-
-
 /// Instruction prefix type
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Prefix {
@@ -133,30 +102,9 @@ impl Prefix {
     }
 }
 
-#[derive(Clone, Copy)]
-// Flags for F register
-pub enum Flag {
-    Carry,
-    Sub,
-    ParityOveflow,
-    F3,
-    HalfCarry,
-    F5,
-    Zero,
-    Sign,
-}
-impl Flag {
-    /// get flag mask
-    pub fn mask(self) -> u8 {
-        match self {
-            Flag::Carry => 0b00000001,
-            Flag::Sub => 0b00000010,
-            Flag::ParityOveflow => 0b00000100,
-            Flag::F3 => 0b00001000,
-            Flag::HalfCarry => 0b00010000,
-            Flag::F5 => 0b00100000,
-            Flag::Zero => 0b01000000,
-            Flag::Sign => 0b10000000,
-        }
-    }
+/// Interrupt mode
+pub enum IntMode {
+    IM0,
+    IM1,
+    IM2,
 }
