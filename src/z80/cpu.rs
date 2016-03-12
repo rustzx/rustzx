@@ -124,7 +124,6 @@ impl Z80 {
                 // CB-prefixed
                 Prefix::CB => {
                     // NOTE: DEBUG
-                    println!("Prefix: CB");
                     let opcode = Opcode::from_byte(byte2);
                     if let Clocks::Some(exec_cycles) = execute_bits(self, bus, opcode,
                                                                                  Prefix::None) {
@@ -134,7 +133,6 @@ impl Z80 {
                 // ED-prefixed
                 Prefix::ED => {
                     // NOTE: DEBUG
-                    println!("Prefix: ED");
                     let opcode = Opcode::from_byte(byte2);
                     if let Clocks::Some(exec_cycles) = execute_extended(self, bus, opcode) {
                         cycle_counter += exec_cycles as u64;
