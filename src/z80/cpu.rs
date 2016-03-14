@@ -6,11 +6,12 @@ use super::opcodes::*;
 pub struct Z80 {
     /// CPU Regs struct
     pub regs: Regs,
-    /// cycles, which were uncounted from previous emulation
-    uncounted_cycles: u64,
     pub halted: bool,
     pub skip_interrupt: bool,
     pub int_mode: IntMode,
+    /// cycles, which were uncounted from previous emulation
+    cycles: u64,
+    io_as_rom: bool,
 }
 
 impl Z80 {
@@ -18,48 +19,118 @@ impl Z80 {
     pub fn new() -> Z80 {
         Z80 {
             regs: Regs::new(),
-            uncounted_cycles: 0,
             halted: false,
             skip_interrupt: false,
             int_mode: IntMode::IM0,
+            cycles: 0,
+            io_as_rom: false,
         }
-    }
-
-    // Returns true if z80 is halted at the moment
-    pub fn is_halted(&self) -> bool {
-        self.halted
     }
 
     /// read byte from rom and, pc += 1
-    pub fn rom_next_byte(&mut self, bus: &Z80Bus) -> u8 {
-        let addr = self.regs.get_pc();
-        self.regs.inc_pc(1);
-        bus.read(addr)
+    pub fn rom_next_byte(&mut self, bus: &mut Z80Bus) -> u8 {
+        if self.io_as_rom {
+            bus.read_interrupt()
+        } else {
+            let addr = self.regs.get_pc();
+            self.regs.inc_pc(1);
+            bus.read(addr)
+        }
     }
 
     /// read word from rom and, pc += 2
-    pub fn rom_next_word(&mut self, bus: &Z80Bus) -> u16 {
-        let (hi, lo);
-        lo = self.regs.get_pc();
-        hi = self.regs.inc_pc(1);
-        self.regs.inc_pc(1);
-        make_word(bus.read(hi), bus.read(lo))
+    pub fn rom_next_word(&mut self, bus: &mut Z80Bus) -> u16 {
+        if self.io_as_rom {
+            let (hi, lo);
+            lo = bus.read_interrupt();
+            hi = bus.read_interrupt();
+            make_word(hi, lo)
+        } else {
+            let (hi, lo);
+            lo = self.regs.get_pc();
+            hi = self.regs.inc_pc(1);
+            self.regs.inc_pc(1);
+            make_word(bus.read(hi), bus.read(lo))
+        }
+    }
+
+    /// returns current cycles count
+    pub fn get_cycles(&self) -> u64 {
+        self.cycles
+    }
+
+    /// resets cycle counter
+    pub fn reset_cycles(&mut self) {
+        self.cycles = 0;
     }
 
     /// emulation cycle, returns cycle count
-    pub fn emulate(&mut self, bus: &mut Z80Bus) -> u64 {
-
-        // cycle_counter initial value
-        let mut cycle_counter = 0_u64; // self.uncounted_cycles;
+    pub fn emulate(&mut self, bus: &mut Z80Bus) -> Result<(), ()> {
         // check interrupts
         if !self.skip_interrupt {
-            // TODO: implement interrupts
+            // at first check nmi
+            if bus.nmi() {
+                // send to bus halt end message
+                bus.halt(false);
+                // push pc and set pc to 0x0066
+                self.cycles += 11;
+                // reset iff1
+                self.regs.set_iff1(false);
+                execute_push_16(self, bus, RegName16::PC);
+                self.regs.set_pc(0x0066);
+                self.regs.inc_r(1);
+                return Result::Ok(());
+            } else if bus.int() {
+                // check flip-flop
+                if self.regs.get_iff1() {
+                    // then check int
+                    // send to bus halt end message
+                    bus.halt(false);
+                    self.regs.inc_r(1);
+                    // clear flip-flops
+                    self.regs.set_iff1(false);
+                    self.regs.set_iff2(false);
+                    match self.int_mode {
+                        // execute instruction on the bus
+                        IntMode::IM0 => {
+                            // instruction needs 2 more ticks
+                            self.cycles += 2;
+                            // disable nested interrupt check
+                            self.skip_interrupt = true;
+                            // set io as rom and execute instruction on it.
+                            self.io_as_rom = true;
+                            let result =  self.emulate(bus);
+                            self.io_as_rom = false;
+                            return result;
+                        }
+                        // push pc and jump to 0x0038
+                        IntMode::IM1 => {
+                            self.cycles += 13;
+                            execute_push_16(self, bus, RegName16::PC);
+                            self.regs.set_pc(0x0038);
+                            return Result::Ok(());
+                        }
+                        // jump using interrupt vector
+                        IntMode::IM2 => {
+                            self.cycles += 19;
+                            execute_push_16(self, bus, RegName16::PC);
+                            // build interrupt vector
+                            let addr = make_word(bus.read_interrupt(), self.regs.get_i());
+                            self.regs.set_pc(addr);
+                            return Result::Ok(());
+                        }
+                    }
+                }
+            }
         } else {
+            // allow interrupts again
             self.skip_interrupt = false;
         }
+        // halt
         if self.halted {
             // execute nop NOP
-            return execute_internal_nop(self) as u64;
+            execute_internal_nop(self);
+            return Result::Ok(());
         };
         // Figure out instruction execution group:
         let byte1 = self.rom_next_byte(bus);
@@ -86,7 +157,7 @@ impl Z80 {
                             let opcode = Opcode::from_byte(self.rom_next_byte(bus));
                             if let Clocks::Some(exec_cycles) =
                                 execute_bits(self, bus, opcode, Prefix::DD) {
-                                cycle_counter += exec_cycles as u64;
+                                self.cycles += exec_cycles as u64;
                             };
                         }
                         Prefix::CB => {
@@ -96,7 +167,7 @@ impl Z80 {
                             let opcode = Opcode::from_byte(self.rom_next_byte(bus));
                             if let Clocks::Some(exec_cycles) =
                                 execute_bits(self, bus, opcode, Prefix::FD) {
-                                cycle_counter += exec_cycles as u64;
+                                self.cycles += exec_cycles as u64;
                             };
                         }
                         Prefix::None => {
@@ -107,14 +178,14 @@ impl Z80 {
                                 Prefix::DD => {
                                     if let Clocks::Some(exec_cycles) =
                                            execute_normal(self, bus, opcode, Prefix::DD) {
-                                        cycle_counter += exec_cycles as u64;
+                                        self.cycles += exec_cycles as u64;
                                     };
                                 }
                                 // FD prefixed
                                 _ => {
                                     if let Clocks::Some(exec_cycles) =
                                            execute_normal(self, bus, opcode, Prefix::FD) {
-                                        cycle_counter += exec_cycles as u64;
+                                        self.cycles += exec_cycles as u64;
                                     };
                                 }
                             };
@@ -127,7 +198,7 @@ impl Z80 {
                     let opcode = Opcode::from_byte(byte2);
                     if let Clocks::Some(exec_cycles) = execute_bits(self, bus, opcode,
                                                                                  Prefix::None) {
-                        cycle_counter += exec_cycles as u64;
+                        self.cycles += exec_cycles as u64;
                     };
                 }
                 // ED-prefixed
@@ -135,7 +206,7 @@ impl Z80 {
                     // NOTE: DEBUG
                     let opcode = Opcode::from_byte(byte2);
                     if let Clocks::Some(exec_cycles) = execute_extended(self, bus, opcode) {
-                        cycle_counter += exec_cycles as u64;
+                        self.cycles += exec_cycles as u64;
                     };
                 }
                 _ => unreachable!(),
@@ -144,10 +215,9 @@ impl Z80 {
             // Non-prefixed
             let opcode = Opcode::from_byte(byte1);
             if let Clocks::Some(exec_cycles) = execute_normal(self, bus, opcode, Prefix::None) {
-                cycle_counter += exec_cycles as u64;
+                self.cycles += exec_cycles as u64;
             };
         };
-
-        cycle_counter
+        Result::Ok(())
     }
 }

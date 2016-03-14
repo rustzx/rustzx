@@ -18,7 +18,7 @@ impl ZXComputer {
     }
     /// emulate max 100 ticks, just testing
     pub fn emulate(&mut self) {
-        self.cpu.emulate(&mut self.bus);
+        self.cpu.emulate(&mut self.bus).unwrap();
     }
     /// load default rom, just testing
     pub fn load_default_rom(&mut self) {

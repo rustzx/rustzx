@@ -11,7 +11,7 @@ fn main() {
     let mut comp = ZXComputer::new();
     comp.load_default_rom();
     let t1 = time::precise_time_ns();
-    while !comp.cpu.is_halted() {
+    while !comp.bus.cpu_halted() {
         comp.emulate();
     }
     let t2 = time::precise_time_ns();

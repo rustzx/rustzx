@@ -11,6 +11,7 @@ const RAM_SIZE: usize = 1024 * 48;
 pub struct ZXBus {
     rom: Vec<u8>,
     ram: [u8; RAM_SIZE],
+    halted: bool,
 }
 
 impl ZXBus {
@@ -19,6 +20,7 @@ impl ZXBus {
         ZXBus {
             rom: Vec::new(),
             ram: [0; RAM_SIZE],
+            halted: false,
         }
     }
 
@@ -29,6 +31,10 @@ impl ZXBus {
         file.read_to_end(&mut buffer).unwrap();
         self.rom = buffer;
     }
+
+    pub fn cpu_halted(&self) -> bool {
+        self.halted
+    }
 }
 
 impl Z80Bus for ZXBus {
@@ -37,6 +43,7 @@ impl Z80Bus for ZXBus {
             self.ram[addr as usize - ROM_SIZE] = data;
         }
     }
+    
     fn read(&self, addr: u16) -> u8 {
         if (addr as usize) < ROM_SIZE {
             if addr as usize >= self.rom.len() {
@@ -48,16 +55,18 @@ impl Z80Bus for ZXBus {
             self.ram[addr as usize - ROM_SIZE]
         }
     }
-    fn write_io(&mut self, addr: u16, data: u8) {
-        println!("Data {:#X} was written to port {:#X}", data, addr);
-    }
+
     #[allow(unused_variables)]
-    fn read_io(&mut self, addr: u16) -> u8 {
-        println!("Read from port {:#X}", addr);
+    fn write_io(&mut self, addr: u16, data: u8) {
+
+    }
+
+    #[allow(unused_variables)]
+    fn read_io(&self, addr: u16) -> u8 {
         0xCC
     }
 
-    fn reti_signal(&mut self) {
-        println!("RETI BUS SIGNAL!");
+    fn halt(&mut self, halted: bool) {
+        self.halted = halted;
     }
 }

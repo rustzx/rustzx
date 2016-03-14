@@ -130,7 +130,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) -> Cloc
                     // restore PC
                     execute_pop_16(cpu, bus, RegName16::PC);
                     if opcode.y == U3::N1 {
-                        bus.reti_signal();
+                        bus.reti();
                     }
                 }
                 // IM im[y]

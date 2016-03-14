@@ -12,5 +12,6 @@ Current next step is serious code refactoring and interrupts implementation
 
 ## Log
 [02.02.2016] First commit  
-[06.03.2016] All Z80 instruction groups have been implemented! :tada:
-[11.03.2016] Serious code reorganization
+[06.03.2016] All Z80 instruction groups have been implemented! :tada:  
+[11.03.2016] Serious code reorganization  
+[14.03.2016] All features of CPU have been implemented :sunglasses:  

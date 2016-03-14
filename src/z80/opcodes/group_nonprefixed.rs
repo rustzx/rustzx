@@ -318,7 +318,6 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 // RRA Rotate right trough carry
                 // [0b00011111] : 0x1F
                 U3::N3 => {
-                    let before = cpu.regs.get_acc();
                     let mut data = cpu.regs.get_acc();
                     let carry = (data & 0x01) != 0;
                     data = data.wrapping_shr(1);
@@ -400,6 +399,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
         // [0b01110110] : 0x76
         U2::N1 if (opcode.z == U3::N6) && (opcode.y == U3::N6) => {
             cpu.halted = true;
+            bus.halt(true);
         }
         // ---------------------------------
         // [0b01yyyzzz] instruction section
