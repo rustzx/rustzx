@@ -1,3 +1,4 @@
+use utils::*;
 use z80::*;
 /// Operand for 8-bit LD instructions
 pub enum LoadOperand8 {

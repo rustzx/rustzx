@@ -4,3 +4,4 @@ version = "0.1.2"
 authors = ["Vladislav Nikonov <pacmancoder@gmail.com>"]
 [dependencies]
 time = "0.1"
+glium = "0.13"

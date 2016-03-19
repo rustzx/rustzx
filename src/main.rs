@@ -1,19 +1,17 @@
 #![allow(dead_code)]
 
+#[macro_use]
+extern crate glium;
 extern crate time;
 
 mod utils;
 mod z80;
 mod zx;
+mod app;
 
-use zx::ZXComputer;
+use app::RustZXApp;
+
 fn main() {
-    let mut comp = ZXComputer::new();
-    comp.load_default_rom();
-    let t1 = time::precise_time_ns();
-    while !comp.bus.cpu_halted() {
-        comp.emulate();
-    }
-    let t2 = time::precise_time_ns();
-    println!("Emulation time: {} ns", t2 - t1);
+    let mut app = RustZXApp::new();
+    app.start();
 }

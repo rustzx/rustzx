@@ -43,7 +43,7 @@ impl Z80Bus for ZXBus {
             self.ram[addr as usize - ROM_SIZE] = data;
         }
     }
-    
+
     fn read(&self, addr: u16) -> u8 {
         if (addr as usize) < ROM_SIZE {
             if addr as usize >= self.rom.len() {

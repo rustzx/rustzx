@@ -1,5 +1,8 @@
-//! Small pack of useful functions
+pub mod smallnum;
+pub use self::smallnum::*;
+
 use std::{i8, i16};
+
 /// Internal function for making word from 2 bytes
 pub fn make_word(hi: u8, lo: u8) -> u16 {
     ((hi as u16) << 8) | (lo as u16)

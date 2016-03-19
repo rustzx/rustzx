@@ -2,7 +2,7 @@
 
 use utils::*;
 use std::fmt;
-use z80::{Prefix, U2, U3};
+use z80::Prefix;
 
 pub const CARRY_MASK: u8 = 0b00000001;
 pub const SUB_MASK: u8 = 0b00000010;

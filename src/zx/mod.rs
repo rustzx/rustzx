@@ -1,6 +1,5 @@
-//! ZX Spectrum computer mod.
-mod bus;
-mod computer;
+pub mod memory;
+pub mod controller;
 
-pub use self::bus::ZXBus;
-pub use self::computer::ZXComputer;
+pub use self::controller::ZXController;
+pub use self::memory::{ZXMemory, RomType, RamType};
