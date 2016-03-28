@@ -16,6 +16,7 @@ And then just execute
 ```bash
 cargo run --release
 ```
+**Note:** Emulator at the moment runs at double speed.  
 ## Log
 [02.02.2016] First commit  
 [06.03.2016] All Z80 instruction groups have been implemented! :tada:  
