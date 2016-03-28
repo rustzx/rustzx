@@ -83,14 +83,15 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) -> Cloc
                         }
                     }
                     // set f3, f5, z, s
+                    let (rh, _) = split_word(result);
                     cpu.regs.set_flag(Flag::Carry, carry);
                     cpu.regs.set_flag(Flag::Sub, sub);
                     cpu.regs.set_flag(Flag::ParityOveflow, pv);
-                    cpu.regs.set_flag(Flag::F3, result & 0b1000 != 0);
-                    cpu.regs.set_flag(Flag::F5, result & 0b100000 != 0);
+                    cpu.regs.set_flag(Flag::F3, rh & 0x08 != 0);
+                    cpu.regs.set_flag(Flag::F5, rh & 0x20 != 0);
                     cpu.regs.set_flag(Flag::HalfCarry, half_carry);
                     cpu.regs.set_flag(Flag::Zero, result == 0);
-                    cpu.regs.set_flag(Flag::Sign, result & 0x8000 != 0);
+                    cpu.regs.set_flag(Flag::Sign, rh & 0x80 != 0);
                     cpu.regs.set_hl(result);
                 }
                 // LD

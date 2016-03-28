@@ -100,14 +100,12 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 // LD (BC), A
                 // [0b00000010] : 0x02
                 U1::N0 if opcode.p == U2::N0 => {
-                    bus.write(cpu.regs.get_reg_16(RegName16::BC),
-                              cpu.regs.get_reg_8(RegName8::A));
+                    bus.write(cpu.regs.get_bc(), cpu.regs.get_acc());
                 }
                 // LD (DE), A
                 // [0b00010010] : 0x12
                 U1::N0 if opcode.p == U2::N1 => {
-                    bus.write(cpu.regs.get_reg_16(RegName16::DE),
-                              cpu.regs.get_reg_8(RegName8::A));
+                    bus.write(cpu.regs.get_de(), cpu.regs.get_acc());
                 }
                 // LD (nn), HL/IX/IY
                 // [0b00100010] : 0x22
@@ -120,19 +118,19 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 // [0b00110010] : 0x32
                 U1::N0 => {
                     let addr = cpu.rom_next_word(bus);
-                    bus.write(addr, cpu.regs.get_reg_8(RegName8::A));
+                    bus.write(addr, cpu.regs.get_acc());
                 }
                 // LD A, (BC)
                 // [0b00001010] : 0x0A
                 U1::N1 if opcode.p == U2::N0 => {
-                    let addr = cpu.regs.get_reg_16(RegName16::BC);
-                    cpu.regs.set_reg_8(RegName8::A, bus.read(addr));
+                    let addr = cpu.regs.get_bc();
+                    cpu.regs.set_acc(bus.read(addr));
                 }
                 // LD A, (DE)
                 // [0b00011010] : 0x1A
                 U1::N1 if opcode.p == U2::N1 => {
-                    let addr = cpu.regs.get_reg_16(RegName16::BC);
-                    cpu.regs.set_reg_8(RegName8::A, bus.read(addr));
+                    let addr = cpu.regs.get_de();
+                    cpu.regs.set_acc(bus.read(addr));
                 }
                 // LD HL/IX/IY, (nn)
                 // [0b00101010] : 0x2A
@@ -145,7 +143,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 // [0b00111010] : 0x3A
                 U1::N1 => {
                     let addr = cpu.rom_next_word(bus);
-                    cpu.regs.set_reg_8(RegName8::A, bus.read(addr));
+                    cpu.regs.set_acc(bus.read(addr));
                 }
             };
         }
@@ -175,7 +173,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             //   get data
             // ------------
             if let Some(mut reg) = RegName8::from_u3(opcode.y) {
-                // INC r[y], DEC y[y] ; IX and IY also used
+                // INC r[y], DEC r[y] ; IX and IY also used
                 // INC [0b00yyy100] : 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x3C
                 // DEC [0b00yyy101] : 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x3D
                 reg = reg.with_prefix(prefix);
@@ -186,7 +184,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 // INC [0b00110100], DEC [0b00110101] : 0x34, 0x35
                 let addr = if prefix == Prefix::None {
                     // we have IND/DEC (HL)
-                    cpu.regs.get_reg_16(RegName16::HL)
+                    cpu.regs.get_hl()
                 } else {
                     // we have INC/DEC (IX/IY + d)
                     let d = cpu.rom_next_byte(bus) as i8;
@@ -213,9 +211,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 cpu.regs.set_flag(Flag::HalfCarry, half_borrow_8(data, 1));
             }
             cpu.regs.set_flag(Flag::Zero, result == 0);
-            cpu.regs.set_flag(Flag::Sign, result & 0x80 != 0); // last bit check
-            cpu.regs.set_flag(Flag::F3, result & 0x08 != 0); // 3 bit
-            cpu.regs.set_flag(Flag::F5, result & 0x20 != 0); // 5 bit
+            cpu.regs.set_flag(Flag::Sign, (result & 0x80) != 0); // last bit check
+            cpu.regs.set_flag(Flag::F3, (result & 0x08) != 0); // 3 bit
+            cpu.regs.set_flag(Flag::F5, (result & 0x20) != 0); // 5 bit
             // ------------
             //  write data
             // ------------
@@ -238,7 +236,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 // INDIRECT LD (HL/IX+d/IY+d), N <PREFIX>[0b00110110] : 0x36
                 if prefix == Prefix::None {
                     // LD (HL)
-                    LoadOperand8::Indirect(cpu.regs.get_reg_16(RegName16::HL))
+                    LoadOperand8::Indirect(cpu.regs.get_hl())
                 } else {
                     // LD (IX+d/ IY+d)
                     let d = cpu.rom_next_byte(bus) as i8;
@@ -266,7 +264,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 U3::N0 => {
                     let mut data = cpu.regs.get_acc();
                     let carry = (data & 0x80) != 0;
-                    data = data.wrapping_shl(1);
+                    data <<= 1;
                     if carry {
                         data |= 1;
                     } else {
@@ -284,7 +282,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 U3::N1 => {
                     let mut data = cpu.regs.get_acc();
                     let carry = (data & 0x01) != 0;
-                    data = data.wrapping_shr(1);
+                    data >>= 1;
                     if carry {
                         data |= 0x80;
                     } else {
@@ -302,7 +300,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 U3::N2 => {
                     let mut data = cpu.regs.get_acc();
                     let carry = (data & 0x80) != 0;
-                    data = data.wrapping_shl(1);
+                    data <<= 1;
                     if cpu.regs.get_flag(Flag::Carry) {
                         data |= 1;
                     } else {
@@ -320,7 +318,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 U3::N3 => {
                     let mut data = cpu.regs.get_acc();
                     let carry = (data & 0x01) != 0;
-                    data = data.wrapping_shr(1);
+                    data >>= 1;
                     if cpu.regs.get_flag(Flag::Carry) {
                         data |= 0x80;
                     } else {
@@ -421,7 +419,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     LoadOperand8::Reg(reg)
                 } else {
                     if prefix == Prefix::None {
-                        LoadOperand8::Indirect(cpu.regs.get_reg_16(RegName16::HL))
+                        LoadOperand8::Indirect(cpu.regs.get_hl())
                     } else {
                         let d = cpu.rom_next_byte(bus) as i8;
                         LoadOperand8::Indirect(word_displacement(cpu.regs.get_reg_16(
@@ -433,7 +431,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     LoadOperand8::Reg(reg)
                 } else {
                     if prefix == Prefix::None {
-                        LoadOperand8::Indirect(cpu.regs.get_reg_16(RegName16::HL))
+                        LoadOperand8::Indirect(cpu.regs.get_hl())
                     } else {
                         let d = cpu.rom_next_byte(bus) as i8;
                         LoadOperand8::Indirect(word_displacement(cpu.regs.get_reg_16(
@@ -465,7 +463,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             } else {
                 // alu[y] (HL/IX+d/IY+d)
                 if prefix == Prefix::None {
-                    bus.read(cpu.regs.get_reg_16(RegName16::HL))
+                    bus.read(cpu.regs.get_hl())
                 } else {
                     let d = cpu.rom_next_byte(bus) as i8;
                     let addr = cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix));
@@ -575,10 +573,10 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 // EX DE, HL
                 // [0b11101011]
                 U3::N5 => {
-                    let de = cpu.regs.get_reg_16(RegName16::DE);
-                    let hl = cpu.regs.get_reg_16(RegName16::HL);
-                    cpu.regs.set_reg_16(RegName16::DE, hl);
-                    cpu.regs.set_reg_16(RegName16::HL, de);
+                    let de = cpu.regs.get_de();
+                    let hl = cpu.regs.get_hl();
+                    cpu.regs.set_de(hl);
+                    cpu.regs.set_hl(de);
                 }
                 // DI
                 // [0b11110011] : F3
@@ -604,7 +602,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             let addr = cpu.rom_next_word(bus);
             if cpu.regs.eval_condition(Condition::from_u3(opcode.y)) {
                 execute_push_16(cpu, bus, RegName16::PC);
-                cpu.regs.set_reg_16(RegName16::PC, addr);
+                cpu.regs.set_pc(addr);
                 clocks += 5;
             } else {
                 clocks += 3;
@@ -625,7 +623,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                         U2::N0 => {
                             let addr = cpu.rom_next_word(bus);
                             execute_push_16(cpu, bus, RegName16::PC);
-                            cpu.regs.set_reg_16(RegName16::PC, addr);
+                            cpu.regs.set_pc(addr);
                         }
                         // [0b11011101] : DD
                         U2::N1 => {

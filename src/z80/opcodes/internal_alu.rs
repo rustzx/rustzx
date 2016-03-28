@@ -77,12 +77,12 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
     };
     // CP, f3 and f5 from acc, else from result
     if alu_code == U3::N7 {
-        f3 = acc & 0b1000 != 0;
-        f5 = acc & 0b100000 != 0;
+        f3 = operand & 0x08 != 0;
+        f5 = operand & 0x20 != 0;
         // if CP, don't write result
     } else {
-        f3 = result & 0b1000 != 0;
-        f5 = result & 0b100000 != 0;
+        f3 = result & 0x08 != 0;
+        f5 = result & 0x20 != 0;
         cpu.regs.set_acc(result);
     };
     zero = result == 0;

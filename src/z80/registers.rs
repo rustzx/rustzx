@@ -366,7 +366,7 @@ impl Regs {
 
     /// Shift program counter relatively with signed displacement
     pub fn shift_pc(&mut self, displacement: i8) -> u16 {
-        self.pc = word_displacement(self.sp, displacement);
+        self.pc = word_displacement(self.pc, displacement);
         self.pc
     }
 
