@@ -11,6 +11,7 @@ pub struct ZXController {
     int: bool,
     keyboard: [u8; 8],
     border_color: u8,
+    ear: bool,
 }
 
 impl ZXController {
@@ -21,6 +22,7 @@ impl ZXController {
             int: false,
             keyboard: [0xFF; 8],
             border_color: 0x00,
+            ear: true,
         }
     }
 
@@ -30,6 +32,10 @@ impl ZXController {
 
     pub fn attach_screen(&mut self, screen: ZXScreen) {
         self.screen = Some(screen);
+    }
+
+    pub fn set_ear(&mut self, value: bool) {
+        self.ear = value;
     }
 
     pub fn get_screen_texture(&self) -> &[u8] {
@@ -108,6 +114,10 @@ impl Z80Bus for ZXController {
                     if ((h >> n) & 0x01) == 0 {
                         tmp &= self.keyboard[n];
                     }
+                };
+                // ear input;
+                if !self.ear {
+                    tmp &= 0b10111111;
                 };
                 tmp
             }

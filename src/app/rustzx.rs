@@ -1,6 +1,7 @@
 use std::thread;
 use glium::glutin::{WindowBuilder, Event,  ElementState as KeyState};
 use glium::DisplayBuild;
+use glium::glutin::{VirtualKeyCode as VKey};
 
 use super::video::ZXScreenRenderer;
 use super::keyboard::vkey_to_zxkey;
@@ -40,6 +41,8 @@ impl RustZXApp {
         let mut controller = ZXController::new();
         let mut cpu = Z80::new();
         let mut memory = ZXMemory::new(RomType::K16, RamType::K48);
+        let mut tape = tape::Tap::new();
+        tape.insert("/home/pacmancoder/test.tap");
         memory.load_rom(0, include_bytes!("48.rom")).unwrap();
         controller.atach_memory(memory);
         controller.attach_screen(ZXScreen::new());
@@ -54,7 +57,7 @@ impl RustZXApp {
         let _cpu_freq = 3_500_000u64;
         // NOTE: 2x speed
         let frame_clocks = 69888u64 * 2u64; // clocks per frame
-        let frame_target_dt_ns = ms_to_ns((1000/50) as f64);
+        let frame_target_dt_ns = ms_to_ns((1000/500) as f64);
         //let frame_target_dt_ns = s_to_ns(frame_clocks as f64 / cpu_freq as f64);
         let mut excess_clocks = 0u64; // clocks, which were uncounted from prev frame
         let mut frame_counter = 0_usize;
@@ -63,14 +66,19 @@ impl RustZXApp {
             // start time, in ns
             let frame_start_ns = time::precise_time_ns();
             let mut clocks = 0;
-            // interrupt on first instruction
+            // interrupt on first instruction after frame start
             cpu.request_interrupt();
-            while clocks < frame_clocks {
-                clocks += cpu.emulate(&mut controller);
+            while clocks + excess_clocks < frame_clocks {
+                let cycle_clocks = cpu.emulate(&mut controller);
+                clocks += cycle_clocks;
+                tape.process_clocks(cycle_clocks);
+                controller.set_ear(tape.current_bit());
             };
             if clocks + excess_clocks > frame_clocks {
                 excess_clocks = (clocks + excess_clocks) - frame_clocks;
             };
+            tape.process_clocks(excess_clocks);
+
             let cpu_dt_ns =  time::precise_time_ns() - frame_start_ns;
             // render display
             if (frame_counter % 32) == 0 {
@@ -85,10 +93,17 @@ impl RustZXApp {
                         break 'render_loop;
                     }
                     Event::KeyboardInput(state, _, Some(key_code)) => {
-                        if let Some(key) =  vkey_to_zxkey(key_code) {
-                            match state {
-                                KeyState::Pressed => controller.send_key(key, true),
-                                KeyState::Released => controller.send_key(key, false),
+                        match key_code {
+                            VKey::Insert => {
+                                tape.play();
+                            }
+                            _ => {
+                                if let Some(key) =  vkey_to_zxkey(key_code) {
+                                    match state {
+                                        KeyState::Pressed => controller.send_key(key, true),
+                                        KeyState::Released => controller.send_key(key, false),
+                                    }
+                                }
                             }
                         }
                     }
