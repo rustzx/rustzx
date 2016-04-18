@@ -1,6 +1,7 @@
 use super::*;
 use z80::*;
 use utils::*;
+use z80::tables::*;
 
 /// Extended instruction group (ED-prefixed)
 /// Operations are assorted.
@@ -54,45 +55,38 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) -> Cloc
                     let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry)) as u16;
                     let operand = cpu.regs.get_reg_16(RegName16::from_u2_sp(opcode.p));
                     let hl =  cpu.regs.get_hl();
-                    let (carry, sub, pv, half_carry);
-                    let result;
+                    let (sub, pv, half_carry);
+                    let result: u32;
                     match opcode.q {
                         // SBC HL, rp[p]
                         U1::N0 => {
-                            let (r_tmp, c1) = hl.overflowing_sub(operand);
-                            let (r, c2) = r_tmp.overflowing_sub(prev_carry);
-                            carry = c1 | c2;
-                            result = r;
+                            result = (hl as u32).wrapping_sub(operand as u32)
+                                .wrapping_sub(prev_carry as u32);
+                            let lookup = lookup16_r12(hl, operand, result as u16);
+                            pv = OVERFLOW_SUB_TABLE[(lookup >> 4) as usize] != 0;
+                            half_carry = HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0;
                             sub = true;
-                            pv = check_sub_overflow_16(hl as i16, operand as i16) |
-                                 check_sub_overflow_16(r_tmp as i16, prev_carry as i16);
-                            half_carry = half_borrow_16(hl, operand) |
-                                         half_borrow_16(r_tmp, prev_carry);
                         }
                         // ADC HL, rp[p]
                         U1::N1 => {
-                            let (r_tmp, c1) = hl.overflowing_add(operand);
-                            let (r, c2) = r_tmp.overflowing_add(prev_carry);
-                            carry = c1 | c2;
-                            result = r;
+                            result = (hl as u32).wrapping_add(operand as u32)
+                                .wrapping_add(prev_carry as u32);
+                            let lookup = lookup16_r12(hl, operand, result as u16);
+                            pv = OVERFLOW_ADD_TABLE[(lookup >> 4) as usize] != 0;
+                            half_carry = HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0;
                             sub = false;
-                            pv = check_add_overflow_16(hl as i16, operand as i16) |
-                                 check_add_overflow_16(r_tmp as i16, prev_carry as i16);
-                            half_carry = half_carry_16(hl, operand) |
-                                         half_carry_16(r_tmp, prev_carry);
                         }
                     }
-                    // set f3, f5, z, s
-                    let (rh, _) = split_word(result);
-                    cpu.regs.set_flag(Flag::Carry, carry);
+                    // set flags
+                    cpu.regs.set_flag(Flag::Carry, result > 0xFFFF);
                     cpu.regs.set_flag(Flag::Sub, sub);
                     cpu.regs.set_flag(Flag::ParityOveflow, pv);
-                    cpu.regs.set_flag(Flag::F3, rh & 0x08 != 0);
-                    cpu.regs.set_flag(Flag::F5, rh & 0x20 != 0);
+                    cpu.regs.set_flag(Flag::F3, result & 0x0800 != 0);
+                    cpu.regs.set_flag(Flag::F5, result & 0x2000 != 0);
                     cpu.regs.set_flag(Flag::HalfCarry, half_carry);
-                    cpu.regs.set_flag(Flag::Zero, result == 0);
-                    cpu.regs.set_flag(Flag::Sign, rh & 0x80 != 0);
-                    cpu.regs.set_hl(result);
+                    cpu.regs.set_flag(Flag::Zero, (result as u16) == 0);
+                    cpu.regs.set_flag(Flag::Sign, result & 0x8000 != 0);
+                    cpu.regs.set_hl(result as u16);
                 }
                 // LD
                 U3::N3 => {
@@ -164,12 +158,28 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) -> Cloc
                         // LD A, I
                         U3::N2 => {
                             let i = cpu.regs.get_i();
-                            cpu.regs.set_acc(i);
+                            let result = cpu.regs.set_acc(i);
+                            let iff2 = cpu.regs.get_iff2();
+                            cpu.regs.set_flag(Flag::Sub, false);
+                            cpu.regs.set_flag(Flag::HalfCarry, false);
+                            cpu.regs.set_flag(Flag::Sign, (result & 0x80) != 0);
+                            cpu.regs.set_flag(Flag::Zero, result == 0);
+                            cpu.regs.set_flag(Flag::F3, (result & 0x08) != 0);
+                            cpu.regs.set_flag(Flag::F5, (result & 0x20) != 0);
+                            cpu.regs.set_flag(Flag::ParityOveflow, iff2);
                         }
                         // LD A, R
                         U3::N3 => {
                             let r = cpu.regs.get_r();
-                            cpu.regs.set_acc(r);
+                            let result = cpu.regs.set_acc(r);
+                            let iff2 = cpu.regs.get_iff2();
+                            cpu.regs.set_flag(Flag::Sub, false);
+                            cpu.regs.set_flag(Flag::HalfCarry, false);
+                            cpu.regs.set_flag(Flag::Sign, (result & 0x80) != 0);
+                            cpu.regs.set_flag(Flag::Zero, result == 0);
+                            cpu.regs.set_flag(Flag::F3, (result & 0x08) != 0);
+                            cpu.regs.set_flag(Flag::F5, (result & 0x20) != 0);
+                            cpu.regs.set_flag(Flag::ParityOveflow, iff2);
                         }
                         // RRD
                         U3::N4 => {

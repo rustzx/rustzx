@@ -1,5 +1,6 @@
 use z80::*;
 use utils::*;
+use z80::tables::*;
 
 /// 8-bit ALU operations
 pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
@@ -10,45 +11,50 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
     match alu_code {
         // ADD A, Operand
         U3::N0 => {
-            let (r, c) = acc.overflowing_add(operand);
-            result = r;
-            carry = c;
+            let temp: u16 =  (acc as u16).wrapping_add(operand as u16);
+            result = temp as u8;
+            // get lookup code in r12 form [read file overflows.rs in z80/tables module]
+            // high nibble will be bit 7 in r12 form, low nibble will be 3 bit in same form
+            let lookup = lookup8_r12(acc, operand, temp as u8);
+            // using lookup for finding overflow and half carry flags
+            pv = OVERFLOW_ADD_TABLE[(lookup >> 4) as usize] != 0;
+            half_carry = HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0;
+            carry = temp > 0xFF;
             sub = false;
-            pv = check_add_overflow_8(acc as i8, operand as i8);
-            half_carry = half_carry_8(acc, operand);
         }
         // ADC A, Operand
         U3::N1 => {
             let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry));
-            let (r_tmp, c1) = acc.overflowing_add(operand);
-            let (r, c2) = r_tmp.overflowing_add(prev_carry);
-            result = r;
-            carry = c1 | c2;
+            let temp: u16 = (acc as u16).wrapping_add(operand as u16)
+                .wrapping_add(prev_carry as u16);
+            result = temp as u8;
+            let lookup = lookup8_r12(acc, operand, temp as u8);
+            pv = OVERFLOW_ADD_TABLE[(lookup >> 4) as usize] != 0;
+            half_carry = HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0;
+            carry = temp > 0xFF;
             sub = false;
-            pv = check_add_overflow_8(acc as i8, operand as i8) |
-                 check_add_overflow_8(r_tmp as i8, prev_carry as i8);
-            half_carry = half_carry_8(acc, operand) | half_carry_8(r_tmp, prev_carry);
         }
         // SUB A, Operand
         U3::N2 | U3::N7 => {
-            let (r, c) = acc.overflowing_sub(operand);
-            result = r;
-            carry = c;
+            let temp: u16 = (acc as u16).wrapping_sub(operand as u16);
+            result = temp as u8;
+            let lookup = lookup8_r12(acc, operand, temp as u8);
+            pv = OVERFLOW_SUB_TABLE[(lookup >> 4) as usize] != 0;
+            half_carry = HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0;
+            carry = temp > 0xFF;
             sub = true;
-            pv = check_sub_overflow_8(acc as i8, operand as i8);
-            half_carry = half_borrow_8(acc, operand);
         }
         // SBC A, Operand; CP A, Operand
         U3::N3 => {
             let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry));
-            let (r_tmp, c1) = acc.overflowing_sub(operand);
-            let (r, c2) = r_tmp.overflowing_sub(prev_carry);
-            result = r;
-            carry = c1 | c2;
+            let temp: u16 = (acc as u16).wrapping_sub(operand as u16)
+                .wrapping_sub(prev_carry as u16);
+            result = temp as u8;
+            let lookup = lookup8_r12(acc, operand, temp as u8);
+            pv = OVERFLOW_SUB_TABLE[(lookup >> 4) as usize] != 0;
+            half_carry = HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0;
+            carry = temp > 0xFF;
             sub = true;
-            pv = check_sub_overflow_8(acc as i8, operand as i8) |
-                 check_sub_overflow_8(r_tmp as i8, prev_carry as i8);
-            half_carry = half_borrow_8(acc, operand) | half_borrow_8(r_tmp, prev_carry);
         }
         // AND A, Operand
         U3::N4 => {

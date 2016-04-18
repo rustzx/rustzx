@@ -65,20 +65,18 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: Pre
                 // BIT y, r[z]
                 // [0b01yyyzzz] : 0x40...0x7F
                 U2::N1 => {
-                    let bit_is_set = data & (0x01 << bit_number) == 0;
+                    let bit_is_set = (data & (0x01 << bit_number)) != 0;
                     cpu.regs.set_flag(Flag::Sub, false);
                     cpu.regs.set_flag(Flag::HalfCarry, true);
-                    cpu.regs.set_flag(Flag::Zero, bit_is_set);
-                    cpu.regs.set_flag(Flag::ParityOveflow, bit_is_set);
+                    cpu.regs.set_flag(Flag::Zero, !bit_is_set);
+                    cpu.regs.set_flag(Flag::ParityOveflow, !bit_is_set);
                     cpu.regs.set_flag(Flag::Sign, bit_is_set && (bit_number == 7));
                     if let RotOperand8::Indirect(addr) = operand {
-                        // copy of high address byte 3 and 5 bits
                         cpu.regs.set_flag(Flag::F3, addr & 0x0800 != 0);
                         cpu.regs.set_flag(Flag::F5, addr & 0x2000 != 0);
                     } else {
-                        // wierd rules
-                        cpu.regs.set_flag(Flag::F3, bit_is_set && (bit_number == 3));
-                        cpu.regs.set_flag(Flag::F5, bit_is_set && (bit_number == 5));
+                        cpu.regs.set_flag(Flag::F3, (data & 0x08) != 0);
+                        cpu.regs.set_flag(Flag::F5, (data & 0x20) != 0);
                     };
                     result = 0; // mask compiler error
                 }

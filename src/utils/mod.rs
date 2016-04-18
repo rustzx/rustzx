@@ -15,6 +15,8 @@ pub fn split_word(value: u16) -> (u8, u8) {
     ((value >> 8) as u8, value as u8)
 }
 
+// TODO: REMOVE HALF_CARRY AND OVERFLOW CHECK FUNCTIONS, REPLACE WITH LOOKUP TABLES
+
 /// check half_carry after 16 bit addition
 #[inline]
 pub fn half_carry_16(a: u16, b: u16) -> bool {
@@ -39,12 +41,7 @@ pub fn half_borrow_8(a: u8, b: u8) -> bool {
 /// preforms word displacement
 #[inline]
 pub fn word_displacement(word: u16, d: i8) -> u16 {
-    let result = if d >= 0 {
-        word.wrapping_add(d as u16)
-    } else {
-        word.wrapping_sub(d.abs() as u16)
-    };
-    result
+    (word as i32).wrapping_add(d as i32) as u16
 }
 
 /// checks signed 8-bit overflow after addition

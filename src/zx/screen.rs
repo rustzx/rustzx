@@ -2,6 +2,9 @@ use utils::*;
 pub const SCREEN_WIDTH: usize = 256;
 pub const SCREEN_HEIGHT: usize = 192;
 pub const PIXEL_COUNT: usize = SCREEN_HEIGHT * SCREEN_WIDTH;
+pub const PIXELS_PER_BYTE: u64 = 8;
+pub const BYTES_PER_ROW: u64 = SCREEN_WIDTH as u64 / PIXELS_PER_BYTE;
+pub const ROWS_PER_ATTR: u64 = 8;
 
 fn get_pixel_base_index(addr: u16) -> usize {
     let (h, l) = split_word(addr);

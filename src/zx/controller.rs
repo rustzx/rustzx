@@ -1,28 +1,58 @@
 use z80::Z80Bus;
 use zx::ZXMemory;
-use super::{ZXScreen};
+use super::screen::*;
 use utils::split_word;
 use super::ZXKey;
 
+const ULA_ATTR_CYCLE: u64 = 8;
+const ULA_ATTR_PER_CYCLE: u64 = 2;
+const ULA_ATTR_IDLE_BEGIN: u64 = 4;
+const ULA_BYTES_PER_CYCLE: u64 = 2;
+const ULA_ROW_RENDER_CLOCKS: u64 = 128;
+
+pub enum ZXModel {
+    Sinclair48K,
+    Sinclair128K,
+}
+
+impl ZXModel {
+    fn frame_clocks(&self) -> u64 {
+        match *self {
+            ZXModel::Sinclair48K => 14347,
+            ZXModel::Sinclair128K => 14368,
+        }
+    }
+    fn row_clocks(&self) -> u64 {
+        match *self {
+            ZXModel::Sinclair48K => 224,
+            ZXModel::Sinclair128K => 228,
+        }
+    }
+}
+
 /// ZX System controller
 pub struct ZXController {
+    model: ZXModel,
     memory: Option<ZXMemory>,
     screen: Option<ZXScreen>,
     int: bool,
     keyboard: [u8; 8],
     border_color: u8,
     ear: bool,
+    frame_clocks: u64,
 }
 
 impl ZXController {
-    pub fn new() -> ZXController {
+    pub fn new(computer_model: ZXModel) -> ZXController {
         ZXController {
+            model: computer_model,
             memory: None,
             screen: None,
             int: false,
             keyboard: [0xFF; 8],
             border_color: 0x00,
             ear: true,
+            frame_clocks: 0,
         }
     }
 
@@ -75,6 +105,63 @@ impl ZXController {
             }
         }
     }
+
+    pub fn dump(&self) -> Vec<u8> {
+        if let Some(ref mem) = self.memory {
+            mem.dump()
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn new_frame(&mut self) {
+        self.frame_clocks = 0;
+    }
+
+    fn floating_bus_value(&self) -> u8 {
+        // top border draw
+        if self.frame_clocks < self.model.frame_clocks() {
+            return 0xFF;
+        }
+        let clocks = self.frame_clocks - self.model.frame_clocks();
+        // botttom border draw
+        if clocks >= self.model.row_clocks() * SCREEN_HEIGHT as u64 {
+            return 0xFF;
+        }
+        // TStates 4..7 is IDLE
+        if clocks % ULA_ATTR_CYCLE >= ULA_ATTR_IDLE_BEGIN {
+            // IDLE
+            return 0xFF;
+        }
+        // if side border rendering
+        if clocks % self.model.row_clocks() >= ULA_ROW_RENDER_CLOCKS  {
+            // IDLE, ULA draws border
+            return 0xFF;
+        }
+        // column is mod of clocks on clocks per row devided on CYCLE and multiplied by 2
+        // and then plus zero or 1 col
+        let col = ((clocks % self.model.row_clocks()) / ULA_ATTR_CYCLE) * ULA_BYTES_PER_CYCLE +
+            (clocks % ULA_ATTR_CYCLE) / 2;
+        // row is just clocks devided by clocks per row
+        let row = clocks / self.model.row_clocks();
+        // bitmap if clocks parity is even
+        let is_bitmap  = clocks % 2 == 0;
+        if is_bitmap {
+            let byte = row * BYTES_PER_ROW + col;
+            if let Some(ref mem) = self.memory {
+                return mem.read(0x4000 + byte as u16);
+            } else {
+                return 0xFF;
+            }
+        } else {
+            let byte = row / ROWS_PER_ATTR + col;
+            if let Some(ref mem) = self.memory {
+                return mem.read(0x5800 + byte as u16);
+            } else {
+                return 0xFF;
+            }
+        }
+    }
 }
 
 impl Z80Bus for ZXController {
@@ -121,7 +208,10 @@ impl Z80Bus for ZXController {
                 };
                 tmp
             }
-            _ => 0x00,
+            // TODO: Floating bus
+            _ => {
+                self.floating_bus_value()
+            },
         }
     }
 
@@ -135,9 +225,11 @@ impl Z80Bus for ZXController {
         };
     }
 
-    // fn int(&mut self) -> bool {
-    //     let tmp = self.int;
-    //     self.int = false;
-    //     tmp
-    // }
+    fn tell_clocks(&mut self, clocks: u64) {
+        self.frame_clocks += clocks;
+    }
+
+    fn read_interrupt(&mut self) -> u8 {
+        0xFF
+    }
 }

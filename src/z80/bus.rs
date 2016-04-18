@@ -33,15 +33,6 @@ pub trait Z80Bus {
     fn read_interrupt(&mut self) -> u8 {
         0
     }
-    // /// method, invoked by  Z80 to check NMI signal
-    // fn nmi(&mut self) -> bool {
-    //     false
-    // }
-    //
-    // /// method, invoked by Z80 to check INT signal
-    // fn int(&mut self) -> bool {
-    //     false
-    // }
 
     /// method, invoked by Z80 in case of RETI instruction. Default implementation is empty
     fn reti(&mut self) {
@@ -50,6 +41,11 @@ pub trait Z80Bus {
 
     /// method, invoked by Z80 in case of HALT line change
     fn halt(&mut self, halted: bool) {
+
+    }
+
+    /// function, invoked by cpu to tell last clocks count
+    fn tell_clocks(&mut self, clocks: u64) {
 
     }
 }

@@ -39,7 +39,7 @@ impl ZXMemory {
         match ram_type {
             RamType::K16 => {
                 ram_size = SIZE_16K;
-                mem_map = [Page::Rom(0), Page::Ram(0), Page::Ram(0), Page::Ram(0)];            
+                mem_map = [Page::Rom(0), Page::Ram(0), Page::Ram(0), Page::Ram(0)];
             }
             RamType::K48 => {
                 ram_size = SIZE_48K;
@@ -92,7 +92,7 @@ impl ZXMemory {
             match page {
                 Page::Ram(page) if (page as usize + 1) * PAGE_SIZE > self.ram.len() => Err(()),
                 Page::Rom(page) if (page as usize + 1) * PAGE_SIZE > self.rom.len() => Err(()),
-                _ => {
+                _ => {  
                     self.map[block] = page;
                     Ok(())
                 }
@@ -102,18 +102,21 @@ impl ZXMemory {
         }
     }
 
-    pub fn load_rom(&mut self, page: u8, data: &[u8; PAGE_SIZE]) -> Result<(), ()> {
+    pub fn load_rom(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {
         if (page as usize + 1) * PAGE_SIZE > self.rom.len() {
             Err(())
         } else {
             let shift = page as usize * PAGE_SIZE;
             let mut slice = &mut self.rom[shift..shift + PAGE_SIZE];
-            slice.clone_from_slice(data);
+            slice[..data.len()].clone_from_slice(data);
             Ok(())
         }
     }
 
-    pub fn clear(&mut self) {
-
+    pub fn dump(&self) -> Vec<u8> {
+        let mut out = self.rom.clone();
+        let mut ram = self.ram.clone();
+        out.append(&mut ram);
+        out
     }
 }

@@ -87,7 +87,7 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut Z80Bus, rot_code: U3, operand: RotOp
     };
     zero = data == 0;
     sign = (data & 0x80) != 0;
-    half_carry = true;
+    half_carry = false;
     pv = tables::PARITY_BIT[data as usize] != 0;
     sub = false;
     f3 = data & 0b1000 != 0;

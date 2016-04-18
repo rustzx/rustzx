@@ -1,4 +1,7 @@
 use std::thread;
+use std::fs::*;
+use std::io::Write;
+
 use glium::glutin::{WindowBuilder, Event,  ElementState as KeyState};
 use glium::DisplayBuild;
 use glium::glutin::{VirtualKeyCode as VKey};
@@ -38,7 +41,7 @@ impl RustZXApp {
     }
     pub fn start(&mut self) {
 
-        let mut controller = ZXController::new();
+        let mut controller = ZXController::new(ZXModel::Sinclair48K);
         let mut cpu = Z80::new();
         let mut memory = ZXMemory::new(RomType::K16, RamType::K48);
         let mut tape = tape::Tap::new();
@@ -53,12 +56,10 @@ impl RustZXApp {
             .build_glium().unwrap();
         let mut renderer = ZXScreenRenderer::new(&display);
 
-        // TODO: make changable, 10 x speed for now
-        let _cpu_freq = 3_500_000u64;
-        // NOTE: 2x speed
-        let frame_clocks = 69888u64 * 2u64; // clocks per frame
-        let frame_target_dt_ns = ms_to_ns((1000/500) as f64);
-        //let frame_target_dt_ns = s_to_ns(frame_clocks as f64 / cpu_freq as f64);
+        // NOTE: 4x speed
+        let frame_clocks = 69888u64 * 8u64; // clocks per frame
+        // 200 frames per second!
+        let frame_target_dt_ns = ms_to_ns((1000/(50 * 8)) as f64);
         let mut excess_clocks = 0u64; // clocks, which were uncounted from prev frame
         let mut frame_counter = 0_usize;
         'render_loop : loop {
@@ -68,6 +69,7 @@ impl RustZXApp {
             let mut clocks = 0;
             // interrupt on first instruction after frame start
             cpu.request_interrupt();
+            controller.new_frame();
             while clocks + excess_clocks < frame_clocks {
                 let cycle_clocks = cpu.emulate(&mut controller);
                 clocks += cycle_clocks;
@@ -97,6 +99,10 @@ impl RustZXApp {
                             VKey::Insert => {
                                 tape.play();
                             }
+                            VKey::F2 => {
+                                let mut f = File::create("/home/pacmancoder/snap.rustzx").unwrap();
+                                f.write_all(&controller.dump()).unwrap();
+                            }
                             _ => {
                                 if let Some(key) =  vkey_to_zxkey(key_code) {
                                     match state {
@@ -108,7 +114,8 @@ impl RustZXApp {
                         }
                     }
                     Event::MouseWheel(_) => {
-                        println!("pc: {:#02X}", cpu.regs.get_pc());
+                        let pc = cpu.regs.get_pc();
+                        println!("pc: {:#04X}", pc);
                     }
                     _ => {},
                 }

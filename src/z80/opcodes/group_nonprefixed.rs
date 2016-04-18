@@ -1,6 +1,7 @@
 use super::*;
 use z80::*;
 use utils::*;
+use z80::tables::*;
 
 /// normal execution group, can be modified with prefixes DD, FD, providing
 /// DD OPCODE [NN], FD OPCODE [NN] instruction group
@@ -80,17 +81,17 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     let reg_acc = RegName16::HL.with_prefix(prefix);
                     let acc = cpu.regs.get_reg_16(reg_acc);
                     let operand = cpu.regs.get_reg_16(reg_operand);
-                    // calc half_carry
-                    let half_carry = half_carry_16(acc, operand);
-                    let (acc, carry) = acc.overflowing_add(operand);
-                    // check flags!
+                    let temp: u32 = (acc as u32).wrapping_add(operand as u32);
+                    // watch internal_alu.rs and overflows.rs
+                    let lookup = lookup16_r12(acc, operand, temp as u16);
+                    let half_carry = HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0;
+                    let carry = temp > 0xFFFF;
                     cpu.regs.set_flag(Flag::Carry, carry); //set carry
                     cpu.regs.set_flag(Flag::Sub, false); // is addition
                     cpu.regs.set_flag(Flag::HalfCarry, half_carry); // half carry
-                    cpu.regs.set_flag(Flag::F3, acc & 0x0800 != 0); // 3 bit of hi
-                    cpu.regs.set_flag(Flag::F5, acc & 0x2000 != 0); // 5 bit of hi
-                    // set register!
-                    cpu.regs.set_reg_16(reg_acc, acc);
+                    cpu.regs.set_flag(Flag::F3, temp & 0x0800 != 0); // 3 bit of hi
+                    cpu.regs.set_flag(Flag::F5, temp & 0x2000 != 0); // 5 bit of hi
+                    cpu.regs.set_reg_16(reg_acc, temp as u16);
                 }
             };
         }
@@ -402,55 +403,33 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
         // ---------------------------------
         // [0b01yyyzzz] instruction section
         // ---------------------------------
-        // LD r[y], r[z]
-        // [0b01yyyzzz]: 0x40...0x7F
-        U2::N1 => {
-            // LD r[y], r[z] without indirection
-            if (opcode.z != U3::N6) && (opcode.y != U3::N6) {
-                let from = RegName8::from_u3(opcode.z).unwrap().with_prefix(prefix);
-                let to = RegName8::from_u3(opcode.y).unwrap().with_prefix(prefix);
-                let tmp = cpu.regs.get_reg_8(from);
-                cpu.regs.set_reg_8(to, tmp);
+        // From memory to register
+        // LD r[y], (HL/IX+d/IY+d)
+        U2::N1 if (opcode.z == U3::N6) => {
+            let src_addr = if prefix == Prefix::None {
+                cpu.regs.get_hl()
             } else {
-                // LD (HL/IX+d/IY+d), r ; LD r, (HL/IX+d/IY+d)
-                // 0x01110zzz; 0x01yyy110
-                let from = if let Some(reg) = RegName8::from_u3(opcode.z) {
-                    // H/L is not affected by prefix if already indirection
-                    LoadOperand8::Reg(reg)
-                } else {
-                    if prefix == Prefix::None {
-                        LoadOperand8::Indirect(cpu.regs.get_hl())
-                    } else {
-                        let d = cpu.rom_next_byte(bus) as i8;
-                        LoadOperand8::Indirect(word_displacement(cpu.regs.get_reg_16(
-                            RegName16::HL.with_prefix(prefix)), d))
-                    }
-                };
-                let to = if let Some(reg) = RegName8::from_u3(opcode.y) {
-                    // H/L is not affected by prefix if already indirection
-                    LoadOperand8::Reg(reg)
-                } else {
-                    if prefix == Prefix::None {
-                        LoadOperand8::Indirect(cpu.regs.get_hl())
-                    } else {
-                        let d = cpu.rom_next_byte(bus) as i8;
-                        LoadOperand8::Indirect(word_displacement(cpu.regs.get_reg_16(
-                            RegName16::HL.with_prefix(prefix)), d))
-                    }
-                };
-                let data = match from {
-                    LoadOperand8::Indirect(addr) => bus.read(addr),
-                    LoadOperand8::Reg(reg) => cpu.regs.get_reg_8(reg),
-                };
-                match to {
-                    LoadOperand8::Indirect(addr) => {
-                        bus.write(addr, data);
-                    }
-                    LoadOperand8::Reg(reg) => {
-                        cpu.regs.set_reg_8(reg, data);
-                    }
-                };
-            }
+                let d = cpu.rom_next_byte(bus) as i8;
+                word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d)
+            };
+            cpu.regs.set_reg_8(RegName8::from_u3(opcode.y).unwrap(), bus.read(src_addr));
+        }
+        // LD (HL/IX+d/IY+d), r[z]
+        U2::N1 if (opcode.y == U3::N6) => {
+            let dst_addr = if prefix == Prefix::None {
+                cpu.regs.get_hl()
+            } else {
+                let d = cpu.rom_next_byte(bus) as i8;
+                word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d)
+            };
+            bus.write(dst_addr, cpu.regs.get_reg_8(RegName8::from_u3(opcode.z).unwrap()))
+        }
+        // LD r[y], r[z]
+        U2::N1 => {
+            let from = RegName8::from_u3(opcode.z).unwrap().with_prefix(prefix);
+            let to = RegName8::from_u3(opcode.y).unwrap().with_prefix(prefix);
+            let tmp = cpu.regs.get_reg_8(from);
+            cpu.regs.set_reg_8(to, tmp);
         }
         // ---------------------------------
         // [0b10yyyzzz] instruction section

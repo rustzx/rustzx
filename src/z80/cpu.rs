@@ -64,7 +64,7 @@ impl Z80 {
     pub fn request_nmi(&mut self) {
         self.nmi_req = true;
     }
-    /// emulation cycle, returns clocks count
+    /// emulation cycle
     pub fn emulate(&mut self, bus: &mut Z80Bus) -> u64 {
         let mut clocks = 0u64;
         // NOTE: DEBUG
@@ -118,7 +118,8 @@ impl Z80 {
                             clocks += 19;
                             execute_push_16(self, bus, RegName16::PC);
                             // build interrupt vector
-                            let addr = make_word(bus.read_interrupt(), self.regs.get_i());
+                            let addr = ((self.regs.get_i() as u16) << 8) + 
+                                bus.read_interrupt() as u16;
                             self.regs.set_pc(addr);
                         }
                     }
@@ -133,6 +134,7 @@ impl Z80 {
         if self.halted {
             // execute nop NOP
             clocks += execute_internal_nop(self) as u64;
+            bus.tell_clocks(clocks);
             return clocks;
         };
         //NOTE: debug
@@ -230,6 +232,7 @@ impl Z80 {
                 clocks += exec_clocks as u64;
             };
         };
+        bus.tell_clocks(clocks);
         return clocks;
     }
 }
