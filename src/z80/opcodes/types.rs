@@ -25,14 +25,6 @@ pub enum BlockDir {
     Dec,
 }
 
-/// Execution result of the instruction
-pub enum Clocks {
-    /// contains clocks count, which was elapsed to execute instruction
-    Some(u8),
-    /// emulator fail
-    ExecFail,
-}
-
 /// Opcode, devided in parts
 /// ```text
 /// xxyyyzzz

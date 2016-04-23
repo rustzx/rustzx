@@ -2,12 +2,14 @@ use super::*;
 use z80::*;
 use utils::*;
 
+// TODO: BORROW, OVERFLOW TABLES
+
 /// ldi or ldd instruction
 pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
     // read (HL)
-    let src = bus.read(cpu.regs.get_hl());
+    let src = bus.read(cpu.regs.get_hl(), Clocks(3));
     // write (HL) to (DE)
-    bus.write(cpu.regs.get_de(), src);
+    bus.write(cpu.regs.get_de(), src, Clocks(3));
     // inc or dec HL and DE
     match dir {
         BlockDir::Inc => {
@@ -28,12 +30,14 @@ pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
     let src_plus_a = src.wrapping_add(cpu.regs.get_acc());
     cpu.regs.set_flag(Flag::F3, (src_plus_a & 0b1000) != 0);
     cpu.regs.set_flag(Flag::F5, (src_plus_a & 0b10) != 0);
+    bus.wait_loop(cpu.regs.get_de(), Clocks(2));
+    // Clocks: <4 + 4> + 3 + 3 + 2 = 16
 }
 
 /// cpi or cpd instruction
 pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) -> bool {
     // read (HL)
-    let src = bus.read(cpu.regs.get_hl());
+    let src = bus.read(cpu.regs.get_hl(), Clocks(3));
     // move pointer
     match dir {
         BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL, 1),
@@ -58,15 +62,20 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) -> bool {
     };
     cpu.regs.set_flag(Flag::F3, (tmp2 & 0b1000) != 0);
     cpu.regs.set_flag(Flag::F5, (tmp2 & 0b10) != 0);
-    tmp == 0
+    bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
+    // Clocks: <4 + 4> + 3 + 5 = 16
+    tmp == 0 // return comarison result
 }
 
 /// ini or ind instruction
 pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
+    bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
     // get input data
+    // TODO: IO TIMINGS!
+    bus.wait_loop(cpu.regs.get_bc(), Clocks(4));
     let src = bus.read_io(cpu.regs.get_bc());
     // write to memory
-    bus.write(cpu.regs.get_hl(), src);
+    bus.write(cpu.regs.get_hl(), src, Clocks(3));
     // dec b
     let b = cpu.regs.dec_reg_8(RegName8::B, 1);
     // move pointer
@@ -112,11 +121,14 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
 
 /// outi or outd instruction
 pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
+    bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
     // get input data
-    let src = bus.read(cpu.regs.get_hl());
+    let src = bus.read(cpu.regs.get_hl(), Clocks(3));
     // acсording to the official docs, b decrements before moving it to the addres bus
     // dec b
     let b = cpu.regs.dec_reg_8(RegName8::B, 1);
+    // TODO: IO TIMINGS!
+    bus.wait_loop(cpu.regs.get_bc(), Clocks(4));
     bus.write_io(cpu.regs.get_bc(), src);
     // move pointer
     match dir {

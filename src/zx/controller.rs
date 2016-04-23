@@ -1,4 +1,4 @@
-use z80::Z80Bus;
+use z80::{Z80Bus, Clocks};
 use zx::ZXMemory;
 use super::screen::*;
 use utils::split_word;
@@ -10,13 +10,21 @@ const ULA_ATTR_IDLE_BEGIN: u64 = 4;
 const ULA_BYTES_PER_CYCLE: u64 = 2;
 const ULA_ROW_RENDER_CLOCKS: u64 = 128;
 
+const ULA_48K_CONTENTION_PATTERN: [u64; 8] = [6, 5, 4, 3, 2, 1, 0, 0];
+
 pub enum ZXModel {
     Sinclair48K,
     Sinclair128K,
 }
 
 impl ZXModel {
-    fn frame_clocks(&self) -> u64 {
+    fn clocks_per_frame(&self) -> u64 {
+        match *self {
+            ZXModel::Sinclair48K => 69888,
+            ZXModel::Sinclair128K => 70908,
+        }
+    }
+    fn first_pixel_clocks(&self) -> u64 {
         match *self {
             ZXModel::Sinclair48K => 14347,
             ZXModel::Sinclair128K => 14368,
@@ -26,6 +34,23 @@ impl ZXModel {
         match *self {
             ZXModel::Sinclair48K => 224,
             ZXModel::Sinclair128K => 228,
+        }
+    }
+    fn contention_clocks(&self, clocks: u64) -> u64 {
+        match *self {
+            ZXModel::Sinclair48K => {
+                if clocks < 14335 {
+                    return 0;
+                }
+                if (clocks - 14335) % 224 >= 128 {
+                    return 0;
+                }
+                return ULA_48K_CONTENTION_PATTERN[(((clocks - 14335) % 224) % 8) as usize];
+            },
+            ZXModel::Sinclair128K => {
+                // make rustc happy
+                return 0;
+            },
         }
     }
 }
@@ -86,6 +111,10 @@ impl ZXController {
         self.int = false;
     }
 
+    pub fn get_frame_clocks(&self) -> u64 {
+        self.frame_clocks
+    }
+
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
         let rownum = match key.half_port {
             0xFE => Some(0),
@@ -114,16 +143,12 @@ impl ZXController {
         }
     }
 
-    pub fn new_frame(&mut self) {
-        self.frame_clocks = 0;
-    }
-
     fn floating_bus_value(&self) -> u8 {
         // top border draw
-        if self.frame_clocks < self.model.frame_clocks() {
+        if self.frame_clocks < self.model.first_pixel_clocks() {
             return 0xFF;
         }
-        let clocks = self.frame_clocks - self.model.frame_clocks();
+        let clocks = self.frame_clocks - self.model.first_pixel_clocks();
         // botttom border draw
         if clocks >= self.model.row_clocks() * SCREEN_HEIGHT as u64 {
             return 0xFF;
@@ -162,17 +187,33 @@ impl ZXController {
             }
         }
     }
+
+    pub fn new_frame(&mut self) {
+        if self.frame_clocks >= self.model.clocks_per_frame() {
+            self.frame_clocks -= self.model.clocks_per_frame()
+        }
+    }
+
+    pub fn frame_finished(&self) -> bool {
+        self.frame_clocks >= self.model.clocks_per_frame()
+    }
+
+    pub fn clocks(&self) -> u64 {
+        self.frame_clocks
+    }
 }
 
 impl Z80Bus for ZXController {
-    fn read(&self, addr: u16) -> u8 {
+
+    fn read_internal(&self, addr: u16) -> u8 {
         if let Some(ref memory) = self.memory {
             memory.read(addr)
         } else {
             0
         }
     }
-    fn write(&mut self, addr: u16, data: u8) {
+
+    fn write_internal(&mut self, addr: u16, data: u8) {
         if let Some(ref mut memory) = self.memory {
             memory.write(addr, data);
             match addr {
@@ -190,6 +231,35 @@ impl Z80Bus for ZXController {
             }
         };
     }
+
+    fn wait_mreq(&mut self, addr: u16, clk: Clocks) {
+        match self.model {
+            ZXModel::Sinclair48K => {
+                // contention in low 16k RAM
+                if (addr >= 0x4000) && (addr <= 0x7fff) {
+                    let last_clocks = self.frame_clocks;
+                    self.frame_clocks += self.model.contention_clocks(last_clocks);
+                }
+            }
+            _ => {}
+        }
+        self.frame_clocks += clk.count() as u64;
+    }
+
+    fn wait_no_mreq(&mut self, addr: u16, clk: Clocks) {
+        match self.model {
+            ZXModel::Sinclair48K => {
+                // contention in low 16k RAM
+                if (addr >= 0x4000) && (addr <= 0x7fff) {
+                    let last_clocks = self.frame_clocks;
+                    self.frame_clocks += self.model.contention_clocks(last_clocks);
+                }
+            }
+            _ => {}
+        }
+        self.frame_clocks += clk.count() as u64;
+    }
+
     fn read_io(&self, addr: u16) -> u8 {
         let (h, l) = split_word(addr);
         match l {
@@ -208,7 +278,6 @@ impl Z80Bus for ZXController {
                 };
                 tmp
             }
-            // TODO: Floating bus
             _ => {
                 self.floating_bus_value()
             },
@@ -225,11 +294,16 @@ impl Z80Bus for ZXController {
         };
     }
 
-    fn tell_clocks(&mut self, clocks: u64) {
-        self.frame_clocks += clocks;
-    }
-
     fn read_interrupt(&mut self) -> u8 {
         0xFF
     }
+    fn int_active(&mut self) -> bool {
+        self.frame_clocks < 32
+    }
+    fn nmi_active(&mut self) -> bool {
+        false
+    }
+    fn reti(&mut self) {}
+    fn halt(&mut self, _: bool) {}
+
 }

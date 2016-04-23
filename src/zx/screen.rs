@@ -64,7 +64,8 @@ impl ZXScreen {
         }
     }
     pub fn write_attr_byte(&mut self, addr: u16, value: u8) {
-        // TODO: Add assert
+        // TODO: Change
+        assert!(addr >= 0x5800);
         let base = addr - 0x5800;
         // left-top pos of 8x8 area
         let x_base = (base % 32) * 8;

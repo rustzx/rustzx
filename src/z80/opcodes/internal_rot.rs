@@ -7,7 +7,11 @@ use z80::*;
 pub fn execute_rot(cpu: &mut Z80, bus: &mut Z80Bus, rot_code: U3, operand: RotOperand8) -> u8 {
     // get byte which will be rotated
     let mut data = match operand {
-        RotOperand8::Indirect(addr) => bus.read(addr),
+        RotOperand8::Indirect(addr) => {
+            let tmp = bus.read(addr, Clocks(3));
+            bus.wait_no_mreq(addr, Clocks(1));
+            tmp
+        },
         RotOperand8::Reg(reg) => cpu.regs.get_reg_8(reg),
     };
     let (sign, zero, f5, f3, half_carry, pv, sub, carry);
@@ -67,11 +71,11 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut Z80Bus, rot_code: U3, operand: RotOp
         U3::N5 => {
             // get lsb
             carry = (data & 0x01) != 0;
-            // shift left and leave highest bit unchanged
+            // shift left and leave highest bit unchange4
             data = ((data >> 1) & 0x7F) | (data & 0x80);
-        }
-        // SLL
-        U3::N6 => {
+       }
+       // SLL
+       U3::N6 => {
             // get msb
             carry = (data & 0x80) != 0;
             // shift left and set lowerest bit
@@ -95,7 +99,7 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut Z80Bus, rot_code: U3, operand: RotOp
     // write result
     match operand {
         RotOperand8::Indirect(addr) => {
-            bus.write(addr, data);
+            bus.write(addr, data, Clocks(3));
         }
         RotOperand8::Reg(reg) => {
             cpu.regs.set_reg_8(reg, data);

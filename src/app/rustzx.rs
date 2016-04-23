@@ -8,7 +8,7 @@ use glium::glutin::{VirtualKeyCode as VKey};
 
 use super::video::ZXScreenRenderer;
 use super::keyboard::vkey_to_zxkey;
-use z80::Z80;
+use z80::{Z80, Z80Bus};
 use zx::*;
 use time;
 use std::time::Duration;
@@ -40,7 +40,7 @@ impl RustZXApp {
         RustZXApp
     }
     pub fn start(&mut self) {
-
+        let mut trace = false;
         let mut controller = ZXController::new(ZXModel::Sinclair48K);
         let mut cpu = Z80::new();
         let mut memory = ZXMemory::new(RomType::K16, RamType::K48);
@@ -55,32 +55,35 @@ impl RustZXApp {
             .with_dimensions(384 * 2, 288 * 2)
             .build_glium().unwrap();
         let mut renderer = ZXScreenRenderer::new(&display);
-
-        // NOTE: 4x speed
-        let frame_clocks = 69888u64 * 8u64; // clocks per frame
-        // 200 frames per second!
-        let frame_target_dt_ns = ms_to_ns((1000/(50 * 8)) as f64);
-        let mut excess_clocks = 0u64; // clocks, which were uncounted from prev frame
+        // NOTE: 16x speed
+        let speed = 16u64;
+        let frame_target_dt_ns = ms_to_ns((1000/(50 * speed)) as f64);
         let mut frame_counter = 0_usize;
         'render_loop : loop {
             frame_counter += 1;
-            // start time, in ns
             let frame_start_ns = time::precise_time_ns();
-            let mut clocks = 0;
-            // interrupt on first instruction after frame start
-            cpu.request_interrupt();
             controller.new_frame();
-            while clocks + excess_clocks < frame_clocks {
-                let cycle_clocks = cpu.emulate(&mut controller);
-                clocks += cycle_clocks;
-                tape.process_clocks(cycle_clocks);
+            // emulation loop
+            if trace {
+                println!("Frame start");
+            }
+            loop {
+                let prev_clocks = controller.clocks();
+                if trace {
+                    println!("PC: {:#04X}; Opcode: {:#02X}; Clocks: {}; Halted: {}; iff: {},{}; im: {:?}",
+                        cpu.regs.get_pc(), Z80Bus::read_internal(&controller,cpu.regs.get_pc()),
+                        controller.get_frame_clocks(), cpu.is_halted(), cpu.regs.get_iff1(),
+                        cpu.regs.get_iff2(), cpu.get_im());
+                }
+                cpu.emulate(&mut controller);
+                let clocks_delta = controller.clocks() - prev_clocks;
+                tape.process_clocks(clocks_delta);
                 controller.set_ear(tape.current_bit());
-            };
-            if clocks + excess_clocks > frame_clocks {
-                excess_clocks = (clocks + excess_clocks) - frame_clocks;
-            };
-            tape.process_clocks(excess_clocks);
-
+                if controller.frame_finished() {
+                    break;
+                }
+            }
+            trace = false;
             let cpu_dt_ns =  time::precise_time_ns() - frame_start_ns;
             // render display
             if (frame_counter % 32) == 0 {
@@ -102,6 +105,9 @@ impl RustZXApp {
                             VKey::F2 => {
                                 let mut f = File::create("/home/pacmancoder/snap.rustzx").unwrap();
                                 f.write_all(&controller.dump()).unwrap();
+                            }
+                            VKey::T => {
+                                trace = true;
                             }
                             _ => {
                                 if let Some(key) =  vkey_to_zxkey(key_code) {
