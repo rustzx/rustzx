@@ -18,12 +18,19 @@ pub enum ZXModel {
 }
 
 impl ZXModel {
+    // fn screen_clocks(&self) -> u64 {
+    //     match *self {
+    //         ZXModel::Sinclair48K => 191 * 224 + 128,
+    //         ZXModel::Sinclair128K => 70908,
+    //     }
+    // }
     fn clocks_per_frame(&self) -> u64 {
         match *self {
             ZXModel::Sinclair48K => 69888,
             ZXModel::Sinclair128K => 70908,
         }
     }
+    // TODO: RENAME
     fn first_pixel_clocks(&self) -> u64 {
         match *self {
             ZXModel::Sinclair48K => 14347,
@@ -36,16 +43,25 @@ impl ZXModel {
             ZXModel::Sinclair128K => 228,
         }
     }
+
+    // fn sceen_start_clocks(&self) -> u64 {
+    //     match *self {
+    //         ZXModel::Sinclair48K => 14335,
+    //         // TODO: CHECK TIMINGS
+    //         ZXModel::Sinclair128K => 14356,
+    //     }
+    // }
     fn contention_clocks(&self, clocks: u64) -> u64 {
         match *self {
             ZXModel::Sinclair48K => {
-                if clocks < 14335 {
+                if (clocks < 14335) || (clocks > 14335 + 191 * 224 + 128) {
+                        return 0;
+                }
+                let clocks_trough_line = (clocks - 14335) % 224;
+                if clocks_trough_line >= 128 {
                     return 0;
                 }
-                if (clocks - 14335) % 224 >= 128 {
-                    return 0;
-                }
-                return ULA_48K_CONTENTION_PATTERN[(((clocks - 14335) % 224) % 8) as usize];
+                return ULA_48K_CONTENTION_PATTERN[(clocks_trough_line % 8) as usize];
             },
             ZXModel::Sinclair128K => {
                 // make rustc happy
@@ -232,6 +248,10 @@ impl Z80Bus for ZXController {
         };
     }
 
+    fn wait_internal(&mut self, clk: Clocks) {
+        self.frame_clocks += clk.count() as u64;
+    }
+
     fn wait_mreq(&mut self, addr: u16, clk: Clocks) {
         match self.model {
             ZXModel::Sinclair48K => {
@@ -260,7 +280,7 @@ impl Z80Bus for ZXController {
         self.frame_clocks += clk.count() as u64;
     }
 
-    fn read_io(&self, addr: u16) -> u8 {
+    fn read_io(&mut self, addr: u16) -> u8 {
         let (h, l) = split_word(addr);
         match l {
             // keyboard

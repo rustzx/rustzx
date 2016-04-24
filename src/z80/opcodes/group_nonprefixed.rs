@@ -596,9 +596,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     let tmp = bus.read_word(addr, Clocks(3));
                     bus.wait_no_mreq(addr.wrapping_add(1), Clocks(1));
                     bus.write_word(addr, cpu.regs.get_reg_16(reg), Clocks(3));
-                    bus.wait_no_mreq(addr, Clocks(1));
+                    bus.wait_loop(addr, Clocks(2));
                     cpu.regs.set_reg_16(reg, tmp);
-                    // Clocks: 23 or 19
+                    // Clocks: [4] + 4 + (3 + 3) + 1 + (3 + 3) + 2 = 23 or 19
                 }
                 // EX DE, HL
                 // [0b11101011]
@@ -684,7 +684,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
             execute_push_16(cpu, bus, RegName16::PC, Clocks(3));
             // CALL y*8
-            cpu.regs.set_reg_16(RegName16::PC, (opcode.y.as_byte() as u16) << 3);
+            cpu.regs.set_reg_16(RegName16::PC, (opcode.y.as_byte() as u16) * 8);
+            // 4 + 1 + 3 + 3 = 11
         }
     };
     if prefix == Prefix::None {

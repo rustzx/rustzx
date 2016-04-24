@@ -125,10 +125,11 @@ impl Z80 {
                         bus.wait_loop(self.regs.get_pc(), Clocks(7));
                         execute_push_16(self, bus, RegName16::PC, Clocks(3));
                         // build interrupt vector
-                        let addr = ((self.regs.get_i() as u16) << 8) +
-                            bus.read_interrupt() as u16;
+                        let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00) |
+                            ((bus.read_interrupt() as u16)) & 0x00FF;
+                        let addr = bus.read_word(addr, Clocks(3));
                         self.regs.set_pc(addr);
-                        bus.wait_loop(self.regs.get_pc(), Clocks(6));
+                        //bus.wait_loop(self.regs.get_pc(), Clocks(6));
                         // 7 + 3 + 3 + 3 + 3 = 19 clocks
                     }
                 }
@@ -149,11 +150,11 @@ impl Z80 {
         let prefix_hi = Prefix::from_byte(byte1);
         // if prefix finded
         if prefix_hi != Prefix::None {
-            // next byte, prefix or opcode
-            let byte2 = self.fetch_byte(bus, Clocks(4));
             match prefix_hi {
                 // may double-prefixed
                 prefix_single @ Prefix::DD | prefix_single @ Prefix::FD => {
+                    // next byte, prefix or opcode
+                    let byte2 = self.fetch_byte(bus, Clocks(4));
                     let prefix_lo = Prefix::from_byte(byte2);
                     // if second prefix finded
                     match prefix_lo {
@@ -187,11 +188,13 @@ impl Z80 {
                 // CB-prefixed
                 Prefix::CB => {
                     // opcode will be read in function
-                    self.regs.dec_pc(1);
+                    //self.regs.dec_pc(1);
                     execute_bits(self, bus, Prefix::None);
                 }
                 // ED-prefixed
                 Prefix::ED => {
+                    // next byte, prefix or opcode
+                    let byte2 = self.fetch_byte(bus, Clocks(4));
                     let opcode = Opcode::from_byte(byte2);
                     execute_extended(self, bus, opcode);
                 }

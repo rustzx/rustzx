@@ -15,6 +15,7 @@ pub trait Z80Bus {
     /// active mreq contention as it works in ZX Spectrum 2+/3)
     fn wait_no_mreq(&mut self, addr: u16, clk: Clocks);
 
+    fn wait_internal(&mut self, clk: Clocks);
     /// any single clock (t-state) can cause contention on ULA
     /// or any other chipm which not detects MREQ signal
     fn wait_loop(&mut self, addr: u16, clk: Clocks) {
@@ -36,7 +37,7 @@ pub trait Z80Bus {
     }
 
     // Method for reading from io port.
-    fn read_io(&self, addr: u16) -> u8;
+    fn read_io(&mut self, addr: u16) -> u8;
     // Method for writing to io port.
     fn write_io(&mut self, addr: u16, data: u8);
 

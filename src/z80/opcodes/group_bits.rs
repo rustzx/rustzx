@@ -7,18 +7,6 @@ use utils::*;
 /// covers CB, DDCB and FDCB execution group
 /// `prefix` param stands for first byte in double-prefixed instructions
 pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
-    // at first = check prefix. if exists - swap opcode and displacement.
-    // this must be happened because DDCB/FDCB instructions looks like
-    // DD CB displacement opcode
-    // let displacement;
-    // let operand =
-    // let opcode = if prefix != Prefix::None {
-    //     displacement = opcode.byte as i8;
-    //     Opcode::from_byte(cpu.fetch_byte(bus, Clocks(3)))
-    // } else {
-    //     displacement = 0i8;
-    //     opcode
-    // };
     let (opcode, operand) = if prefix == Prefix::None {
         // normal opcode fetch
         let tmp_opcode = Opcode::from_byte(cpu.fetch_byte(bus, Clocks(4)));
@@ -29,28 +17,18 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
         }
     } else {
         // xx xx dd nn format opcode fetch
-        let d = cpu.fetch_byte(bus, Clocks(3)) as i8;
+        bus.read(cpu.regs.get_pc(), Clocks(3));
+        let d = bus.read_internal(cpu.regs.get_pc()) as i8;
         let addr = word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d);
-        let tmp_opcode = Opcode::from_byte(bus.read(cpu.regs.get_pc(), Clocks(3)));
+        cpu.regs.inc_pc(1);
+        bus.read(cpu.regs.get_pc(), Clocks(3));
+        let tmp = bus.read_internal(cpu.regs.get_pc());
+        let tmp_opcode = Opcode::from_byte(tmp);
         bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
         cpu.regs.inc_pc(1);
         (tmp_opcode, RotOperand8::Indirect(addr))
     };
 
-    // determinate data to rotate
-    // (HL) selected if z is 6 in non-prefixed or if opcode is prefixed
-    // let operand = if (opcode.z == U3::N6) | (prefix != Prefix::None) {
-    //     // of non prefixed, reg will become HL, else prefix corrects if to IX or IY
-    //     let reg = RegName16::HL.with_prefix(prefix);
-    //     // displacement will be equal zero if prefix isn't set, so next code is ok
-    //     let addr = word_displacement(cpu.regs.get_reg_16(reg), displacement);
-    //     RotOperand8::Indirect(addr)
-    // } else {
-    //     // opcode.z will never be 6 at this moment, so unwrap
-    //     RotOperand8::Reg(RegName8::from_u3(opcode.z).unwrap())
-    // };
-    // if opcode is prefixed and z != 6 then we must copy
-    // result to register (B, C, D, E, F, H, L, A), selected by z
     let copy_reg = if (opcode.z != U3::N6) & (prefix != Prefix::None) {
         Some(RegName8::from_u3(opcode.z).unwrap())
     } else {
