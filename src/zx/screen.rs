@@ -6,6 +6,11 @@ pub const PIXELS_PER_BYTE: u64 = 8;
 pub const BYTES_PER_ROW: u64 = SCREEN_WIDTH as u64 / PIXELS_PER_BYTE;
 pub const ROWS_PER_ATTR: u64 = 8;
 
+pub fn get_line_base(line: u16) -> u16 {
+    // 0 1 0 Y7 Y6 Y2 Y1 Y0 | Y5 Y4 Y3 X4 X3 X2 X1 X0
+    0x4000 | (line << 5) & 0x1800 | (line << 8) & 0x0700 | (line << 2) & 0x00E0
+}
+
 fn get_pixel_base_index(addr: u16) -> usize {
     let (h, l) = split_word(addr);
     // 0 1 0 Y7 Y6 Y2 Y1 Y0 | Y5 Y4 Y3 X4 X3 X2 X1 X0
@@ -64,7 +69,7 @@ impl ZXScreen {
         }
     }
     pub fn write_attr_byte(&mut self, addr: u16, value: u8) {
-        // TODO: Change
+        // TODO: Add upper bound
         assert!(addr >= 0x5800);
         let base = addr - 0x5800;
         // left-top pos of 8x8 area

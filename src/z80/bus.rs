@@ -37,9 +37,9 @@ pub trait Z80Bus {
     }
 
     // Method for reading from io port.
-    fn read_io(&mut self, addr: u16) -> u8;
+    fn read_io(&mut self, port: u16) -> u8;
     // Method for writing to io port.
-    fn write_io(&mut self, addr: u16, data: u8);
+    fn write_io(&mut self, port: u16, data: u8);
 
     /// provided metod to write word, LSB first (clk - clocks per byte)
     fn write_word(&mut self, addr: u16, data: u16, clk: Clocks) {

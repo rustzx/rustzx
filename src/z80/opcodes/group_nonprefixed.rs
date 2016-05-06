@@ -211,13 +211,17 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 result = data.wrapping_add(1);
                 cpu.regs.set_flag(Flag::Sub, false);
                 cpu.regs.set_flag(Flag::ParityOveflow, data == 0x7F);
-                cpu.regs.set_flag(Flag::HalfCarry, half_carry_8(data, 1));
+                let lookup = lookup8_r12(data, 1, result);
+                cpu.regs.set_flag(Flag::HalfCarry,
+                    HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0);
             } else {
                 // DEC
                 result = data.wrapping_sub(1);
                 cpu.regs.set_flag(Flag::Sub, true);
                 cpu.regs.set_flag(Flag::ParityOveflow, data == 0x80);
-                cpu.regs.set_flag(Flag::HalfCarry, half_borrow_8(data, 1));
+                let lookup = lookup8_r12(data, 1, result);
+                cpu.regs.set_flag(Flag::HalfCarry,
+                    HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
             }
             cpu.regs.set_flag(Flag::Zero, result == 0);
             cpu.regs.set_flag(Flag::Sign, (result & 0x80) != 0); // last bit check
@@ -260,7 +264,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             // Read const operand
             let data = bus.read(cpu.regs.get_pc(), Clocks(3));
             if prefix != Prefix::None {
-                bus.wait_loop(cpu.regs.get_ir(), Clocks(2));
+                bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
             }
             cpu.regs.inc_pc(1);
             // write to bus or reg
@@ -367,10 +371,14 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                         correction |= 0x06;
                     }
                     let acc_new = if !cpu.regs.get_flag(Flag::Sub) {
-                        cpu.regs.set_flag(Flag::HalfCarry, half_carry_8(acc, correction));
+                        let lookup = lookup8_r12(acc, correction, acc.wrapping_add(correction));
+                        cpu.regs.set_flag(Flag::HalfCarry,
+                            HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0);
                         acc.wrapping_add(correction)
                     } else {
-                        cpu.regs.set_flag(Flag::HalfCarry, half_borrow_8(acc, correction));
+                        let lookup = lookup8_r12(acc, correction, acc.wrapping_sub(correction));
+                        cpu.regs.set_flag(Flag::HalfCarry,
+                            HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
                         acc.wrapping_sub(correction)
                     };
                     cpu.regs.set_flag(Flag::Sign, acc_new & 0x80 != 0); // Sign
@@ -438,7 +446,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                 bus.read(src_addr, Clocks(3)));
             // Clocks:
             // HL: 4 + 3 = 7
-            // XY+d: 4 + 4 + 3 + 5 + 3 = 19
+            // XY+d: <4 + 4> + 3 + 5 + 3 = 19
         }
         // LD (HL/IX+d/IY+d), r[z]
         U2::N1 if (opcode.y == U3::N6) => {
@@ -548,7 +556,6 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
         }
         // JP cc[y], nn
         // [0b11yyy010]: C2,CA,D2,DA,E2,EA,F2,FA
-        // TODO: CHECK CONDITIONAL BRANCHES
         U2::N3 if opcode.z == U3::N2 => {
             let addr = cpu.fetch_word(bus, Clocks(3));
             if cpu.regs.eval_condition(Condition::from_u3(opcode.y)) {
@@ -574,8 +581,6 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     let data = cpu.fetch_byte(bus, Clocks(3));
                     let acc = cpu.regs.get_acc();
                     // write Acc to port A*256 + operand
-                    // TODO: IO TIMINGS!
-                    bus.wait_no_mreq(cpu.regs.get_pc(), Clocks(4));
                     bus.write_io(((acc as u16) << 8) | data as u16, acc);
                 }
                 // IN A, (n)
@@ -584,9 +589,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     let data = cpu.fetch_byte(bus, Clocks(3));
                     let acc = cpu.regs.get_acc();
                     // read from port A*256 + operand to Acc
-                    // TODO: IO TIMINGS!
-                    bus.wait_no_mreq(cpu.regs.get_pc(), Clocks(4));
-                    cpu.regs.set_acc(bus.read_io(((acc as u16) << 8) | data as u16));
+                    cpu.regs.set_acc(bus.read_io(((acc as u16) << 8) | (data as u16)));
                 }
                 // EX (SP), HL/IX/IY
                 // [0b11100011] : E3
@@ -688,9 +691,4 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             // 4 + 1 + 3 + 3 = 11
         }
     };
-    if prefix == Prefix::None {
-       cpu.regs.inc_r(1); // single inc
-   } else {
-       cpu.regs.inc_r(2); // DD or FD prefix double inc R reg
-   };
 }

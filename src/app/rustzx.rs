@@ -106,7 +106,7 @@ impl RustZXApp {
                                 let mut f = File::create("/home/pacmancoder/snap.rustzx").unwrap();
                                 f.write_all(&controller.dump()).unwrap();
                             }
-                            VKey::T => {
+                            VKey::F3 => {
                                 trace = true;
                             }
                             _ => {

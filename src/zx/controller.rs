@@ -18,12 +18,6 @@ pub enum ZXModel {
 }
 
 impl ZXModel {
-    // fn screen_clocks(&self) -> u64 {
-    //     match *self {
-    //         ZXModel::Sinclair48K => 191 * 224 + 128,
-    //         ZXModel::Sinclair128K => 70908,
-    //     }
-    // }
     fn clocks_per_frame(&self) -> u64 {
         match *self {
             ZXModel::Sinclair48K => 69888,
@@ -33,8 +27,8 @@ impl ZXModel {
     // TODO: RENAME
     fn first_pixel_clocks(&self) -> u64 {
         match *self {
-            ZXModel::Sinclair48K => 14347,
-            ZXModel::Sinclair128K => 14368,
+            ZXModel::Sinclair48K => 14347 - 9,
+            ZXModel::Sinclair128K => 14368 - 9,
         }
     }
     fn row_clocks(&self) -> u64 {
@@ -44,17 +38,10 @@ impl ZXModel {
         }
     }
 
-    // fn sceen_start_clocks(&self) -> u64 {
-    //     match *self {
-    //         ZXModel::Sinclair48K => 14335,
-    //         // TODO: CHECK TIMINGS
-    //         ZXModel::Sinclair128K => 14356,
-    //     }
-    // }
     fn contention_clocks(&self, clocks: u64) -> u64 {
         match *self {
             ZXModel::Sinclair48K => {
-                if (clocks < 14335) || (clocks > 14335 + 191 * 224 + 128) {
+                if (clocks < 14335) || (clocks >= 14335 + 192 * 224) {
                         return 0;
                 }
                 let clocks_trough_line = (clocks - 14335) % 224;
@@ -64,10 +51,25 @@ impl ZXModel {
                 return ULA_48K_CONTENTION_PATTERN[(clocks_trough_line % 8) as usize];
             },
             ZXModel::Sinclair128K => {
-                // make rustc happy
+                // ...
                 return 0;
             },
         }
+    }
+
+    fn port_is_contended(&self, port: u16) -> bool {
+        match *self {
+            ZXModel::Sinclair48K => {
+                // every even post
+                (port & 0x0001) == 0
+            }
+            ZXModel::Sinclair128K => false,
+        }
+    }
+
+    fn addr_is_contended(&self, addr: u16) -> bool {
+        // how this works for other machines?
+        (addr >= 0x4000) && (addr <= 0x7FFF)
     }
 }
 
@@ -160,46 +162,71 @@ impl ZXController {
     }
 
     fn floating_bus_value(&self) -> u8 {
-        // top border draw
+        // TODO: Find out how to calculate floating bus, this function is incorrect!
         if self.frame_clocks < self.model.first_pixel_clocks() {
             return 0xFF;
         }
+        // clocks relative to screen start
         let clocks = self.frame_clocks - self.model.first_pixel_clocks();
+        // row is just clocks devided by clocks per row
+        let row = clocks / self.model.row_clocks();
         // botttom border draw
-        if clocks >= self.model.row_clocks() * SCREEN_HEIGHT as u64 {
+        if row >= 192 as u64 {
             return 0xFF;
         }
-        // TStates 4..7 is IDLE
-        if clocks % ULA_ATTR_CYCLE >= ULA_ATTR_IDLE_BEGIN {
-            // IDLE
-            return 0xFF;
-        }
+
         // if side border rendering
-        if clocks % self.model.row_clocks() >= ULA_ROW_RENDER_CLOCKS  {
+        if clocks % self.model.row_clocks() >= 124  {
             // IDLE, ULA draws border
             return 0xFF;
         }
+
+        // TStates 4..7 is IDLE
+        if clocks % 8 >= 4 {
+            // IDLE
+            return 0xFF;
+        }
+
         // column is mod of clocks on clocks per row devided on CYCLE and multiplied by 2
         // and then plus zero or 1 col
-        let col = ((clocks % self.model.row_clocks()) / ULA_ATTR_CYCLE) * ULA_BYTES_PER_CYCLE +
-            (clocks % ULA_ATTR_CYCLE) / 2;
-        // row is just clocks devided by clocks per row
-        let row = clocks / self.model.row_clocks();
+        let col = ((clocks % self.model.row_clocks()) / 8) * 2 + (clocks % 8) / 2;
         // bitmap if clocks parity is even
-        let is_bitmap  = clocks % 2 == 0;
-        if is_bitmap {
-            let byte = row * BYTES_PER_ROW + col;
+        if clocks % 2 == 0 {
             if let Some(ref mem) = self.memory {
-                return mem.read(0x4000 + byte as u16);
+                return mem.read( get_line_base(row as u16) + col as u16);
             } else {
                 return 0xFF;
             }
         } else {
-            let byte = row / ROWS_PER_ATTR + col;
+            let byte = (row / 8) * 32  + col;
             if let Some(ref mem) = self.memory {
                 return mem.read(0x5800 + byte as u16);
             } else {
                 return 0xFF;
+            }
+        }
+    }
+
+    fn io_contention_first(&mut self, port: u16) {
+        if self.model.addr_is_contended(port) {
+            self.frame_clocks += self.model.contention_clocks(self.frame_clocks);
+        };
+        self.frame_clocks += 1;
+    }
+
+    fn io_contention_last(&mut self, port: u16) {
+        if self.model.port_is_contended(port) {
+            self.frame_clocks += self.model.contention_clocks(self.frame_clocks);
+            self.frame_clocks += 2;
+        } else {
+            if self.model.addr_is_contended(port) {
+                self.frame_clocks += self.model.contention_clocks(self.frame_clocks);
+                self.frame_clocks += 1;
+                self.frame_clocks += self.model.contention_clocks(self.frame_clocks);
+                self.frame_clocks += 1;
+                self.frame_clocks += self.model.contention_clocks(self.frame_clocks);
+            } else {
+                self.frame_clocks += 2;
             }
         }
     }
@@ -256,7 +283,7 @@ impl Z80Bus for ZXController {
         match self.model {
             ZXModel::Sinclair48K => {
                 // contention in low 16k RAM
-                if (addr >= 0x4000) && (addr <= 0x7fff) {
+                if self.model.addr_is_contended(addr) {
                     let last_clocks = self.frame_clocks;
                     self.frame_clocks += self.model.contention_clocks(last_clocks);
                 }
@@ -270,7 +297,7 @@ impl Z80Bus for ZXController {
         match self.model {
             ZXModel::Sinclair48K => {
                 // contention in low 16k RAM
-                if (addr >= 0x4000) && (addr <= 0x7fff) {
+                if self.model.addr_is_contended(addr) {
                     let last_clocks = self.frame_clocks;
                     self.frame_clocks += self.model.contention_clocks(last_clocks);
                 }
@@ -280,9 +307,13 @@ impl Z80Bus for ZXController {
         self.frame_clocks += clk.count() as u64;
     }
 
-    fn read_io(&mut self, addr: u16) -> u8 {
-        let (h, l) = split_word(addr);
-        match l {
+    fn read_io(&mut self, port: u16) -> u8 {
+        // all contentions check
+        self.io_contention_first(port);
+        self.io_contention_last(port);
+        // find out what we need to do
+        let (h, l) = split_word(port);
+        let output = match l {
             // keyboard
             0xFE => {
                 let mut tmp: u8 = 0xFF;
@@ -296,29 +327,39 @@ impl Z80Bus for ZXController {
                 if !self.ear {
                     tmp &= 0b10111111;
                 };
+                // 5 and 7 unused
                 tmp
             }
             _ => {
                 self.floating_bus_value()
             },
-        }
+        };
+        // add one clock after operation
+        self.frame_clocks += 1;
+        output
     }
 
-    fn write_io(&mut self, addr: u16, data: u8) {
-        let (_, l) = split_word(addr);
+    fn write_io(&mut self, port: u16, data: u8) {
+        // first contention
+        self.io_contention_first(port);
+        let (_, l) = split_word(port);
         match l {
             0xFE => {
                 self.border_color = data & 0x07;
             }
             _ => {}
         };
+        // last contention after byte write
+        self.io_contention_last(port);
+        // add one clock after operation
+        self.frame_clocks += 1;
     }
 
     fn read_interrupt(&mut self) -> u8 {
         0xFF
     }
     fn int_active(&mut self) -> bool {
-        self.frame_clocks < 32
+        self.frame_clocks % self.model.clocks_per_frame() < 32
     }
     fn nmi_active(&mut self) -> bool {
         false

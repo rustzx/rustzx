@@ -347,7 +347,7 @@ impl Regs {
     }
 
     /// changes program counter
-    pub fn set_pc(&mut self, value: u16) -> u16 { 
+    pub fn set_pc(&mut self, value: u16) -> u16 {
         self.pc = value;
         self.pc
     }
@@ -366,10 +366,6 @@ impl Regs {
 
     /// Shift program counter relatively with signed displacement
     pub fn shift_pc(&mut self, displacement: i8) -> u16 {
-        // NOTE: DEBUG
-        if  word_displacement(self.pc, displacement) == 0x1303 {
-            println!("[shift pc] last opcode before 0x1303 is {:#02X} shift by {}", self.pc, displacement);
-        }
         self.pc = word_displacement(self.pc, displacement);
         self.pc
     }
@@ -484,6 +480,21 @@ impl Regs {
         r
     }
 
+    pub fn get_b(&self) -> u8 {
+        self.b
+    }
+
+    pub fn get_c(&self) -> u8 {
+        self.c
+    }
+
+    pub fn get_h(&self) -> u8 {
+        self.h
+    }
+
+    pub fn get_l(&self) -> u8 {
+        self.l
+    }
     // flip-flops --------------------------------------------------------------------------------
 
     /// returns iff1

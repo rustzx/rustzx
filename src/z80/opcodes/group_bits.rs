@@ -10,31 +10,37 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
     let (opcode, operand) = if prefix == Prefix::None {
         // normal opcode fetch
         let tmp_opcode = Opcode::from_byte(cpu.fetch_byte(bus, Clocks(4)));
+        // inc r when non-prefixed.
+        cpu.regs.inc_r(1);
+        // return opcode with operand tuple
         if let Some(reg) = RegName8::from_u3(tmp_opcode.z) {
             (tmp_opcode, RotOperand8::Reg(reg))
         } else {
+            // non-prefixed, addr is HL
             (tmp_opcode, RotOperand8::Indirect(cpu.regs.get_hl()))
         }
     } else {
         // xx xx dd nn format opcode fetch
-        bus.read(cpu.regs.get_pc(), Clocks(3));
-        let d = bus.read_internal(cpu.regs.get_pc()) as i8;
+        // if prefixed, we need to swap displacement and opcode
+        // fetch displacement
+        let d =  cpu.fetch_byte(bus, Clocks(3)) as i8;
+        // build address
         let addr = word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d);
-        cpu.regs.inc_pc(1);
-        bus.read(cpu.regs.get_pc(), Clocks(3));
-        let tmp = bus.read_internal(cpu.regs.get_pc());
+        // read next byte
+        let tmp = bus.read(cpu.regs.get_pc(), Clocks(3));
         let tmp_opcode = Opcode::from_byte(tmp);
+        // wait 2 clocks
         bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
+        // next byte
         cpu.regs.inc_pc(1);
         (tmp_opcode, RotOperand8::Indirect(addr))
     };
-
-    let copy_reg = if (opcode.z != U3::N6) & (prefix != Prefix::None) {
+    // if prefixed and z != 6, copy result to r[z]
+    let copy_reg = if (opcode.z != U3::N6) && (prefix != Prefix::None) {
         Some(RegName8::from_u3(opcode.z).unwrap())
     } else {
         None
     };
-
     // valiable to store result of next computations,
     // used in DDCB, FDCB opcodes for result store
     let result;
@@ -80,7 +86,7 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
                 // RES y, r[z]
                 // [0b10yyyzzz] : 0x80...0xBF
                 U2::N2 => {
-                    result = data & (!(0x01 << bit_number));
+                result = data & (!(0x01 << bit_number));
                     match operand {
                         RotOperand8::Indirect(addr) => {
                             bus.write(addr, result, Clocks(3));
@@ -114,5 +120,4 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
             cpu.regs.set_reg_8(reg, result);
         };
     };
-    cpu.regs.inc_r(2); // DDCB,FDCB or CB prefix double inc R reg (yes, wierd enough)
 }

@@ -56,14 +56,6 @@ impl Z80 {
         }
     }
 
-    // pub fn request_interrupt(&mut self) {
-    //     self.int_req = true;
-    // }
-    //
-    // pub fn request_nmi(&mut self) {
-    //     self.nmi_req = true;
-    // }
-
     pub fn is_halted(&self) -> bool {
         self.halted
     }
@@ -82,6 +74,7 @@ impl Z80 {
                     bus.halt(false);
                     self.halted = false;
                 }
+                // TODO: nmi review
                 // push pc and set pc to 0x0066 ( pleace PC on bus ?)
                 bus.wait_loop(self.regs.get_pc(), Clocks(5));
                 // reset iff1
@@ -104,36 +97,39 @@ impl Z80 {
                 match self.int_mode {
                     // execute instruction on the bus
                     IntMode::IM0 => {
-                        bus.wait_loop(self.regs.get_pc(), Clocks(2));
+                        // for zx spectrum same as IM1
+                        execute_push_16(self, bus, RegName16::PC, Clocks(3));
+                        self.regs.set_pc(0x0038);
+                        bus.wait_internal(Clocks(7));
+                        /*bus.wait_loop(self.regs.get_pc(), Clocks(2));
                         // disable nested interrupt check
                         self.skip_interrupt = true;
                         // set io as rom and execute instruction on it.
                         self.io_as_rom = true;
                         self.emulate(bus);
-                        self.io_as_rom = false;
+                        self.io_as_rom = false;*/
                         // 2 + instruction clocks
                     }
                     // push pc and jump to 0x0038
                     IntMode::IM1 => {
-                        bus.wait_loop(self.regs.get_pc(), Clocks(7));
                         execute_push_16(self, bus, RegName16::PC, Clocks(3));
                         self.regs.set_pc(0x0038);
-                        // 7 + 3 + 3 = 13 clocks
+                        bus.wait_internal(Clocks(7));
+                        // 3 + 3 + 7 = 13 clocks
                     }
                     // jump using interrupt vector
                     IntMode::IM2 => {
-                        bus.wait_loop(self.regs.get_pc(), Clocks(7));
                         execute_push_16(self, bus, RegName16::PC, Clocks(3));
                         // build interrupt vector
                         let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00) |
-                            ((bus.read_interrupt() as u16)) & 0x00FF;
+                            (((bus.read_interrupt() as u16)) & 0x00FF);
                         let addr = bus.read_word(addr, Clocks(3));
                         self.regs.set_pc(addr);
+                        bus.wait_internal(Clocks(7));
                         //bus.wait_loop(self.regs.get_pc(), Clocks(6));
-                        // 7 + 3 + 3 + 3 + 3 = 19 clocks
+                        // 3 + 3 + 3 + 3 + 7 = 19 clocks
                     }
                 }
-                self.skip_interrupt = false;
             }
         } else {
             // allow interrupts again
@@ -147,6 +143,7 @@ impl Z80 {
         };
         // byte fetch is at least 4 clocks long
         let byte1 = self.fetch_byte(bus, Clocks(4));
+        self.regs.inc_r(1);
         let prefix_hi = Prefix::from_byte(byte1);
         // if prefix finded
         if prefix_hi != Prefix::None {
@@ -155,23 +152,22 @@ impl Z80 {
                 prefix_single @ Prefix::DD | prefix_single @ Prefix::FD => {
                     // next byte, prefix or opcode
                     let byte2 = self.fetch_byte(bus, Clocks(4));
+                    self.regs.inc_r(1);
                     let prefix_lo = Prefix::from_byte(byte2);
                     // if second prefix finded
                     match prefix_lo {
                         Prefix::DD | Prefix::ED | Prefix::FD => {
+                            // NOTE: Check how this works!
+                            // don't increment r !
                             // move back, read second prefix again on next iteration
                             self.regs.dec_pc(1);
                             // execute "NONI"
                             self.skip_interrupt = true;
                             bus.wait_loop(self.regs.get_pc(), Clocks(4));
                         }
-                        Prefix::CB if prefix_hi == Prefix::DD => {
-                            // DDCB prefixed
-                            execute_bits(self, bus, Prefix::DD);
-                        }
                         Prefix::CB => {
-                            // FDCB prefixed
-                            execute_bits(self, bus, Prefix::FD);
+                            // FDCB, DDCB prefixed
+                            execute_bits(self, bus, prefix_single);
                         }
                         Prefix::None => {
                             // use second byte as opcode
@@ -188,13 +184,13 @@ impl Z80 {
                 // CB-prefixed
                 Prefix::CB => {
                     // opcode will be read in function
-                    //self.regs.dec_pc(1);
                     execute_bits(self, bus, Prefix::None);
                 }
                 // ED-prefixed
                 Prefix::ED => {
                     // next byte, prefix or opcode
                     let byte2 = self.fetch_byte(bus, Clocks(4));
+                    self.regs.inc_r(1);
                     let opcode = Opcode::from_byte(byte2);
                     execute_extended(self, bus, opcode);
                 }

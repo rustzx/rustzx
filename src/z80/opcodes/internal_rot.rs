@@ -94,8 +94,8 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut Z80Bus, rot_code: U3, operand: RotOp
     half_carry = false;
     pv = tables::PARITY_BIT[data as usize] != 0;
     sub = false;
-    f3 = data & 0b1000 != 0;
-    f5 = data & 0b100000 != 0;
+    f3 = data & 0x08 != 0;
+    f5 = data & 0x20 != 0;
     // write result
     match operand {
         RotOperand8::Indirect(addr) => {

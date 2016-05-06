@@ -6,8 +6,6 @@ use z80::tables::*;
 /// Extended instruction group (ED-prefixed)
 /// Operations are assorted.
 pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
-    // LD A, R; LD R, A accessing R after incю So increment it twice now!
-    cpu.regs.inc_r(2);
     match opcode.x {
         U2::N0 | U2::N3 => {
             // Nothing. Just nothung. Invalid opcodes.
@@ -27,8 +25,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     let reg = RegName8::from_u3(opcode.y);
                     // put BC on bus (this how Z80 acts on real HW) and get io data
                     let data = bus.read_io(cpu.regs.get_bc());
-                    // TODO: IO TIMINGS!
-                    bus.wait_no_mreq(cpu.regs.get_pc(), Clocks(4));
                     if let Some(reg) = reg {
                         cpu.regs.set_reg_8(reg, data);
                     };
@@ -50,8 +46,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         0
                     };
                     bus.write_io(cpu.regs.get_bc(), data);
-                    // TODO: IO TIMINGS!
-                    bus.wait_no_mreq(cpu.regs.get_pc(), Clocks(4));
                 }
                 // SBC, ADC
                 // [0b0ppq010]
@@ -116,7 +110,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     cpu.regs.set_acc(result);
                     cpu.regs.set_flag(Flag::Sign, result & 0x80 != 0);
                     cpu.regs.set_flag(Flag::Zero, result == 0);
-                    cpu.regs.set_flag(Flag::HalfCarry, half_borrow_8(0, acc));
+                    let lookup = lookup8_r12(0, acc, result);
+                    cpu.regs.set_flag(Flag::HalfCarry,
+                        HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
                     cpu.regs.set_flag(Flag::ParityOveflow, acc == 0x80);
                     cpu.regs.set_flag(Flag::Sub, true);
                     cpu.regs.set_flag(Flag::Carry, acc != 0x00);
@@ -263,7 +259,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         U3::N6 => {
                             execute_ldi_ldd(cpu, bus, BlockDir::Inc);
                             if cpu.regs.get_reg_16(RegName16::BC) != 0 {
-                                bus.wait_loop(cpu.regs.get_de(), Clocks(5));
+                                // last DE for wait
+                                bus.wait_loop(cpu.regs.get_de().wrapping_sub(1), Clocks(5));
                                 cpu.regs.dec_pc(2);
                             };
                         }
@@ -271,7 +268,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         U3::N7 => {
                             execute_ldi_ldd(cpu, bus, BlockDir::Dec);
                             if cpu.regs.get_reg_16(RegName16::BC) != 0 {
-                                bus.wait_loop(cpu.regs.get_de(), Clocks(5));
+                                // last DE for wait
+                                bus.wait_loop(cpu.regs.get_de().wrapping_add(1), Clocks(5));
                                 cpu.regs.dec_pc(2);
                             };
                         }
