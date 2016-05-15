@@ -13,11 +13,11 @@ pub const HALF_CARRY_SUB_TABLE: [u8; 8] = [ 0, 0, 1, 0, 1, 0, 1, 1 ];
 pub const OVERFLOW_ADD_TABLE: [u8; 8] = [ 0, 0, 0, 1, 1, 0, 0, 0 ];
 pub const OVERFLOW_SUB_TABLE: [u8; 8] = [ 0, 1, 0, 0, 0, 0, 1, 0 ];
 
-/// TODO: docs
+/// get pv/hc flags lookup id from 8-bit operands
 pub fn lookup8_r12(a: u8, b: u8, r: u8) -> u8 {
     return ((a & 0x88) >> 3) | ((b & 0x88) >> 2) | ((r & 0x88) >> 1);
 }
-
+/// get pv/hc flags lookup id from 16-bit operands
 pub fn lookup16_r12(a: u16, b: u16, r: u16) -> u8 {
     return (((a & 0x8800) >> 11) | ((b & 0x8800) >> 10) | ((r & 0x8800) >> 9)) as u8;
 }

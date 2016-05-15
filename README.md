@@ -16,6 +16,10 @@ And then just execute
 ```bash
 cargo run --release
 ```
+## Screenshots
+![](screenshots/ulatest3.png) ![](screenshots/fusetest.png)  
+![](screenshots/floatspy.png) ![](screenshots/diagnostics.png)  
+![](screenshots/timings.png)
 ## References
 Of course, I used many resources to find out, how to build my first
 emulator in life. So there is a list of useful references, from where I dig most information about Z80, ULA and other ZX Spectrum hardware parts:  

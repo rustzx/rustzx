@@ -24,7 +24,7 @@ impl Clocks {
 
 
 /// Instruction prefix type
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Prefix {
     None,
     CB,
@@ -41,6 +41,15 @@ impl Prefix {
             0xED => Prefix::ED,
             0xFD => Prefix::FD,
             _ => Prefix::None,
+        }
+    }
+    pub fn to_byte(self) -> Option<u8> {
+        match self {
+            Prefix::DD => Some(0xDD),
+            Prefix::FD => Some(0xFD),
+            Prefix::ED => Some(0xED),
+            Prefix::CB => Some(0xCB),
+            Prefix::None => None,
         }
     }
 }

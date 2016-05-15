@@ -12,7 +12,9 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut Z80Bus, rot_code: U3, operand: RotOp
             bus.wait_no_mreq(addr, Clocks(1));
             tmp
         },
-        RotOperand8::Reg(reg) => cpu.regs.get_reg_8(reg),
+        RotOperand8::Reg(reg) => {
+            cpu.regs.get_reg_8(reg)
+        },
     };
     let (sign, zero, f5, f3, half_carry, pv, sub, carry);
     match rot_code {

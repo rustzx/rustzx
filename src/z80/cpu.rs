@@ -10,7 +10,8 @@ pub struct Z80 {
     pub skip_interrupt: bool,
     pub int_mode: IntMode,
     io_as_rom: bool,
-    // int_req: bool,
+    active_prefix: Prefix,
+    //int_req: bool,
     // nmi_req: bool,
 }
 
@@ -23,8 +24,8 @@ impl Z80 {
             skip_interrupt: false,
             int_mode: IntMode::IM0,
             io_as_rom: false,
-            // int_req: false,
-            // nmi_req: false,
+            active_prefix: Prefix::None,
+            //int_req: false,
         }
     }
 
@@ -43,16 +44,19 @@ impl Z80 {
     #[inline]
     pub fn fetch_word(&mut self, bus: &mut Z80Bus, clk: Clocks) -> u16 {
         if self.io_as_rom {
-            let (hi, lo);
+            /*let (hi, lo);
             lo = bus.read_interrupt();
             hi = bus.read_interrupt();
-            make_word(hi, lo)
+            make_word(hi, lo)*/
+            0x0000
         } else {
             let (hi_addr, lo_addr);
             lo_addr = self.regs.get_pc();
+            let lo = bus.read(lo_addr, clk);
             hi_addr = self.regs.inc_pc(1);
+            let hi = bus.read(hi_addr, clk);
             self.regs.inc_pc(1);
-            make_word(bus.read(hi_addr, clk), bus.read(lo_addr, clk))
+            make_word(hi, lo)
         }
     }
 
@@ -73,8 +77,8 @@ impl Z80 {
                 if self.halted {
                     bus.halt(false);
                     self.halted = false;
+                    self.regs.inc_pc(1);
                 }
-                // TODO: nmi review
                 // push pc and set pc to 0x0066 ( pleace PC on bus ?)
                 bus.wait_loop(self.regs.get_pc(), Clocks(5));
                 // reset iff1
@@ -89,6 +93,7 @@ impl Z80 {
                 if self.halted {
                     bus.halt(false);
                     self.halted = false;
+                    self.regs.inc_pc(1);
                 }
                 self.regs.inc_r(1);
                 // clear flip-flops
@@ -97,6 +102,7 @@ impl Z80 {
                 match self.int_mode {
                     // execute instruction on the bus
                     IntMode::IM0 => {
+                        // TODO: return back normal interrupt detection?
                         // for zx spectrum same as IM1
                         execute_push_16(self, bus, RegName16::PC, Clocks(3));
                         self.regs.set_pc(0x0038);
@@ -135,15 +141,15 @@ impl Z80 {
             // allow interrupts again
             self.skip_interrupt = false;
         };
-        // halt
-        if self.halted {
-             // execute NOP
-             bus.wait_loop(self.regs.get_pc(), Clocks(4));
-             return;
+        // technique with active_prefix is bit.... like a shit...
+        let byte1 = if self.active_prefix != Prefix::None {
+            let tmp = self.active_prefix.to_byte().unwrap();
+            self.active_prefix = Prefix::None;
+            tmp
+        } else {
+            self.regs.inc_r(1);
+            self.fetch_byte(bus, Clocks(4))
         };
-        // byte fetch is at least 4 clocks long
-        let byte1 = self.fetch_byte(bus, Clocks(4));
-        self.regs.inc_r(1);
         let prefix_hi = Prefix::from_byte(byte1);
         // if prefix finded
         if prefix_hi != Prefix::None {
@@ -157,13 +163,8 @@ impl Z80 {
                     // if second prefix finded
                     match prefix_lo {
                         Prefix::DD | Prefix::ED | Prefix::FD => {
-                            // NOTE: Check how this works!
-                            // don't increment r !
-                            // move back, read second prefix again on next iteration
-                            self.regs.dec_pc(1);
-                            // execute "NONI"
+                            self.active_prefix = prefix_lo;
                             self.skip_interrupt = true;
-                            bus.wait_loop(self.regs.get_pc(), Clocks(4));
                         }
                         Prefix::CB => {
                             // FDCB, DDCB prefixed
@@ -172,12 +173,7 @@ impl Z80 {
                         Prefix::None => {
                             // use second byte as opcode
                             let opcode = Opcode::from_byte(byte2);
-                            match prefix_single {
-                                // DD prefixed
-                                Prefix::DD => { execute_normal(self, bus, opcode, Prefix::DD); }
-                                // FD prefixed
-                                _ => { execute_normal(self, bus, opcode, Prefix::FD); }
-                            };
+                            execute_normal(self, bus, opcode, prefix_single);
                         }
                     };
                 }

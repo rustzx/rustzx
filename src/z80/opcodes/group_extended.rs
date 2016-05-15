@@ -116,8 +116,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     cpu.regs.set_flag(Flag::ParityOveflow, acc == 0x80);
                     cpu.regs.set_flag(Flag::Sub, true);
                     cpu.regs.set_flag(Flag::Carry, acc != 0x00);
-                    cpu.regs.set_flag(Flag::F3, result & 0b1000 != 0);
-                    cpu.regs.set_flag(Flag::F5, result & 0b100000 != 0);
+                    cpu.regs.set_flag(Flag::F3, result & 0x08 != 0);
+                    cpu.regs.set_flag(Flag::F5, result & 0x20 != 0);
                 }
                 // RETN, RETI
                 U3::N5 => {
@@ -162,29 +162,29 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         // LD A, I
                         U3::N2 => {
                             bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
-                            let i = cpu.regs.get_i();
-                            let result = cpu.regs.set_acc(i);
                             let iff2 = cpu.regs.get_iff2();
+                            let i = cpu.regs.get_i();
+                            cpu.regs.set_acc(i);
                             cpu.regs.set_flag(Flag::Sub, false);
                             cpu.regs.set_flag(Flag::HalfCarry, false);
-                            cpu.regs.set_flag(Flag::Sign, (result & 0x80) != 0);
-                            cpu.regs.set_flag(Flag::Zero, result == 0);
-                            cpu.regs.set_flag(Flag::F3, (result & 0x08) != 0);
-                            cpu.regs.set_flag(Flag::F5, (result & 0x20) != 0);
+                            cpu.regs.set_flag(Flag::Sign, (i & 0x80) != 0);
+                            cpu.regs.set_flag(Flag::Zero, i == 0);
+                            cpu.regs.set_flag(Flag::F3, (i & 0x08) != 0);
+                            cpu.regs.set_flag(Flag::F5, (i & 0x20) != 0);
                             cpu.regs.set_flag(Flag::ParityOveflow, iff2);
                         }
                         // LD A, R
                         U3::N3 => {
                             bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
-                            let r = cpu.regs.get_r();
-                            let result = cpu.regs.set_acc(r);
                             let iff2 = cpu.regs.get_iff2();
+                            let r = cpu.regs.get_r();
+                            cpu.regs.set_acc(r);
                             cpu.regs.set_flag(Flag::Sub, false);
                             cpu.regs.set_flag(Flag::HalfCarry, false);
-                            cpu.regs.set_flag(Flag::Sign, (result & 0x80) != 0);
-                            cpu.regs.set_flag(Flag::Zero, result == 0);
-                            cpu.regs.set_flag(Flag::F3, (result & 0x08) != 0);
-                            cpu.regs.set_flag(Flag::F5, (result & 0x20) != 0);
+                            cpu.regs.set_flag(Flag::Sign, (r & 0x80) != 0);
+                            cpu.regs.set_flag(Flag::Zero, r == 0);
+                            cpu.regs.set_flag(Flag::F3, (r & 0x08) != 0);
+                            cpu.regs.set_flag(Flag::F5, (r & 0x20) != 0);
                             cpu.regs.set_flag(Flag::ParityOveflow, iff2);
                         }
                         // RRD
@@ -292,7 +292,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         U3::N6 => {
                             let result = execute_cpi_cpd(cpu, bus, BlockDir::Inc);
                             if (cpu.regs.get_reg_16(RegName16::BC) != 0) & (!result) {
-                                bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
+                                // last HL
+                                bus.wait_loop(cpu.regs.get_hl().wrapping_sub(1), Clocks(5));
                                 cpu.regs.dec_pc(2);
                             };
                         }
@@ -300,7 +301,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         U3::N7 => {
                             let result = execute_cpi_cpd(cpu, bus, BlockDir::Dec);
                             if (cpu.regs.get_reg_16(RegName16::BC) != 0) & (!result) {
-                                bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
+                                bus.wait_loop(cpu.regs.get_hl().wrapping_add(1), Clocks(5));
                                 cpu.regs.dec_pc(2);
                             };
                         }
@@ -319,7 +320,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         U3::N6 => {
                             execute_ini_ind(cpu, bus, BlockDir::Inc);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
-                                bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
+                                bus.wait_loop(cpu.regs.get_hl().wrapping_sub(1), Clocks(5));
                                 cpu.regs.dec_pc(2);
                             };
                         }
@@ -327,7 +328,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         U3::N7 => {
                             execute_ini_ind(cpu, bus, BlockDir::Dec);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
-                                bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
+                                bus.wait_loop(cpu.regs.get_hl().wrapping_add(1), Clocks(5));
                                 cpu.regs.dec_pc(2);
                             };
                         }

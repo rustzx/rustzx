@@ -64,9 +64,6 @@ pub trait Z80Bus {
     /// method, invoked by Z80 in case of HALT line change
     fn halt(&mut self, halted: bool);
 
-    fn int_active(&mut self) -> bool;
-    fn nmi_active(&mut self) -> bool;
-
-    // function, invoked by cpu to tell last consumed clocks count
-    // fn consume_clocks(&mut self, clocks: u64);
+    fn int_active(&self) -> bool;
+    fn nmi_active(&self) -> bool;
 }

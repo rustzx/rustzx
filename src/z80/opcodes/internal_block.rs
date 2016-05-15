@@ -2,13 +2,10 @@ use super::*;
 use z80::*;
 use z80::tables::*;
 
-// TODO: BORROW, OVERFLOW TABLES
-
 /// ldi or ldd instruction
 pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
     // read (HL)
     let src = bus.read(cpu.regs.get_hl(), Clocks(3));
-    // dec BC
     let bc = cpu.regs.dec_reg_16(RegName16::BC, 1);
     // write (HL) to (DE)
     bus.write(cpu.regs.get_de(), src, Clocks(3));
@@ -19,7 +16,7 @@ pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
             cpu.regs.inc_reg_16(RegName16::HL, 1);
             cpu.regs.inc_reg_16(RegName16::DE, 1);
         }
-        BlockDir::Dec => { 
+        BlockDir::Dec => {
             cpu.regs.dec_reg_16(RegName16::HL, 1);
             cpu.regs.dec_reg_16(RegName16::DE, 1);
         }
@@ -38,6 +35,7 @@ pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
 pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) -> bool {
     // read (HL)
     let src = bus.read(cpu.regs.get_hl(), Clocks(3));
+    bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
     // move pointer
     match dir {
         BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL, 1),
@@ -63,14 +61,12 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) -> bool {
     };
     cpu.regs.set_flag(Flag::F3, (tmp2 & 0b1000) != 0);
     cpu.regs.set_flag(Flag::F5, (tmp2 & 0b10) != 0);
-    bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
     // Clocks: <4 + 4> + 3 + 5 = 16
     tmp == 0 // return comarison result
 }
 
 /// ini or ind instruction
 pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
-    // TODO: Check when b must be increased
     bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
     // get from port and write to memory
     let src = bus.read_io(cpu.regs.get_bc());
@@ -107,9 +103,8 @@ pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
     bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
     // get input data
     let src = bus.read(cpu.regs.get_hl(), Clocks(3));
-    bus.write_io(cpu.regs.get_bc(), src);
-    // use bc before dec b
     let b = cpu.regs.dec_reg_8(RegName8::B, 1);
+    bus.write_io(cpu.regs.get_bc(), src);
     // move pointer
     match dir {
         BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL, 1),

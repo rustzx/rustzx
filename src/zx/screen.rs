@@ -1,6 +1,10 @@
 use utils::*;
 pub const SCREEN_WIDTH: usize = 256;
 pub const SCREEN_HEIGHT: usize = 192;
+pub const BORDER_WIDTH_COLUMNS: usize = 4;
+pub const BORDER_HEIGHT_COLUMNS: usize = 3;
+pub const BORDER_HEIGHT_ROW: usize = 64;
+
 pub const PIXEL_COUNT: usize = SCREEN_HEIGHT * SCREEN_WIDTH;
 pub const PIXELS_PER_BYTE: u64 = 8;
 pub const BYTES_PER_ROW: u64 = SCREEN_WIDTH as u64 / PIXELS_PER_BYTE;
@@ -43,7 +47,7 @@ impl ZXScreen {
         self.screen = [0; PIXEL_COUNT * 2];
     }
     pub fn write_bitmap_byte(&mut self, addr: u16, value: u8) {
-        assert!((addr & 0xE000) == 0x4000);
+        assert!(addr >= 0x4000 && addr <= 0x57FF);
         // split bitmap byte on pixels
         let mut pixels = [0_u8; 8];
         let mut value = value;
@@ -69,8 +73,7 @@ impl ZXScreen {
         }
     }
     pub fn write_attr_byte(&mut self, addr: u16, value: u8) {
-        // TODO: Add upper bound
-        assert!(addr >= 0x5800);
+        assert!(addr >= 0x5800 && addr <= 0x5AFF);
         let base = addr - 0x5800;
         // left-top pos of 8x8 area
         let x_base = (base % 32) * 8;

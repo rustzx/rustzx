@@ -37,11 +37,11 @@ pub struct RustZXApp;
 
 impl RustZXApp {
     pub fn new() -> RustZXApp {
-        RustZXApp
+    RustZXApp
     }
     pub fn start(&mut self) {
         let mut trace = false;
-        let mut controller = ZXController::new(ZXModel::Sinclair48K);
+        let mut controller = ZXController::new(ZXMachine::Sinclair48K);
         let mut cpu = Z80::new();
         let mut memory = ZXMemory::new(RomType::K16, RamType::K48);
         let mut tape = tape::Tap::new();

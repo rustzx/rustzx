@@ -27,19 +27,12 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
         // build address
         let addr = word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d);
         // read next byte
-        let tmp = bus.read(cpu.regs.get_pc(), Clocks(3));
-        let tmp_opcode = Opcode::from_byte(tmp);
+        let tmp_opcode = Opcode::from_byte(bus.read(cpu.regs.get_pc(), Clocks(3)));
         // wait 2 clocks
         bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
         // next byte
         cpu.regs.inc_pc(1);
         (tmp_opcode, RotOperand8::Indirect(addr))
-    };
-    // if prefixed and z != 6, copy result to r[z]
-    let copy_reg = if (opcode.z != U3::N6) && (prefix != Prefix::None) {
-        Some(RegName8::from_u3(opcode.z).unwrap())
-    } else {
-        None
     };
     // valiable to store result of next computations,
     // used in DDCB, FDCB opcodes for result store
@@ -73,7 +66,10 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
                     cpu.regs.set_flag(Flag::HalfCarry, true);
                     cpu.regs.set_flag(Flag::Zero, !bit_is_set);
                     cpu.regs.set_flag(Flag::ParityOveflow, !bit_is_set);
-                    cpu.regs.set_flag(Flag::Sign, bit_is_set && (bit_number == 7));
+                    // NOTE: according to FUSE.
+                    // maybe must be based on current bit or something?
+                    cpu.regs.set_flag(Flag::Sign, (data & 0x80 != 0) && (bit_number == 7));
+
                     if let RotOperand8::Indirect(addr) = operand {
                         cpu.regs.set_flag(Flag::F3, addr & 0x0800 != 0);
                         cpu.regs.set_flag(Flag::F5, addr & 0x2000 != 0);
@@ -113,11 +109,14 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
             }
         }
     };
-    // if result must be copied
-    if let Some(reg) = copy_reg {
-        // if operation is not BIT
-        if opcode.x != U2::N1 {
-            cpu.regs.set_reg_8(reg, result);
-        };
-    };
+    // if result preifxed
+    if prefix != Prefix::None {
+        // and z != 6 (must be undocumented)
+        if let Some(reg) = RegName8::from_u3(opcode.z) {
+            // then copy, if instruction isn't BIT
+            if opcode.x != U2::N1 {
+                cpu.regs.set_reg_8(reg, result);
+            };
+        }
+    }
 }

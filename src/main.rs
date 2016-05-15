@@ -3,7 +3,8 @@
 #[macro_use]
 extern crate glium;
 extern crate time;
-
+#[macro_use]
+extern crate lazy_static;
 mod utils;
 mod z80;
 mod zx;

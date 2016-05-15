@@ -6,6 +6,7 @@ pub enum LoadOperand8 {
     Reg(RegName8),
 }
 
+// TODO: Rename to BitOperand8 in project
 /// Operand for 8-bit Rotate instructions
 pub enum RotOperand8  {
     Indirect(u16),

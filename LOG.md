@@ -1,8 +1,10 @@
+**[15.05.2016]** Fixed bug in INC/DEC (IX/IY + dd). After 2 weeks :smile:  
+**[12.05.2016]** Fixed CALL timings  
 **[06.05.2016]** Floating bus fix  
 **[28.04.2016]** All contentions implemented!  
 **[24.04.2016]** Almost all contentions working perfectly (IO still broken)  
 **[24.04.2016]** IM2 bug fixed, finally I found it! :smile:  
-**[24.04.2016]** new Z80Bus interface, serious z80 emulation part rewrite
+**[24.04.2016]** new Z80Bus interface, serious z80 emulation part rewrite  
 **[22.04.2016]** work on implementing correct timings started.  
 **[18.04.2016]** fixed many instruction bugs (IO section still not finished)  
 **[12.04.2016]** fixed shader bug causing bad performance - palette was declared as non-const  
