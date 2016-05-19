@@ -1,44 +1,40 @@
+//! Main application class module
+//! TODO: Code refactoring
+
 use std::thread;
 use std::fs::*;
 use std::io::Write;
-
-use glium::glutin::{WindowBuilder, Event,  ElementState as KeyState};
-use glium::DisplayBuild;
-use glium::glutin::{VirtualKeyCode as VKey};
-
-use super::video::ZXScreenRenderer;
-use super::keyboard::vkey_to_zxkey;
-use z80::{Z80, Z80Bus};
-use zx::*;
-use time;
 use std::time::Duration;
 
+use time;
+use glium::glutin::{WindowBuilder, Event, ElementState as KeyState};
+use glium::DisplayBuild;
+use glium::glutin::VirtualKeyCode as VKey;
+
+use app::video::ZXScreenRenderer;
+use app::keyboard::vkey_to_zxkey;
+use z80::*;
+use zx::*;
+
+/// converts nanoseconds  to miliseconds
 fn ns_to_ms(ns: u64) -> f64 {
     ns as f64 / 1_000_000f64
 }
 
-fn s_to_ns(s: f64) -> u64 {
-    (s * 1_000_000_000_f64) as u64
-}
-
+/// converts miliseconds to nanoseconds
 fn ms_to_ns(s: f64) -> u64 {
     (s * 1_000_000_f64) as u64
 }
 
-#[derive(Clone, Copy)]
-struct Vertex {
-    position: [f32; 2],
-    tex_coord: [f32; 2],
-}
-
-implement_vertex!(Vertex, position, tex_coord);
-
+/// Application instance type
 pub struct RustZXApp;
 
 impl RustZXApp {
+    /// Returns new application instance
     pub fn new() -> RustZXApp {
-    RustZXApp
+        RustZXApp
     }
+    /// starts application
     pub fn start(&mut self) {
         let mut trace = false;
         let mut controller = ZXController::new(ZXMachine::Sinclair48K);
@@ -48,21 +44,23 @@ impl RustZXApp {
         tape.insert("/home/pacmancoder/test.tap");
         memory.load_rom(0, include_bytes!("48.rom")).unwrap();
         controller.atach_memory(memory);
-        controller.attach_screen(ZXScreen::new());
-
+        controller.attach_screen(ZXScreen::new(ZXMachine::Sinclair48K, ZXPalette::default()));
         // build new glium window
         let display = WindowBuilder::new()
-            .with_dimensions(384 * 2, 288 * 2)
-            .build_glium().unwrap();
+                          .with_dimensions(384 * 2, 288 * 2)
+                          .build_glium()
+                          .unwrap();
         let mut renderer = ZXScreenRenderer::new(&display);
         // NOTE: 16x speed
-        let speed = 16u64;
-        let frame_target_dt_ns = ms_to_ns((1000/(50 * speed)) as f64);
         let mut frame_counter = 0_usize;
-        'render_loop : loop {
+        let mut speed = 16u64;
+        let mut frame_devider = 1;
+        'render_loop: loop {
+            let frame_target_dt_ns = ms_to_ns((1000 / (50 * speed)) as f64);
             frame_counter += 1;
-            let frame_start_ns = time::precise_time_ns();
             controller.new_frame();
+
+            let frame_start_ns = time::precise_time_ns();
             // emulation loop
             if trace {
                 println!("Frame start");
@@ -70,10 +68,15 @@ impl RustZXApp {
             loop {
                 let prev_clocks = controller.clocks();
                 if trace {
-                    println!("PC: {:#04X}; Opcode: {:#02X}; Clocks: {}; Halted: {}; iff: {},{}; im: {:?}",
-                        cpu.regs.get_pc(), Z80Bus::read_internal(&controller,cpu.regs.get_pc()),
-                        controller.get_frame_clocks(), cpu.is_halted(), cpu.regs.get_iff1(),
-                        cpu.regs.get_iff2(), cpu.get_im());
+                    println!("PC: {:#04X}; Opcode: {:#02X}; Clocks: {}; Halted: {}; iff: {},{}; \
+                              im: {:?}",
+                             cpu.regs.get_pc(),
+                             Z80Bus::read_internal(&controller, cpu.regs.get_pc()),
+                             controller.get_frame_clocks(),
+                             cpu.is_halted(),
+                             cpu.regs.get_iff1(),
+                             cpu.regs.get_iff2(),
+                             cpu.get_im());
                 }
                 cpu.emulate(&mut controller);
                 let clocks_delta = controller.clocks() - prev_clocks;
@@ -84,13 +87,11 @@ impl RustZXApp {
                 }
             }
             trace = false;
-            let cpu_dt_ns =  time::precise_time_ns() - frame_start_ns;
-            // render display
-            if (frame_counter % 32) == 0 {
-                renderer.invert_blink();
+            let cpu_dt_ns = time::precise_time_ns() - frame_start_ns;
+            if frame_counter % frame_devider == 0 {
+                renderer.set_border_color(controller.get_border_color());
+                renderer.draw_screen(&display, controller.get_screen_texture());
             }
-            renderer.set_border_color(controller.get_border_color());
-            renderer.draw_screen(&display, controller.get_screen_texture());
             // glutin events
             for event in display.poll_events() {
                 match event {
@@ -109,8 +110,16 @@ impl RustZXApp {
                             VKey::F3 => {
                                 trace = true;
                             }
+                            VKey::F4 => {
+                                speed = 1;
+                                frame_devider = 1;
+                            }
+                            VKey::F5 => {
+                                speed = 128;
+                                frame_devider = 16;
+                            }
                             _ => {
-                                if let Some(key) =  vkey_to_zxkey(key_code) {
+                                if let Some(key) = vkey_to_zxkey(key_code) {
                                     match state {
                                         KeyState::Pressed => controller.send_key(key, true),
                                         KeyState::Released => controller.send_key(key, false),
@@ -123,21 +132,22 @@ impl RustZXApp {
                         let pc = cpu.regs.get_pc();
                         println!("pc: {:#04X}", pc);
                     }
-                    _ => {},
+                    _ => {}
                 }
             }
             let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
 
             // wait some time for 50 FPS
+
             if emulation_dt_ns < frame_target_dt_ns {
                 thread::sleep(Duration::new(0, (frame_target_dt_ns - emulation_dt_ns) as u32));
             };
             let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
             if let Some(wnd) = display.get_window() {
                 wnd.set_title(&format!("CPU: {:7.3}ms; EMULATOR: {:7.3}ms; FRAME:{:7.3}ms",
-                    ns_to_ms(cpu_dt_ns),
-                    ns_to_ms(emulation_dt_ns),
-                    ns_to_ms(frame_dt_ns)));
+                                       ns_to_ms(cpu_dt_ns),
+                                       ns_to_ms(emulation_dt_ns),
+                                       ns_to_ms(frame_dt_ns)));
             }
         }
     }

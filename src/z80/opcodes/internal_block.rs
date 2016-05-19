@@ -95,7 +95,8 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
     cpu.regs.set_flag(Flag::Carry, k_carry);
     cpu.regs.set_flag(Flag::HalfCarry, k_carry);
     // Parity of (k & 7) xor B is PV flag
-    cpu.regs.set_flag(Flag::ParityOveflow, tables::PARITY_BIT[((k & 0x07) ^ b) as usize] != 0);
+    cpu.regs.set_flag(Flag::ParityOveflow,
+                      tables::PARITY_BIT[((k & 0x07) ^ b) as usize] != 0);
 }
 
 /// outi or outd instruction
@@ -123,5 +124,6 @@ pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
     cpu.regs.set_flag(Flag::Carry, k_carry);
     cpu.regs.set_flag(Flag::HalfCarry, k_carry);
     // Parity of (k & 7) xor B is PV flag
-    cpu.regs.set_flag(Flag::ParityOveflow, tables::PARITY_BIT[((k & 0x07) ^ b) as usize] != 0);
+    cpu.regs.set_flag(Flag::ParityOveflow,
+                      tables::PARITY_BIT[((k & 0x07) ^ b) as usize] != 0);
 }

@@ -14,16 +14,16 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
         cpu.regs.inc_r(1);
         // return opcode with operand tuple
         if let Some(reg) = RegName8::from_u3(tmp_opcode.z) {
-            (tmp_opcode, RotOperand8::Reg(reg))
+            (tmp_opcode, BitOperand8::Reg(reg))
         } else {
             // non-prefixed, addr is HL
-            (tmp_opcode, RotOperand8::Indirect(cpu.regs.get_hl()))
+            (tmp_opcode, BitOperand8::Indirect(cpu.regs.get_hl()))
         }
     } else {
         // xx xx dd nn format opcode fetch
         // if prefixed, we need to swap displacement and opcode
         // fetch displacement
-        let d =  cpu.fetch_byte(bus, Clocks(3)) as i8;
+        let d = cpu.fetch_byte(bus, Clocks(3)) as i8;
         // build address
         let addr = word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d);
         // read next byte
@@ -32,7 +32,7 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
         bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
         // next byte
         cpu.regs.inc_pc(1);
-        (tmp_opcode, RotOperand8::Indirect(addr))
+        (tmp_opcode, BitOperand8::Indirect(addr))
     };
     // valiable to store result of next computations,
     // used in DDCB, FDCB opcodes for result store
@@ -48,14 +48,12 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
             // get bit number and data byte
             let bit_number = opcode.y.as_byte();
             let data = match operand {
-                RotOperand8::Indirect(addr) => {
+                BitOperand8::Indirect(addr) => {
                     let tmp = bus.read(addr, Clocks(3));
                     bus.wait_no_mreq(addr, Clocks(1));
                     tmp
                 }
-                RotOperand8::Reg(reg) => {
-                    cpu.regs.get_reg_8(reg)
-                }
+                BitOperand8::Reg(reg) => cpu.regs.get_reg_8(reg),
             };
             match opcode.x {
                 // BIT y, r[z]
@@ -70,7 +68,7 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
                     // maybe must be based on current bit or something?
                     cpu.regs.set_flag(Flag::Sign, (data & 0x80 != 0) && (bit_number == 7));
 
-                    if let RotOperand8::Indirect(addr) = operand {
+                    if let BitOperand8::Indirect(addr) = operand {
                         cpu.regs.set_flag(Flag::F3, addr & 0x0800 != 0);
                         cpu.regs.set_flag(Flag::F5, addr & 0x2000 != 0);
                     } else {
@@ -82,12 +80,12 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
                 // RES y, r[z]
                 // [0b10yyyzzz] : 0x80...0xBF
                 U2::N2 => {
-                result = data & (!(0x01 << bit_number));
+                    result = data & (!(0x01 << bit_number));
                     match operand {
-                        RotOperand8::Indirect(addr) => {
+                        BitOperand8::Indirect(addr) => {
                             bus.write(addr, result, Clocks(3));
                         }
-                        RotOperand8::Reg(reg) => {
+                        BitOperand8::Reg(reg) => {
                             cpu.regs.set_reg_8(reg, result);
                         }
                     };
@@ -97,15 +95,15 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
                 U2::N3 => {
                     result = data | (0x01 << bit_number);
                     match operand {
-                        RotOperand8::Indirect(addr) => {
+                        BitOperand8::Indirect(addr) => {
                             bus.write(addr, result, Clocks(3));
                         }
-                        RotOperand8::Reg(reg) => {
+                        BitOperand8::Reg(reg) => {
                             cpu.regs.set_reg_8(reg, result);
                         }
                     };
                 }
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
     };

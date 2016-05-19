@@ -1,3 +1,5 @@
+//! Module consist of function which represents different execution groups and some
+//! small related types
 mod types;
 mod internal_alu;
 mod internal_rot;

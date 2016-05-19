@@ -1,23 +1,16 @@
 use utils::*;
 use z80::*;
+
 /// Operand for 8-bit LD instructions
 pub enum LoadOperand8 {
     Indirect(u16),
     Reg(RegName8),
 }
 
-// TODO: Rename to BitOperand8 in project
-/// Operand for 8-bit Rotate instructions
-pub enum RotOperand8  {
+/// Operand for 8-bit Bit instructions
+pub enum BitOperand8 {
     Indirect(u16),
     Reg(RegName8),
-}
-
-/// Operand for 8-bit ALU instructions
-pub enum AluOperand8 {
-    Indirect(u16),
-    Reg(RegName8),
-    Const(u8),
 }
 
 /// Direction of address cahange in block functions
@@ -42,7 +35,7 @@ pub struct Opcode {
     pub q: U1,
 }
 impl Opcode {
-    /// split opcode into parts
+    /// splits opcode into parts
     pub fn from_byte(data: u8) -> Opcode {
         Opcode {
             byte: data,

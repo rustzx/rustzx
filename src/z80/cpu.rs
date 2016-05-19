@@ -1,22 +1,22 @@
+//! Z80 CPU module
+//! TODO: INT MODE 0
+
 use utils::*;
 use super::*;
 use super::opcodes::*;
 
 /// Z80 Processor struct
 pub struct Z80 {
-    /// CPU Regs struct
     pub regs: Regs,
     pub halted: bool,
     pub skip_interrupt: bool,
     pub int_mode: IntMode,
     io_as_rom: bool,
     active_prefix: Prefix,
-    //int_req: bool,
-    // nmi_req: bool,
 }
 
 impl Z80 {
-    /// new cpu instance
+    /// Returns new cpu instance
     pub fn new() -> Z80 {
         Z80 {
             regs: Regs::new(),
@@ -25,30 +25,29 @@ impl Z80 {
             int_mode: IntMode::IM0,
             io_as_rom: false,
             active_prefix: Prefix::None,
-            //int_req: false,
         }
     }
 
-    /// read byte from rom and, pc += 1
+    /// Reads byte from memory and increments PC
     #[inline]
     pub fn fetch_byte(&mut self, bus: &mut Z80Bus, clk: Clocks) -> u8 {
         if self.io_as_rom {
             bus.read_interrupt()
         } else {
-            let addr = self.regs.get_pc();
-            self.regs.inc_pc(1);
-            bus.read(addr, clk)
+        let addr = self.regs.get_pc();
+        self.regs.inc_pc(1);
+        bus.read(addr, clk)
         }
     }
-    /// read word from rom and, pc += 2
+
+    /// Reads word from memory and increments PC twice
     #[inline]
     pub fn fetch_word(&mut self, bus: &mut Z80Bus, clk: Clocks) -> u16 {
         if self.io_as_rom {
-            /*let (hi, lo);
+            let (hi, lo);
             lo = bus.read_interrupt();
             hi = bus.read_interrupt();
-            make_word(hi, lo)*/
-            0x0000
+            make_word(hi, lo)
         } else {
             let (hi_addr, lo_addr);
             lo_addr = self.regs.get_pc();
@@ -59,15 +58,15 @@ impl Z80 {
             make_word(hi, lo)
         }
     }
-
+    /// Checks is cpu halted
     pub fn is_halted(&self) -> bool {
         self.halted
     }
-
+    /// Returns current interrupt mode
     pub fn get_im(&self) -> IntMode {
         self.int_mode
     }
-
+    /// Main emulation step function
     pub fn emulate(&mut self, bus: &mut Z80Bus) {
         // check interrupts
         if !self.skip_interrupt {
@@ -128,11 +127,10 @@ impl Z80 {
                         execute_push_16(self, bus, RegName16::PC, Clocks(3));
                         // build interrupt vector
                         let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00) |
-                            (((bus.read_interrupt() as u16)) & 0x00FF);
+                                   (((bus.read_interrupt() as u16)) & 0x00FF);
                         let addr = bus.read_word(addr, Clocks(3));
                         self.regs.set_pc(addr);
                         bus.wait_internal(Clocks(7));
-                        //bus.wait_loop(self.regs.get_pc(), Clocks(6));
                         // 3 + 3 + 3 + 3 + 7 = 19 clocks
                     }
                 }

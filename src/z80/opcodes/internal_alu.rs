@@ -11,7 +11,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
     match alu_code {
         // ADD A, Operand
         U3::N0 => {
-            let temp: u16 =  (acc as u16).wrapping_add(operand as u16);
+            let temp: u16 = (acc as u16).wrapping_add(operand as u16);
             result = temp as u8;
             // get lookup code in r12 form [read file overflows.rs in z80/tables module]
             // high nibble will be bit 7 in r12 form, low nibble will be 3 bit in same form
@@ -25,8 +25,9 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
         // ADC A, Operand
         U3::N1 => {
             let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry));
-            let temp: u16 = (acc as u16).wrapping_add(operand as u16)
-                .wrapping_add(prev_carry as u16);
+            let temp: u16 = (acc as u16)
+                                .wrapping_add(operand as u16)
+                                .wrapping_add(prev_carry as u16);
             result = temp as u8;
             let lookup = lookup8_r12(acc, operand, temp as u8);
             pv = OVERFLOW_ADD_TABLE[(lookup >> 4) as usize] != 0;
@@ -47,8 +48,9 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
         // SBC A, Operand; CP A, Operand
         U3::N3 => {
             let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry));
-            let temp: u16 = (acc as u16).wrapping_sub(operand as u16)
-                .wrapping_sub(prev_carry as u16);
+            let temp: u16 = (acc as u16)
+                                .wrapping_sub(operand as u16)
+                                .wrapping_sub(prev_carry as u16);
             result = temp as u8;
             let lookup = lookup8_r12(acc, operand, temp as u8);
             pv = OVERFLOW_SUB_TABLE[(lookup >> 4) as usize] != 0;

@@ -1,3 +1,6 @@
+//! Module with hardware key port\masks
+
+// Struct, which contains mast and port of key
 pub struct ZXKey{
     pub half_port: u8,
     pub mask: u8,

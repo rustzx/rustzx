@@ -1,6 +1,7 @@
-//! Collection of independent types, used by multiplie other types
+//! Collection of independent types, used by other types of z80 module
 use std::ops::AddAssign;
 
+/// Clocks count
 #[derive(Clone, Copy)]
 pub struct Clocks(pub usize);
 
@@ -17,6 +18,7 @@ impl AddAssign<usize> for Clocks {
 }
 
 impl Clocks {
+    /// returns inner `usize` value
     pub fn count(&self) -> usize {
         self.0
     }
@@ -33,7 +35,7 @@ pub enum Prefix {
     FD,
 }
 impl Prefix {
-    /// get prefix option from byte value
+    /// Returns prefix type from byte value
     pub fn from_byte(data: u8) -> Prefix {
         match data {
             0xCB => Prefix::CB,
@@ -43,6 +45,7 @@ impl Prefix {
             _ => Prefix::None,
         }
     }
+    /// Transforms prefix back to byte
     pub fn to_byte(self) -> Option<u8> {
         match self {
             Prefix::DD => Some(0xDD),
@@ -54,7 +57,7 @@ impl Prefix {
     }
 }
 
-/// Interrupt mode
+/// Interrupt mode enum
 #[derive(Debug, Clone, Copy)]
 pub enum IntMode {
     IM0,

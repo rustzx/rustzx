@@ -1,3 +1,4 @@
+//! Module with ZX Spectrum related things
 pub mod memory;
 pub mod controller;
 pub mod screen;

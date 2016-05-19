@@ -6,24 +6,28 @@ const SIZE_64K: usize = PAGE_SIZE * 4;
 const SIZE_128K: usize = PAGE_SIZE * 8;
 const MEM_BLOCKS: usize = 4;
 
+/// Rom type enum
 pub enum RomType {
     K16,
     K32,
     K64,
 }
 
+/// Ram type enum
 pub enum RamType {
     K16,
     K48,
     K128,
 }
 
+// Page info and type
 #[derive(Clone, Copy)]
 pub enum Page {
     Ram(u8),
     Rom(u8),
 }
 
+// Memory struct
 pub struct ZXMemory {
     rom: Vec<u8>,
     ram: Vec<u8>,
@@ -32,7 +36,7 @@ pub struct ZXMemory {
 }
 
 impl ZXMemory {
-    ///
+    /// Returns new Memory with coresponding rom and ram types
     pub fn new(rom_type: RomType, ram_type: RamType) -> ZXMemory {
         let ram_size;
         let mem_map;
@@ -61,21 +65,18 @@ impl ZXMemory {
             map: mem_map,
         }
     }
-    /// get value form memory
+
+    /// Returns value form memory
     pub fn read(&self, addr: u16) -> u8 {
         let page = self.map[(addr as usize) / PAGE_SIZE];
         let addr_rel = addr as usize % PAGE_SIZE;
         match page {
-            Page::Rom(page) => {
-                self.rom[(page as usize) * PAGE_SIZE + addr_rel]
-            }
-            Page::Ram(page) => {
-                self.ram[(page as usize) * PAGE_SIZE + addr_rel]
-            }
+            Page::Rom(page) => self.rom[(page as usize) * PAGE_SIZE + addr_rel],
+            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + addr_rel],
         }
     }
 
-    /// write value to memory
+    /// Writes value to memory
     pub fn write(&mut self, addr: u16, value: u8) {
         let page = self.map[(addr as usize) / PAGE_SIZE];
         let addr_rel = addr as usize % PAGE_SIZE;
@@ -87,12 +88,13 @@ impl ZXMemory {
         };
     }
 
+    /// Changes memory map
     pub fn remap(&mut self, block: usize, page: Page) -> Result<(), ()> {
         if block < MEM_BLOCKS {
             match page {
                 Page::Ram(page) if (page as usize + 1) * PAGE_SIZE > self.ram.len() => Err(()),
                 Page::Rom(page) if (page as usize + 1) * PAGE_SIZE > self.rom.len() => Err(()),
-                _ => {  
+                _ => {
                     self.map[block] = page;
                     Ok(())
                 }
@@ -102,6 +104,8 @@ impl ZXMemory {
         }
     }
 
+    /// Loads ROM from array slice to memory
+    /// TODO: make "upload_page" fuction, allow to load not only rom's
     pub fn load_rom(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {
         if (page as usize + 1) * PAGE_SIZE > self.rom.len() {
             Err(())
@@ -113,6 +117,7 @@ impl ZXMemory {
         }
     }
 
+    /// Dumps current address space
     pub fn dump(&self) -> Vec<u8> {
         let mut out = self.rom.clone();
         let mut ram = self.ram.clone();

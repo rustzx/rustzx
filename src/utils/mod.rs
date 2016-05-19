@@ -1,3 +1,5 @@
+//! Some emulator-related utils
+
 pub mod smallnum;
 pub use self::smallnum::*;
 
@@ -27,10 +29,4 @@ pub fn bool_to_u8(value: bool) -> u8 {
         true => 1,
         false => 0,
     }
-}
-
-/// check bit in value
-#[inline]
-pub fn bit(value: u8, bit: u8) -> bool {
-    (value & (0x01 << bit)) != 0
 }

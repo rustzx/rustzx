@@ -1,6 +1,9 @@
-use glium::glutin::{VirtualKeyCode as VKey};
+//! Provides function `vkey_to_zxkey` for translatng glutin key to internal format enum
+
+use glium::glutin::VirtualKeyCode as VKey;
 use zx::keys::*;
 
+/// returns `ZXKey` from glutin `VirtualKeyCode`
 pub fn vkey_to_zxkey(key: VKey) -> Option<ZXKey> {
     match key {
         // FEFE

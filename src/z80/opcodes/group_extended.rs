@@ -34,8 +34,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     cpu.regs.set_flag(Flag::F5, data & 0b100000 != 0);
                     cpu.regs.set_flag(Flag::Zero, data == 0);
                     cpu.regs.set_flag(Flag::Sign, data & 0x80 != 0);
-                    cpu.regs.set_flag(Flag::ParityOveflow,
-                                       tables::PARITY_BIT[data as usize] != 0);
+                    cpu.regs.set_flag(Flag::ParityOveflow, tables::PARITY_BIT[data as usize] != 0);
                 }
                 // OUT
                 // [0b01yyy001] : 41 49 51 59 61 69 71 79
@@ -53,14 +52,15 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     bus.wait_loop(cpu.regs.get_ir(), Clocks(7));
                     let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry)) as u16;
                     let operand = cpu.regs.get_reg_16(RegName16::from_u2_sp(opcode.p));
-                    let hl =  cpu.regs.get_hl();
+                    let hl = cpu.regs.get_hl();
                     let (sub, pv, half_carry);
                     let result: u32;
                     match opcode.q {
                         // SBC HL, rp[p]
                         U1::N0 => {
-                            result = (hl as u32).wrapping_sub(operand as u32)
-                                .wrapping_sub(prev_carry as u32);
+                            result = (hl as u32)
+                                         .wrapping_sub(operand as u32)
+                                         .wrapping_sub(prev_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
                             pv = OVERFLOW_SUB_TABLE[(lookup >> 4) as usize] != 0;
                             half_carry = HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0;
@@ -68,8 +68,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         }
                         // ADC HL, rp[p]
                         U1::N1 => {
-                            result = (hl as u32).wrapping_add(operand as u32)
-                                .wrapping_add(prev_carry as u32);
+                            result = (hl as u32)
+                                         .wrapping_add(operand as u32)
+                                         .wrapping_add(prev_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
                             pv = OVERFLOW_ADD_TABLE[(lookup >> 4) as usize] != 0;
                             half_carry = HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0;
@@ -112,7 +113,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     cpu.regs.set_flag(Flag::Zero, result == 0);
                     let lookup = lookup8_r12(0, acc, result);
                     cpu.regs.set_flag(Flag::HalfCarry,
-                        HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
+                                      HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
                     cpu.regs.set_flag(Flag::ParityOveflow, acc == 0x80);
                     cpu.regs.set_flag(Flag::Sub, true);
                     cpu.regs.set_flag(Flag::Carry, acc != 0x00);
@@ -132,16 +133,10 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                 }
                 // IM im[y]
                 U3::N6 => {
-                    cpu.int_mode =  match opcode.y {
-                        U3::N0 | U3::N1 | U3::N4 | U3::N5 => {
-                            IntMode::IM0
-                        }
-                        U3::N2 | U3::N6 => {
-                            IntMode::IM1
-                        }
-                        U3::N3 | U3::N7 => {
-                            IntMode::IM2
-                        }
+                    cpu.int_mode = match opcode.y {
+                        U3::N0 | U3::N1 | U3::N4 | U3::N5 => IntMode::IM0,
+                        U3::N2 | U3::N6 => IntMode::IM1,
+                        U3::N3 | U3::N7 => IntMode::IM2,
                     };
                 }
                 // Assorted - LD,Rotates, Nop
@@ -205,7 +200,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             cpu.regs.set_flag(Flag::Zero, acc == 0);
                             cpu.regs.set_flag(Flag::HalfCarry, false);
                             cpu.regs.set_flag(Flag::ParityOveflow,
-                                               tables::PARITY_BIT[acc as usize] != 0);
+                                              tables::PARITY_BIT[acc as usize] != 0);
                             cpu.regs.set_flag(Flag::Sub, false);
                             cpu.regs.set_flag(Flag::F3, acc & 0b1000 != 0);
                             cpu.regs.set_flag(Flag::F5, acc & 0b100000 != 0);
@@ -228,7 +223,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             cpu.regs.set_flag(Flag::Zero, acc == 0);
                             cpu.regs.set_flag(Flag::HalfCarry, false);
                             cpu.regs.set_flag(Flag::ParityOveflow,
-                                               tables::PARITY_BIT[acc as usize] != 0);
+                                              tables::PARITY_BIT[acc as usize] != 0);
                             cpu.regs.set_flag(Flag::Sub, false);
                             cpu.regs.set_flag(Flag::F3, acc & 0b1000 != 0);
                             cpu.regs.set_flag(Flag::F5, acc & 0b100000 != 0);
@@ -274,7 +269,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             };
                         }
                         // No operation
-                        _ => {},
+                        _ => {}
                     }
                 }
                 // CP Block group
@@ -306,7 +301,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             };
                         }
                         // No operation
-                        _ => {},
+                        _ => {}
                     }
                 }
                 // IN Block group
@@ -333,7 +328,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             };
                         }
                         // No operation
-                        _ => {},
+                        _ => {}
                     }
                 }
                 // Out Block group
@@ -360,11 +355,11 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             };
                         }
                         // No operation
-                        _ => {},
+                        _ => {}
                     }
                 }
                 // No operation
-                _ => {},
+                _ => {}
             }
         }
     }

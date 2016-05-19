@@ -83,7 +83,8 @@ impl ZXTape for Tap {
         self.curr_bit
     }
     fn insert<P>(&mut self, path: P) -> InsertResult
-        where P: AsRef<Path> {
+        where P: AsRef<Path>
+    {
         if let Ok(mut file) = File::open(path) {
             if let Err(_) = file.read_to_end(&mut self.data) {
                 return InsertResult::Err("TAP file read error");
@@ -103,7 +104,7 @@ impl ZXTape for Tap {
             // if enough accumulated clocks then clear delay and drop some accumulated clocks
             if self.acc_clocks >= self.delay {
                 self.acc_clocks -= self.delay;
-                //self.acc_clocks = 0;
+                // self.acc_clocks = 0;
                 self.delay = 0;
             }
             // return anyway, it is delay!
@@ -113,14 +114,14 @@ impl ZXTape for Tap {
             self.acc_clocks = 0;
         }
         // state machine. Wrapped into the loop for sequental non-clock-consuming state execution
-        'state_machine : loop {
+        'state_machine: loop {
             match self.state {
                 // Stop state.
                 TapeState::Stop => {
                     // Tape stopped, return HI bit
                     self.curr_bit = true;
                     break 'state_machine;
-                },
+                }
                 // Play state. Starts the tape
                 TapeState::Play => {
                     // out of range play
@@ -130,8 +131,8 @@ impl ZXTape for Tap {
                         self.state = TapeState::Stop;
                     } else {
                         // get block size as lsb word
-                        self.block_size = make_word(self.data[self.pos + 1],
-                                                   self.data[self.pos]) as usize;
+                        self.block_size =
+                            make_word(self.data[self.pos + 1], self.data[self.pos]) as usize;
                         // select appropriate pulse count for Pilot sequence
                         self.pulse_counter = if self.data[self.pos + 2] < 128 {
                             PILOT_PULSES_HEADER
@@ -239,9 +240,7 @@ impl ZXTape for Tap {
         self.clear_data();
         self.reset_state();
     }
-    fn stop(&mut self) {
-
-    }
+    fn stop(&mut self) {}
     fn play(&mut self) {
         match self.state {
             TapeState::Stop => {
@@ -250,7 +249,5 @@ impl ZXTape for Tap {
             _ => {}
         }
     }
-    fn rewind(&mut self) {
-
-    }
+    fn rewind(&mut self) {}
 }

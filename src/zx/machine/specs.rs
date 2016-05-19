@@ -1,5 +1,6 @@
-use zx::screen::BORDER_WIDTH_COLUMNS;
+use zx::screen::BORDER_COLS;
 
+/// Immutable type (Builder is not public in outer module)
 pub struct ZXSpecs {
     // frequencies
     pub freq_cpu: u64,
@@ -27,10 +28,12 @@ pub struct ZXSpecs {
     pub contention_pattern: [u64; 8],
 }
 
+/// Specs builder, used to make static valiables with machines specs
 pub struct ZXSpecsBuilder {
     specs: ZXSpecs,
 }
 impl ZXSpecsBuilder {
+    /// Returns new ZXSpecsBuilder
     pub fn new() -> ZXSpecsBuilder {
         ZXSpecsBuilder {
             specs: ZXSpecs {
@@ -59,29 +62,32 @@ impl ZXSpecsBuilder {
                 // contention
                 contention_offset: 0,
                 contention_pattern: [0; 8],
-            }
+            },
         }
     }
+    /// Builds new ZXSpecs
     pub fn build(mut self) -> ZXSpecs {
         self.specs.clocks_frame = (self.specs.lines_all + self.specs.lines_vsync) *
-            self.specs.clocks_line;
+                                  self.specs.clocks_line;
         // 4*4 is 4 border columns * 4 clocks per column
         self.specs.clocks_line_base.push(self.specs.clocks_first_pixel -
-            self.specs.lines_top_border * self.specs.clocks_line -
-            BORDER_WIDTH_COLUMNS as u64 * 4);
+                                         self.specs.lines_top_border * self.specs.clocks_line -
+                                         BORDER_COLS as u64 * 4);
         // + 1 because TStates in calculations may be > frame length (CHECK)
         let lines_count = self.specs.lines_all + 1;
         for _ in 1..lines_count {
             let last = *self.specs.clocks_line_base.last().unwrap();
             let line_clocks = self.specs.clocks_line;
             self.specs.clocks_line_base.push(last + line_clocks);
-        };
+        }
         self.specs
     }
+    /// Changes CPU frequency
     pub fn freq_cpu(mut self, value: u64) -> Self {
         self.specs.freq_cpu = value;
         self
     }
+    /// Changes Clocks per left border, screen render, left border and retrace
     pub fn clocks_row(mut self, lborder: u64, screen: u64, rborder: u64, retrace: u64) -> Self {
         self.specs.clocks_left_border = lborder;
         self.specs.clocks_screen_row = screen;
@@ -90,10 +96,12 @@ impl ZXSpecsBuilder {
         self.specs.clocks_line = lborder + screen + rborder + retrace;
         self
     }
+    /// Changes first pixel clocks
     pub fn clocks_first_pixel(mut self, value: u64) -> Self {
         self.specs.clocks_first_pixel = value;
         self
     }
+    /// Changes lines per top border, screen, bottom border and vsync
     pub fn lines(mut self, tborder: u64, screen: u64, bborder: u64, vsync: u64) -> Self {
         self.specs.lines_vsync = vsync;
         self.specs.lines_top_border = tborder;
@@ -102,11 +110,13 @@ impl ZXSpecsBuilder {
         self.specs.lines_all = tborder + screen + bborder;
         self
     }
+    /// Changes contention pattern
     pub fn contention(mut self, pattern: [u64; 8], offset: u64) -> Self {
         self.specs.contention_pattern = pattern;
         self.specs.contention_offset = offset;
         self
     }
+    /// changes interrupt length
     pub fn interrupt_length(mut self, value: u64) -> Self {
         self.specs.interrupt_length = value;
         self
