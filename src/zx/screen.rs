@@ -1,21 +1,21 @@
 //! ZX Spectrum screen module
 //! Consists of ZXScreen type and functions for bitmap addr encode/decode
 //! Produces RGBA bitmap screen
+//! *Block* in this module is 8x1 pixels chunk
+//! *Col* and *Row* are 8 pixels chunks 
 
 use utils::*;
 use z80::Clocks;
 use super::machine::ZXMachine;
 
-// TODO CHECK USING OF CONST IN PROJECT
-// SCREEN_* NOW FULL SCREEN SIZE, CANVAS_* - working area
-const SCREEN_WIDTH: usize = 384;
-const SCREEN_HEIGHT: usize = 288;
-pub const PIXEL_COUNT: usize = SCREEN_HEIGHT * SCREEN_WIDTH;
-
 pub const CANVAS_WIDTH: usize = 256;
 pub const CANVAS_HEIGHT: usize = 192;
-pub const CANVAS_X: usize = 64;
-pub const CANVAS_Y: usize = 48;
+pub const CANVAS_X: usize = 32;
+pub const CANVAS_Y: usize = 24;
+
+pub const SCREEN_WIDTH: usize = CANVAS_WIDTH + 32 * 2;
+pub const SCREEN_HEIGHT: usize = CANVAS_HEIGHT + 24 * 2;
+pub const PIXEL_COUNT: usize = SCREEN_HEIGHT * SCREEN_WIDTH;
 
 pub const ATTR_COLS: usize = CANVAS_WIDTH / 8;
 pub const ATTR_ROWS: usize = CANVAS_HEIGHT / 8;
@@ -41,21 +41,26 @@ pub fn get_bitmap_line(addr: u16) -> usize {
     y as usize
 }
 
+/// get bitmap column from address
 pub fn get_bitmap_col(addr: u16) -> usize {
     let (_, l) = split_word(addr);
     // extract lowest 5 bits as x coordinate base
     (l & 0x1F) as usize
 }
 
+/// get attribute row from address
 pub fn get_attr_row(addr: u16) -> usize {
     ((addr - 0x5800) / ATTR_COLS as u16) as usize
 }
 
+/// get attribute column from address
 pub fn get_attr_col(addr: u16) -> usize {
     ((addr - 0x5800) % ATTR_COLS as u16) as usize
 }
 
 
+/// ZX Spectrum color enum
+/// Constructs self from 3-bit value
 #[derive(Clone, Copy)]
 enum ZXColor {
     Black,
@@ -88,6 +93,9 @@ impl ZXColor {
     }
 }
 
+/// ZX Spectrum attribute structure
+/// It contains information about ink, paper color,
+/// flash attribute and brightness
 #[derive(Clone, Copy)]
 pub struct ZXAttribute {
     ink: ZXColor,
@@ -97,6 +105,7 @@ pub struct ZXAttribute {
 }
 
 impl ZXAttribute {
+    /// Constructs self from byte
     pub fn from_byte(data: u8) -> ZXAttribute {
         ZXAttribute {
             ink: ZXColor::from_bits(data & 0x07),
@@ -108,20 +117,26 @@ impl ZXAttribute {
 }
 
 
+/// Structure, that holds palette information.
+/// It have method to transform ZX Spectrum screen data
+/// to 4-byte rgba bixel
 pub struct ZXPalette;
 
 impl ZXPalette {
+    /// Returns default palette
+    /// TODO: Use `Default` trait?
     pub fn default() -> ZXPalette {
         ZXPalette
     }
-    pub fn get_rgba(&self, attr: &ZXAttribute, state: bool, flash_state: bool)
-        -> [u8; BYTES_PER_PIXEL] {
+    /// Returns rgba pixel from screen data
+    pub fn get_rgba(&self, attr: &ZXAttribute, state: bool,
+        flash_state: bool) -> [u8; BYTES_PER_PIXEL] {
         let base_color = if attr.bright {
             0xFF
         } else {
             0x88
         };
-        let color = if state ^ (attr.flash & flash_state) {
+        let color = if state ^  (attr.flash & flash_state) {
             attr.ink
         } else {
             attr.paper
@@ -139,7 +154,7 @@ impl ZXPalette {
     }
 }
 
-/// Screen
+/// ZXSpectrum screen sctruct
 pub struct ZXScreen {
     // 4 rgba bytes per pixel
     attributes: [[ZXAttribute; ATTR_COLS]; ATTR_ROWS],
@@ -164,20 +179,22 @@ impl ZXScreen {
             frame_counter: 0,
         }
     }
-
-    /// Clears screen
-    pub fn clear(&mut self) {
-        // fill with zeros
-        self.attributes = [[ZXAttribute::from_byte(0); ATTR_COLS]; ATTR_ROWS];
-        self.bitmap = [[0; ATTR_COLS]; CANVAS_HEIGHT];
-        self.buffer = [0; PIXEL_COUNT * BYTES_PER_PIXEL];
+    /// Changes border at given tstate
+    pub fn set_border(&mut self, color: u8, _clocks: Clocks) {
+        let attr = ZXAttribute::from_byte(color);
+        let color = self.palette.get_rgba(&attr, true, false);
+        for y in 0..16 {
+            for x in 0..16 {
+                self.buffer[(y * SCREEN_WIDTH + x) * BYTES_PER_PIXEL..(y * SCREEN_WIDTH + x + 1) * BYTES_PER_PIXEL]
+                    .clone_from_slice(&color);
+            }
+        }
     }
-
+    /// Invokes actions, preformed at frame start (screen redraw)
     pub fn new_frame(&mut self) {
         self.frame_counter += 1;
         if self.frame_counter % 32 == 0 {
             self.flash = !self.flash;
-            //println!("Flash!", );
         }
         for line in 0..CANVAS_HEIGHT {
             for col in 0.. ATTR_COLS {
@@ -186,11 +203,12 @@ impl ZXScreen {
         }
     }
 
+    /// Updates given 8x1 block in pixel buffer
     fn update_buffer_block(&mut self, line: usize, col: usize) {
         let data = self.bitmap[line][col];
-        let row = line /8;
+        let row = line / 8;
         // get base block index (8x1 stripe)
-        let block_base_index = (((line + CANVAS_Y) * SCREEN_WIDTH) + col * 8 + CANVAS_X) *
+        let block_base_index = (((line + CANVAS_Y) * SCREEN_WIDTH) + CANVAS_X + col * 8) *
             BYTES_PER_PIXEL;
         // current attribute of block
         let block_attr = self.attributes[row][col];
@@ -213,10 +231,12 @@ impl ZXScreen {
         let col = get_bitmap_col(addr);
         self.bitmap[line][col] = data;
         let specs = self.machine.specs();
+
+        let clocks_origin = specs.clocks_first_pixel as usize + 2;
         // taking into acount that contention starts from first pixel clocks - 1
-        let block_time = (specs.clocks_first_pixel - 1) + (line as u64) * specs.clocks_line +
-            ((col as u64) / 2) * 8;
-        if clocks.count() < block_time as usize {
+        let block_time = clocks_origin + line * specs.clocks_line as usize +
+            (col / 2) * 8;
+        if clocks.count() < block_time {
             self.update_buffer_block(line, col);
         }
     }
@@ -228,20 +248,24 @@ impl ZXScreen {
         let col = get_attr_col(addr);
         self.attributes[row][col] = ZXAttribute::from_byte(value);
         let specs = self.machine.specs();
-        // taking into acount that contention starts from first pixel clocks - 1
-        let last_block_time = (specs.clocks_first_pixel - 1) +
-        ((row as u64) * 8 + 7) * specs.clocks_line + (col as u64 / 2) * 8;
 
-        if clocks.count() <= last_block_time as usize {
-            let beam_line = if clocks.count() < (specs.clocks_first_pixel as usize - 1) {
-                0
-            } else {
-                ((clocks.count() -
-                    (specs.clocks_first_pixel as usize - 1)) / specs.clocks_line as usize)
-            };
-            self.update_buffer_block(row * 8 + beam_line % 8, col);
-            for line_shift in (beam_line % 8)..8 {
-                self.update_buffer_block(row * 8 + line_shift, col);
+        let clocks_origin = specs.clocks_first_pixel as usize + 2;
+        let beam_line = if clocks.count() < clocks_origin + (col / 2 * 8) {
+            0
+        } else {
+            ((clocks.count() - (clocks_origin + (col / 2 * 8))) / specs.clocks_line as usize) + 1
+        };
+        let block_time = if beam_line <= row * 8 {
+            clocks_origin + (row * 8) * specs.clocks_line as usize + (col / 2) * 8
+        }  else if beam_line < (row + 1) * 8 {
+            clocks_origin + (row * 8 + beam_line % 8) * specs.clocks_line as usize + (col / 2) * 8
+        } else {
+            clocks_origin + ((row * 8) + 7) * specs.clocks_line as usize + (col / 2) * 8
+        };
+        // if next line of beam is smaller than next attr block
+        if clocks.count() < block_time as usize {
+            for line_shift in (beam_line % 8 + row * 8)..((row + 1) * 8) {
+                self.update_buffer_block(line_shift, col);
             }
         }
     }

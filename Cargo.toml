@@ -1,7 +1,14 @@
 [package]
 name = "rustzx"
-version = "0.1.2"
+version = "0.5.22"
 authors = ["Vladislav Nikonov <pacmancoder@gmail.com>"]
+publish = false
+description = "ZX Spectum emulator"
+repository = "https://github.com/pacmancoder/rustzx"
+readme = "README.md"
+keywords = ["emulator", "game", "z80"]
+license = "MIT"
+
 [dependencies]
 time = "0.1"
 glium = "0.13"

@@ -34,9 +34,9 @@ impl Z80 {
         if self.io_as_rom {
             bus.read_interrupt()
         } else {
-        let addr = self.regs.get_pc();
-        self.regs.inc_pc(1);
-        bus.read(addr, clk)
+            let addr = self.regs.get_pc();
+            self.regs.inc_pc(1);
+            bus.read(addr, clk)
         }
     }
 

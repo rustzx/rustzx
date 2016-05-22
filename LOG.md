@@ -1,3 +1,6 @@
+**[21.05.2016]** OVERSCAN and SHOCK demo's passed! :sparkles:     
+**[21.05.2016]** Screen reorganization and OpenGL rendering part fix  
+**[19.05.2016]** Documentation, Rustfmt  
 **[15.05.2016]** Fixed bug in INC/DEC (IX/IY + dd). After 2 weeks :smile:  
 **[12.05.2016]** Fixed CALL timings  
 **[06.05.2016]** Floating bus fix  

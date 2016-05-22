@@ -5,6 +5,7 @@ use std::thread;
 use std::fs::*;
 use std::io::Write;
 use std::time::Duration;
+use std::io::Read;
 
 use time;
 use glium::glutin::{WindowBuilder, Event, ElementState as KeyState};
@@ -42,12 +43,20 @@ impl RustZXApp {
         let mut memory = ZXMemory::new(RomType::K16, RamType::K48);
         let mut tape = tape::Tap::new();
         tape.insert("/home/pacmancoder/test.tap");
-        memory.load_rom(0, include_bytes!("48.rom")).unwrap();
+        tape.play();
+        let mut play = false;
+        let mut rom = Vec::new();
+        if let Ok(mut file) = File::open("/home/pacmancoder/48.rom") {
+            file.read_to_end(&mut rom).unwrap();
+        } else {
+            panic!("ROM not found!");
+        }
+        memory.load_rom(0, &rom).unwrap();
         controller.atach_memory(memory);
         controller.attach_screen(ZXScreen::new(ZXMachine::Sinclair48K, ZXPalette::default()));
         // build new glium window
         let display = WindowBuilder::new()
-                          .with_dimensions(384 * 2, 288 * 2)
+                          .with_dimensions(SCREEN_WIDTH as u32 * 2, SCREEN_HEIGHT as u32 * 2)
                           .build_glium()
                           .unwrap();
         let mut renderer = ZXScreenRenderer::new(&display);
@@ -67,20 +76,14 @@ impl RustZXApp {
             }
             loop {
                 let prev_clocks = controller.clocks();
-                if trace {
-                    println!("PC: {:#04X}; Opcode: {:#02X}; Clocks: {}; Halted: {}; iff: {},{}; \
-                              im: {:?}",
-                             cpu.regs.get_pc(),
-                             Z80Bus::read_internal(&controller, cpu.regs.get_pc()),
-                             controller.get_frame_clocks(),
-                             cpu.is_halted(),
-                             cpu.regs.get_iff1(),
-                             cpu.regs.get_iff2(),
-                             cpu.get_im());
-                }
                 cpu.emulate(&mut controller);
+                if cpu.regs.get_pc() == 0x556 {
+                    println!("Tape Access!");
+                }
                 let clocks_delta = controller.clocks() - prev_clocks;
-                tape.process_clocks(clocks_delta);
+                if play {
+                    tape.process_clocks(clocks_delta);
+                }
                 controller.set_ear(tape.current_bit());
                 if controller.frame_finished() {
                     break;
@@ -101,7 +104,10 @@ impl RustZXApp {
                     Event::KeyboardInput(state, _, Some(key_code)) => {
                         match key_code {
                             VKey::Insert => {
-                                tape.play();
+                                play = true;
+                            }
+                            VKey::Delete => {
+                                play = false;
                             }
                             VKey::F2 => {
                                 let mut f = File::create("/home/pacmancoder/snap.rustzx").unwrap();

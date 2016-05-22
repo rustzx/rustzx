@@ -7,7 +7,8 @@ Licensed under MIT License.
 
 ## Current progress
 Implementation of ZX Spectrum 48K hardware.  
-Tests, refactoring, reorganization.
+Watch [LOG](LOG.md) for details and github issues
+for current plans and help requests.
 ## Compiling
 Rustzx is not usable at the moment.
 If you want to test it anyway - copy ROM (machine is 48K) to

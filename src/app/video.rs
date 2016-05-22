@@ -9,6 +9,8 @@ use glium::backend::Facade;
 use glium::index::{NoIndices, PrimitiveType};
 use glium::backend::glutin_backend::GlutinFacade;
 
+use zx::screen::*;
+
 /// Custom vertex type for glium
 #[derive(Clone, Copy)]
 struct Vertex {
@@ -54,14 +56,8 @@ impl ZXScreenRenderer {
         let vert_shader = include_str!("shaders/vert.glsl");
         let frag_shader = include_str!("shaders/frag.glsl");
         let program = Program::from_source(display, vert_shader, frag_shader, None).unwrap();
-        // 384х288
-        // 384 = 256 + 64 + 64
-        // 288 = 192 + 48 + 48
-        // let sx = 256.0 / 384.0;
-        // let sy = 192.0 / 288.0;
-        let (sx, sy) = (1.0, 1.0);
-        let mat = [[sx, 0.0, 0.0, 0.0],
-                   [0.0, sy, 0.0, 0.0],
+        let mat = [[1.0, 0.0, 0.0, 0.0],
+                   [0.0,1.0, 0.0, 0.0],
                    [0.0, 0.0, 1.0, 0.0],
                    [0.0, 0.0, 0.0, 1.0]];
         ZXScreenRenderer {
@@ -79,39 +75,14 @@ impl ZXScreenRenderer {
 
     /// Main screen rendering function
     pub fn draw_screen(&self, display: &GlutinFacade, screen: &[u8]) {
-        /*let screen_raw = RawImage2d {
-            data: Cow::Borrowed(screen),
-            width: 256,
-            height: 192,
-            format: ClientFormat::U8U8U8U8,
-        };*/
-        /*let bcolor = [0x00, self.border_color, 0x00, 0x00];
-        let border_raw = RawImage2d {
-            data: Cow::Borrowed(&bcolor),
-            width: 1,
-            height: 1,
-            format: ClientFormat::U8U8U8U8,
-        };*/
-        /*let screen_tex = UnsignedTexture2d::new(display, screen_raw).unwrap();
-        let border_tex = UnsignedTexture2d::new(display, border_raw).unwrap();*/
-        let bitmap = RawImage2d::from_raw_rgba(screen.to_vec(), (384, 288));
+        let bitmap = RawImage2d::from_raw_rgba(screen.to_vec(),
+            (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
         let screen_tex = Texture2d::new(display, bitmap).unwrap();
         let uniforms_screen = uniform![
             tex: Sampler::new(&screen_tex).magnify_filter(MagnifySamplerFilter::Nearest),
             matrix: self.screen_matrix,
         ];
-        /*let uniforms_border = uniform![
-            tex: Sampler::new(&border_tex).magnify_filter(MagnifySamplerFilter::Nearest),
-            matrix: BORDER_MATRIX,
-            blink: false,
-        ];*/
         let mut target = display.draw();
-        /*target.draw(&self.screen_vb,
-                    &self.screen_idx,
-                    &self.shader,
-                    &uniforms_border,
-                    &Default::default())
-              .unwrap();*/
         target.draw(&self.screen_vb,
                     &self.screen_idx,
                     &self.shader,

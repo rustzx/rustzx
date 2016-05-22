@@ -16,6 +16,7 @@ pub struct ZXController {
     keyboard: [u8; 8],
     border_color: u8,
     ear: bool,
+    // TODO: switch to Clocks struct
     frame_clocks: u64,
 }
 
@@ -265,6 +266,9 @@ impl Z80Bus for ZXController {
         // if port from lua
         if port & 0x0001 == 0 {
             self.border_color = data & 0x07;
+            if let Some(ref mut screen) = self.screen {
+                screen.set_border(data & 0x07, Clocks(self.frame_clocks as usize));
+            }
         }
         // last contention after byte write
         self.io_contention_last(port);
