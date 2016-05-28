@@ -5,7 +5,6 @@ use std::thread;
 use std::fs::*;
 use std::io::Write;
 use std::time::Duration;
-use std::io::Read;
 
 use time;
 use glium::glutin::{WindowBuilder, Event, ElementState as KeyState};
@@ -14,8 +13,12 @@ use glium::glutin::VirtualKeyCode as VKey;
 
 use app::video::ZXScreenRenderer;
 use app::keyboard::vkey_to_zxkey;
-use z80::*;
 use zx::*;
+use emulator::*;
+use utils::EmulationSpeed;
+
+// 50 ms
+const MAX_FRAME_TIME_NS: u64 = 50 * 1000000;
 
 /// converts nanoseconds  to miliseconds
 fn ns_to_ms(ns: u64) -> f64 {
@@ -37,64 +40,32 @@ impl RustZXApp {
     }
     /// starts application
     pub fn start(&mut self) {
-        let mut trace = false;
-        let mut controller = ZXController::new(ZXMachine::Sinclair48K);
-        let mut cpu = Z80::new();
-        let mut memory = ZXMemory::new(RomType::K16, RamType::K48);
-        let mut tape = tape::Tap::new();
-        tape.insert("/home/pacmancoder/test.tap");
-        tape.play();
-        let mut play = false;
-        let mut rom = Vec::new();
-        if let Ok(mut file) = File::open("/home/pacmancoder/48.rom") {
-            file.read_to_end(&mut rom).unwrap();
-        } else {
-            panic!("ROM not found!");
-        }
-        memory.load_rom(0, &rom).unwrap();
-        controller.atach_memory(memory);
-        controller.attach_screen(ZXScreen::new(ZXMachine::Sinclair48K, ZXPalette::default()));
         // build new glium window
+        let mut emulator = Emulator::new(ZXMachine::Sinclair48K);
+        emulator.controller.load_rom("/home/pacmancoder/48.rom");
+        emulator.controller.insert_tape("/home/pacmancoder/test.tap");
         let display = WindowBuilder::new()
                           .with_dimensions(SCREEN_WIDTH as u32 * 2, SCREEN_HEIGHT as u32 * 2)
                           .build_glium()
                           .unwrap();
         let mut renderer = ZXScreenRenderer::new(&display);
         // NOTE: 16x speed
-        let mut frame_counter = 0_usize;
-        let mut speed = 16u64;
-        let mut frame_devider = 1;
+        //let mut frame_counter = 0_usize;
+        let mut speed = EmulationSpeed::Definite(1);
+        //let mut frame_devider = 1;
         'render_loop: loop {
-            let frame_target_dt_ns = ms_to_ns((1000 / (50 * speed)) as f64);
-            frame_counter += 1;
-            controller.new_frame();
+            emulator.set_speed(speed);
+            let frame_target_dt_ns = ms_to_ns((1000 / 50) as f64);
+            //frame_counter += 1;
 
             let frame_start_ns = time::precise_time_ns();
             // emulation loop
-            if trace {
-                println!("Frame start");
-            }
-            loop {
-                let prev_clocks = controller.clocks();
-                cpu.emulate(&mut controller);
-                if cpu.regs.get_pc() == 0x556 {
-                    println!("Tape Access!");
-                }
-                let clocks_delta = controller.clocks() - prev_clocks;
-                if play {
-                    tape.process_clocks(clocks_delta);
-                }
-                controller.set_ear(tape.current_bit());
-                if controller.frame_finished() {
-                    break;
-                }
-            }
-            trace = false;
-            let cpu_dt_ns = time::precise_time_ns() - frame_start_ns;
-            if frame_counter % frame_devider == 0 {
-                renderer.set_border_color(controller.get_border_color());
-                renderer.draw_screen(&display, controller.get_screen_texture());
-            }
+            let cpu_dt_ns = emulator.emulate_frame(MAX_FRAME_TIME_NS);
+
+            //if frame_counter % frame_devider == 0 {
+            renderer.set_border_color(emulator.controller.get_border_color());
+            renderer.draw_screen(&display, emulator.controller.get_screen_texture());
+            //}
             // glutin events
             for event in display.poll_events() {
                 match event {
@@ -104,40 +75,38 @@ impl RustZXApp {
                     Event::KeyboardInput(state, _, Some(key_code)) => {
                         match key_code {
                             VKey::Insert => {
-                                play = true;
+                                emulator.controller.play_tape();
                             }
                             VKey::Delete => {
-                                play = false;
+                                emulator.controller.stop_tape();
                             }
                             VKey::F2 => {
                                 let mut f = File::create("/home/pacmancoder/snap.rustzx").unwrap();
-                                f.write_all(&controller.dump()).unwrap();
+                                f.write_all(&emulator.controller.dump()).unwrap();
                             }
                             VKey::F3 => {
-                                trace = true;
+                                speed = EmulationSpeed::Definite(1);
                             }
                             VKey::F4 => {
-                                speed = 1;
-                                frame_devider = 1;
+                                speed = EmulationSpeed::Definite(16);
                             }
                             VKey::F5 => {
-                                speed = 128;
-                                frame_devider = 16;
+                                speed = EmulationSpeed::Max;
                             }
                             _ => {
                                 if let Some(key) = vkey_to_zxkey(key_code) {
                                     match state {
-                                        KeyState::Pressed => controller.send_key(key, true),
-                                        KeyState::Released => controller.send_key(key, false),
+                                        KeyState::Pressed => emulator.controller.send_key(key, true),
+                                        KeyState::Released => emulator.controller.send_key(key, false),
                                     }
                                 }
                             }
                         }
                     }
-                    Event::MouseWheel(_) => {
-                        let pc = cpu.regs.get_pc();
-                        println!("pc: {:#04X}", pc);
-                    }
+                    // Event::MouseWheel(_) => {
+                    //     let pc = cpu.regs.get_pc();
+                    //     println!("pc: {:#04X}", pc);
+                    // }
                     _ => {}
                 }
             }

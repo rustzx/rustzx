@@ -1,5 +1,5 @@
 use z80::*;
-use utils::{split_word, make_word};
+use utils::{split_word, make_word, Clocks};
 
 /// Pushes 16 bit value to the stack. Clocks count using for each byte write
 pub fn execute_push_16(cpu: &mut Z80, bus: &mut Z80Bus, reg: RegName16, clk: Clocks) {

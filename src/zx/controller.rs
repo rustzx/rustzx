@@ -1,46 +1,67 @@
 //! Contains ZX Spectrum System contrller (like lua or so) of emulator
 //! TODO: Make ZXController Builder
 
-use z80::{Z80Bus, Clocks};
-use zx::ZXMemory;
+use std::fs::File;
+use std::io::Read;
+use z80::Z80Bus;
+use zx::{ZXMemory, RomType, RamType};
 use zx::machine::ZXMachine;
+use zx::tape::*;
 use super::screen::*;
 use super::ZXKey;
-use utils::split_word;
+use utils::{split_word, Clocks};
+
+// TODO: switch from "assign some sevice" with mem, screen, tap, etc. to creating in constructor
 
 /// ZX System controller
 pub struct ZXController {
     machine: ZXMachine,
-    memory: Option<ZXMemory>,
-    screen: Option<ZXScreen>,
+    memory: ZXMemory,
+    screen: ZXScreen,
     keyboard: [u8; 8],
     border_color: u8,
     ear: bool,
-    // TODO: switch to Clocks struct
-    frame_clocks: u64,
+    frame_clocks: Clocks,
+    passed_frames: usize,
+    tape: Box<ZXTape>,
 }
 
 impl ZXController {
     /// Returns new ZXController
     pub fn new(machine: ZXMachine) -> ZXController {
+        let memory = match machine {
+            _ => ZXMemory::new(RomType::K16, RamType::K48),
+        };
+        let screen = ZXScreen::new(ZXMachine::Sinclair48K, ZXPalette::default());
         ZXController {
             machine: machine,
-            memory: None,
-            screen: None,
+            memory: memory,
+            screen: screen,
             keyboard: [0xFF; 8],
             border_color: 0x00,
             ear: true,
-            frame_clocks: 0,
+            frame_clocks: Clocks(0),
+            passed_frames: 0,
+            tape: Box::new(Tap::new()),
         }
     }
-    /// Captures ZXMemory
-    pub fn atach_memory(&mut self, memory: ZXMemory) {
-        self.memory = Some(memory);
+    pub fn load_rom(&mut self, path: &str) {
+        let mut rom = Vec::new();
+        if let Ok(mut file) = File::open(path) {
+            file.read_to_end(&mut rom).unwrap();
+        } else {
+            panic!("ROM not found!");
+        }
+        self.memory.load_rom(0, &rom).unwrap();
     }
-
-    /// Captures ZXScreen
-    pub fn attach_screen(&mut self, screen: ZXScreen) {
-        self.screen = Some(screen);
+    pub fn insert_tape(&mut self, path: &str) {
+        (*self.tape).insert(path);
+    }
+    pub fn play_tape(&mut self) {
+        (*self.tape).play();
+    }
+    pub fn stop_tape(&mut self) {
+        (*self.tape).stop();
     }
 
     /// Changes ear bit
@@ -52,22 +73,12 @@ impl ZXController {
     /// # Panics
     /// Panics when screen is not assigned
     pub fn get_screen_texture(&self) -> &[u8] {
-        if let Some(ref screen) = self.screen {
-            screen.clone_texture()
-        } else {
-            panic!("screen is not assigned to controller");
-        }
+        self.screen.clone_texture()
     }
 
     /// get current border color
     pub fn get_border_color(&self) -> u8 {
         self.border_color
-    }
-
-    /// get clocks, passed from frame
-    /// TODO: Use `Clocks` struct ?
-    pub fn get_frame_clocks(&self) -> u64 {
-        self.frame_clocks
     }
 
     /// Changes key state in controller
@@ -94,114 +105,112 @@ impl ZXController {
 
     /// Dumps memory space
     pub fn dump(&self) -> Vec<u8> {
-        if let Some(ref mem) = self.memory {
-            mem.dump()
-        } else {
-            Vec::new()
-        }
+        self.memory.dump()
     }
 
     /// Returns current bus floating value
     fn floating_bus_value(&self) -> u8 {
         let specs = self.machine.specs();
         let clocks = self.frame_clocks;
-        if clocks < 14338 {
+        if clocks.count() < specs.clocks_first_pixel + 2 {
             return 0xFF;
         }
-        let clocks = self.frame_clocks - 14338;
+        let clocks = clocks.count() - (specs.clocks_first_pixel + 2);
         let row = clocks / specs.clocks_line;
         let clocks = clocks % specs.clocks_line;
         let col = (clocks / 8) * 2 + (clocks % 8) / 2;
         if row < 192 && clocks < 124 && ((clocks & 0x04) == 0) {
-            if let Some(ref mem) = self.memory {
-                if clocks % 2 == 0 {
-                    return mem.read(get_bitmap_line_addr(row as u16) + col as u16);
-                } else {
-                    let byte = (row / 8) * 32 + col;
-                    return mem.read(0x5800 + byte as u16);
-                };
-            }
+            if clocks % 2 == 0 {
+                return self.memory.read(get_bitmap_line_addr(row as u16) + col as u16);
+            } else {
+                let byte = (row / 8) * 32 + col;
+                return self.memory.read(0x5800 + byte as u16);
+            };
         }
         return 0xFF;
+    }
+
+    fn do_contention(&mut self) {
+        let contention = self.machine.contention_clocks(self.frame_clocks);
+        self.wait_internal(contention);
+    }
+
+    fn do_contention_and_wait(&mut self, wait_time: Clocks) {
+        let contention = self.machine.contention_clocks(self.frame_clocks);
+        self.wait_internal(contention + wait_time);
     }
 
     /// Returns early IO contention clocks
     fn io_contention_first(&mut self, port: u16) {
         if self.machine.addr_is_contended(port) {
-            self.frame_clocks += self.machine.contention_clocks(self.frame_clocks);
+            self.do_contention();
         };
-        self.frame_clocks += 1;
+        self.wait_internal(Clocks(1));
     }
 
     /// Returns late IO contention clocks
     fn io_contention_last(&mut self, port: u16) {
         if self.machine.port_is_contended(port) {
-            self.frame_clocks += self.machine.contention_clocks(self.frame_clocks);
-            self.frame_clocks += 2;
+            self.do_contention_and_wait(Clocks(2));
         } else {
             if self.machine.addr_is_contended(port) {
-                self.frame_clocks += self.machine.contention_clocks(self.frame_clocks);
-                self.frame_clocks += 1;
-                self.frame_clocks += self.machine.contention_clocks(self.frame_clocks);
-                self.frame_clocks += 1;
-                self.frame_clocks += self.machine.contention_clocks(self.frame_clocks);
+                self.do_contention_and_wait(Clocks(1));
+                self.do_contention_and_wait(Clocks(1));
+                self.do_contention();
             } else {
-                self.frame_clocks += 2;
+                self.wait_internal(Clocks(2));
             }
         }
     }
 
     /// Starts a new frame
-    pub fn new_frame(&mut self) {
-        if self.frame_clocks >= self.machine.specs().clocks_frame {
-            self.frame_clocks -= self.machine.specs().clocks_frame
-        }
-        if let Some(ref mut scr) = self.screen {
-            scr.new_frame();
-        }
+    fn new_frame(&mut self) {
+        self.frame_clocks -= self.machine.specs().clocks_frame;
+        self.screen.new_frame();
     }
 
     /// Returns true if all frame clocks has been passed
-    pub fn frame_finished(&self) -> bool {
-        self.frame_clocks >= self.machine.specs().clocks_frame
+    pub fn frames_count(&self) -> usize {
+        self.passed_frames
+    }
+
+    pub fn reset_frame_counter(&mut self) {
+        self.passed_frames = 0;
     }
 
     /// Returns current clocks from frame start
-    pub fn clocks(&self) -> u64 {
+    pub fn clocks(&self) -> Clocks {
         self.frame_clocks
     }
 }
 
 impl Z80Bus for ZXController {
     fn read_internal(&self, addr: u16) -> u8 {
-        if let Some(ref memory) = self.memory {
-            memory.read(addr)
-        } else {
-            0
-        }
+        self.memory.read(addr)
     }
 
     fn write_internal(&mut self, addr: u16, data: u8) {
-        if let Some(ref mut memory) = self.memory {
-            memory.write(addr, data);
-            match addr {
-                0x4000...0x57FF => {
-                    if let Some(ref mut screen) = self.screen {
-                        screen.write_bitmap_byte(addr, Clocks(self.frame_clocks as usize), data);
-                    }
-                }
-                0x5800...0x5AFF => {
-                    if let Some(ref mut screen) = self.screen {
-                        screen.write_attr_byte(addr, Clocks(self.frame_clocks as usize), data);
-                    }
-                }
-                _ => {}
+        self.memory.write(addr, data);
+        match addr {
+            0x4000...0x57FF => {
+                self.screen.write_bitmap_byte(addr, self.frame_clocks, data);
             }
-        };
+            0x5800...0x5AFF => {
+                self.screen.write_attr_byte(addr, self.frame_clocks, data);
+            }
+            _ => {}
+        }
     }
 
     fn wait_internal(&mut self, clk: Clocks) {
-        self.frame_clocks += clk.count() as u64;
+        self.frame_clocks += clk;
+        (*self.tape).process_clocks(clk);
+        let ear = (*self.tape).current_bit();
+        self.set_ear(ear);
+        if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
+            self.new_frame();
+            self.passed_frames += 1;
+        }
     }
 
     fn wait_mreq(&mut self, addr: u16, clk: Clocks) {
@@ -209,27 +218,17 @@ impl Z80Bus for ZXController {
             ZXMachine::Sinclair48K => {
                 // contention in low 16k RAM
                 if self.machine.addr_is_contended(addr) {
-                    let last_clocks = self.frame_clocks;
-                    self.frame_clocks += self.machine.contention_clocks(last_clocks);
+                    self.do_contention();
                 }
             }
             _ => {}
         }
-        self.frame_clocks += clk.count() as u64;
+        self.wait_internal(clk);
     }
 
     fn wait_no_mreq(&mut self, addr: u16, clk: Clocks) {
-        match self.machine {
-            ZXMachine::Sinclair48K => {
-                // contention in low 16k RAM
-                if self.machine.addr_is_contended(addr) {
-                    let last_clocks = self.frame_clocks;
-                    self.frame_clocks += self.machine.contention_clocks(last_clocks);
-                }
-            }
-            _ => {}
-        }
-        self.frame_clocks += clk.count() as u64;
+        // only for 48 K!
+        self.wait_mreq(addr, clk);
     }
 
     fn read_io(&mut self, port: u16) -> u8 {
@@ -256,7 +255,7 @@ impl Z80Bus for ZXController {
             self.floating_bus_value()
         };
         // add one clock after operation
-        self.frame_clocks += 1;
+        self.wait_internal(Clocks(1));
         output
     }
 
@@ -266,14 +265,12 @@ impl Z80Bus for ZXController {
         // if port from lua
         if port & 0x0001 == 0 {
             self.border_color = data & 0x07;
-            if let Some(ref mut screen) = self.screen {
-                screen.set_border(data & 0x07, Clocks(self.frame_clocks as usize));
-            }
+            self.screen.set_border(data & 0x07, self.frame_clocks);
         }
         // last contention after byte write
         self.io_contention_last(port);
         // add one clock after operation
-        self.frame_clocks += 1;
+        self.wait_internal(Clocks(1));
     }
 
     fn read_interrupt(&mut self) -> u8 {
@@ -281,7 +278,7 @@ impl Z80Bus for ZXController {
     }
 
     fn int_active(&self) -> bool {
-        self.frame_clocks % self.machine.specs().clocks_frame <
+        self.frame_clocks.count() % self.machine.specs().clocks_frame <
         self.machine.specs().interrupt_length
     }
 

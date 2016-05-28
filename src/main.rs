@@ -14,6 +14,7 @@ mod utils;
 mod z80;
 mod zx;
 mod app;
+mod emulator;
 
 use app::RustZXApp;
 

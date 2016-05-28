@@ -1,7 +1,28 @@
 //! Some emulator-related utils
 
+pub mod clocks;
+pub mod events;
 pub mod smallnum;
 pub use self::smallnum::*;
+pub use self::events::*;
+pub use self::clocks::*;
+
+#[derive(Copy, Clone)]
+pub enum EmulationSpeed {
+    Definite(usize),
+    Max,
+}
+
+/// converts nanoseconds to miliseconds
+#[inline]
+fn ns_to_ms(ns: u64) -> f64 {
+    ns as f64 / 1_000_000f64
+}
+/// converts miliseconds to nanoseconds
+#[inline]
+fn ms_to_ns(s: f64) -> u64 {
+    (s * 1_000_000_f64) as u64
+}
 
 /// Internal function for making word from 2 bytes
 #[inline]

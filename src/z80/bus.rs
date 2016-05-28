@@ -1,5 +1,4 @@
 use utils::*;
-use z80::Clocks;
 
 /// Z80 processor System bus
 /// Implement it for communication with CPU.
