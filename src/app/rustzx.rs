@@ -14,6 +14,7 @@ use glium::glutin::VirtualKeyCode as VKey;
 use app::video::ZXScreenRenderer;
 use app::keyboard::vkey_to_zxkey;
 use zx::*;
+use zx::constants::*;
 use emulator::*;
 use utils::EmulationSpeed;
 
@@ -40,33 +41,26 @@ impl RustZXApp {
     }
     /// starts application
     pub fn start(&mut self) {
-        // build new glium window
+        // build new emulator and load tape & rom
         let mut emulator = Emulator::new(ZXMachine::Sinclair48K);
         emulator.controller.load_rom("/home/pacmancoder/48.rom");
         emulator.controller.insert_tape("/home/pacmancoder/test.tap");
+        // build new glium window
         let display = WindowBuilder::new()
                           .with_dimensions(SCREEN_WIDTH as u32 * 2, SCREEN_HEIGHT as u32 * 2)
                           .build_glium()
                           .unwrap();
-        let mut renderer = ZXScreenRenderer::new(&display);
-        // NOTE: 16x speed
-        //let mut frame_counter = 0_usize;
+        let renderer = ZXScreenRenderer::new(&display);
         let mut speed = EmulationSpeed::Definite(1);
-        //let mut frame_devider = 1;
         'render_loop: loop {
             emulator.set_speed(speed);
             let frame_target_dt_ns = ms_to_ns((1000 / 50) as f64);
-            //frame_counter += 1;
-
             let frame_start_ns = time::precise_time_ns();
             // emulation loop
             let cpu_dt_ns = emulator.emulate_frame(MAX_FRAME_TIME_NS);
-
-            //if frame_counter % frame_devider == 0 {
-            renderer.set_border_color(emulator.controller.get_border_color());
-            renderer.draw_screen(&display, emulator.controller.get_screen_texture());
-            //}
-            // glutin events
+            renderer.draw_screen(&display,
+                emulator.controller.get_border_texture(),
+                emulator.controller.get_canvas_texture());
             for event in display.poll_events() {
                 match event {
                     Event::Closed => {
@@ -103,10 +97,6 @@ impl RustZXApp {
                             }
                         }
                     }
-                    // Event::MouseWheel(_) => {
-                    //     let pc = cpu.regs.get_pc();
-                    //     println!("pc: {:#04X}", pc);
-                    // }
                     _ => {}
                 }
             }

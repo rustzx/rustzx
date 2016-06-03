@@ -105,7 +105,7 @@ impl ZXMemory {
     }
 
     /// Loads ROM from array slice to memory
-    /// TODO: make "upload_page" fuction, allow to load not only rom's
+    /// TODO: make "load_page" fuction, allow to load not only rom's
     pub fn load_rom(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {
         if (page as usize + 1) * PAGE_SIZE > self.rom.len() {
             Err(())

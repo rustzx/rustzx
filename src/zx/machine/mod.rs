@@ -12,6 +12,8 @@ lazy_static! {
         ZXSpecsBuilder::new()
             .freq_cpu(3_500_000)
             .clocks_first_pixel(14336)
+            .clocks_ula_read_shift(2)
+            .clocks_ula_beam_shift(1)
             .clocks_row(24, 128, 24, 48)
             .lines(48, 192, 48, 24)
             .contention([6, 5, 4, 3, 2, 1, 0, 0], 1)
@@ -32,8 +34,7 @@ impl ZXMachine {
     pub fn specs(self) -> &'static ZXSpecs {
         match self {
             ZXMachine::Sinclair48K => &SPECS_48K,
-            // TODO: FIX
-            ZXMachine::Sinclair128K => &SPECS_48K,
+            _ => unimplemented!(),
         }
     }
 

@@ -263,8 +263,11 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             };
             // Read const operand
             let data = bus.read(cpu.regs.get_pc(), Clocks(3));
+            // if non-prefixed and there is no indirection
             if prefix != Prefix::None {
-                bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
+                if let LoadOperand8::Indirect(_) = operand {
+                    bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
+                }
             }
             cpu.regs.inc_pc(1);
             // write to bus or reg
@@ -642,7 +645,6 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
         U2::N3 if opcode.z == U3::N4 => {
             let addr_l = cpu.fetch_byte(bus, Clocks(3));
             let addr_h = bus.read(cpu.regs.get_pc(), Clocks(3));
-            // let addr = cpu.fetch_word(bus, Clocks(3));
             let addr = make_word(addr_h, addr_l);
             if cpu.regs.eval_condition(Condition::from_u3(opcode.y)) {
                 bus.wait_no_mreq(cpu.regs.get_pc(), Clocks(1));
@@ -672,9 +674,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                         U2::N0 => {
                             let addr_l = cpu.fetch_byte(bus, Clocks(3));
                             let addr_h = bus.read(cpu.regs.get_pc(), Clocks(3));
-                            // let addr = cpu.fetch_word(bus, Clocks(3));
                             let addr = make_word(addr_h, addr_l);
-                            // let addr = cpu.fetch_word(bus, Clocks(3));
                             bus.wait_no_mreq(cpu.regs.get_pc(), Clocks(1));
                             cpu.regs.inc_pc(1);
                             execute_push_16(cpu, bus, RegName16::PC, Clocks(3));

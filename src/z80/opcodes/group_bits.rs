@@ -67,14 +67,13 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
                     // NOTE: according to FUSE.
                     // maybe must be based on current bit or something?
                     cpu.regs.set_flag(Flag::Sign, (data & 0x80 != 0) && (bit_number == 7));
-
                     if let BitOperand8::Indirect(addr) = operand {
                         cpu.regs.set_flag(Flag::F3, addr & 0x0800 != 0);
                         cpu.regs.set_flag(Flag::F5, addr & 0x2000 != 0);
                     } else {
                         cpu.regs.set_flag(Flag::F3, (data & 0x08) != 0);
                         cpu.regs.set_flag(Flag::F5, (data & 0x20) != 0);
-                    };
+                    }
                     result = 0; // mask compiler error
                 }
                 // RES y, r[z]

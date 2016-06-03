@@ -1,5 +1,6 @@
 //! Some emulator-related utils
 
+pub mod screen;
 pub mod clocks;
 pub mod events;
 pub mod smallnum;

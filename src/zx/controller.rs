@@ -3,21 +3,24 @@
 
 use std::fs::File;
 use std::io::Read;
+
+use utils::{split_word, Clocks};
+use utils::screen::*;
 use z80::Z80Bus;
 use zx::{ZXMemory, RomType, RamType};
 use zx::machine::ZXMachine;
 use zx::tape::*;
-use super::screen::*;
-use super::ZXKey;
-use utils::{split_word, Clocks};
-
-// TODO: switch from "assign some sevice" with mem, screen, tap, etc. to creating in constructor
+use zx::ZXKey;
+use zx::screen::canvas::ZXCanvas;
+use zx::screen::border::ZXBorder;
+use zx::screen::colors::{ZXColor, ZXPalette};
 
 /// ZX System controller
 pub struct ZXController {
     machine: ZXMachine,
     memory: ZXMemory,
-    screen: ZXScreen,
+    canvas: ZXCanvas,
+    border: ZXBorder,
     keyboard: [u8; 8],
     border_color: u8,
     ear: bool,
@@ -32,11 +35,13 @@ impl ZXController {
         let memory = match machine {
             _ => ZXMemory::new(RomType::K16, RamType::K48),
         };
-        let screen = ZXScreen::new(ZXMachine::Sinclair48K, ZXPalette::default());
+        let canvas = ZXCanvas::new(machine, ZXPalette::default());
+        let border = ZXBorder::new(machine, ZXPalette::default());
         ZXController {
             machine: machine,
             memory: memory,
-            screen: screen,
+            canvas: canvas,
+            border: border,
             keyboard: [0xFF; 8],
             border_color: 0x00,
             ear: true,
@@ -64,16 +69,14 @@ impl ZXController {
         (*self.tape).stop();
     }
 
-    /// Changes ear bit
-    pub fn set_ear(&mut self, value: bool) {
-        self.ear = value;
+    /// Returns Screen texture
+    pub fn get_canvas_texture(&self) -> &[u8] {
+        self.canvas.texture()
     }
 
-    /// Returns Screen texture
-    /// # Panics
-    /// Panics when screen is not assigned
-    pub fn get_screen_texture(&self) -> &[u8] {
-        self.screen.clone_texture()
+    /// Returns border texture
+    pub fn get_border_texture(&self) -> &[u8] {
+        self.border.texture()
     }
 
     /// get current border color
@@ -121,7 +124,7 @@ impl ZXController {
         let col = (clocks / 8) * 2 + (clocks % 8) / 2;
         if row < 192 && clocks < 124 && ((clocks & 0x04) == 0) {
             if clocks % 2 == 0 {
-                return self.memory.read(get_bitmap_line_addr(row as u16) + col as u16);
+                return self.memory.read(get_bitmap_line_addr(row) + col as u16);
             } else {
                 let byte = (row / 8) * 32 + col;
                 return self.memory.read(0x5800 + byte as u16);
@@ -166,7 +169,8 @@ impl ZXController {
     /// Starts a new frame
     fn new_frame(&mut self) {
         self.frame_clocks -= self.machine.specs().clocks_frame;
-        self.screen.new_frame();
+        self.canvas.new_frame();
+        self.border.new_frame();
     }
 
     /// Returns true if all frame clocks has been passed
@@ -193,10 +197,10 @@ impl Z80Bus for ZXController {
         self.memory.write(addr, data);
         match addr {
             0x4000...0x57FF => {
-                self.screen.write_bitmap_byte(addr, self.frame_clocks, data);
+                self.canvas.write_bitmap_byte(addr, self.frame_clocks, data);
             }
             0x5800...0x5AFF => {
-                self.screen.write_attr_byte(addr, self.frame_clocks, data);
+                self.canvas.write_attr_byte(addr, self.frame_clocks, data);
             }
             _ => {}
         }
@@ -206,7 +210,7 @@ impl Z80Bus for ZXController {
         self.frame_clocks += clk;
         (*self.tape).process_clocks(clk);
         let ear = (*self.tape).current_bit();
-        self.set_ear(ear);
+        self.ear = ear;
         if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
             self.new_frame();
             self.passed_frames += 1;
@@ -265,7 +269,7 @@ impl Z80Bus for ZXController {
         // if port from lua
         if port & 0x0001 == 0 {
             self.border_color = data & 0x07;
-            self.screen.set_border(data & 0x07, self.frame_clocks);
+            self.border.set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
         }
         // last contention after byte write
         self.io_contention_last(port);

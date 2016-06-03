@@ -1,6 +1,8 @@
 //! Module with glium-related types and functions for rendering screen
 //! contains `ZXScreenRenderer`
 
+//pub const BYTES_PER_PIXEL: usize = 4;
+
 use glium::{Surface, VertexBuffer, Program};
 use glium::uniforms::*;
 use glium::texture::RawImage2d;
@@ -9,7 +11,7 @@ use glium::backend::Facade;
 use glium::index::{NoIndices, PrimitiveType};
 use glium::backend::glutin_backend::GlutinFacade;
 
-use zx::screen::*;
+use zx::constants::*;
 
 /// Custom vertex type for glium
 #[derive(Clone, Copy)]
@@ -45,7 +47,6 @@ pub struct ZXScreenRenderer {
     screen_idx: NoIndices,
     shader: Program,
     screen_matrix: [[f32; 4]; 4],
-    border_color: u8,
 }
 
 impl ZXScreenRenderer {
@@ -65,30 +66,32 @@ impl ZXScreenRenderer {
             screen_idx: idx,
             shader: program,
             screen_matrix: mat,
-            border_color: 0,
         }
-    }
-    /// selects border color
-    pub fn set_border_color(&mut self, col: u8) {
-        self.border_color = col;
     }
 
     /// Main screen rendering function
-    pub fn draw_screen(&self, display: &GlutinFacade, screen: &[u8]) {
-        let bitmap = RawImage2d::from_raw_rgba(screen.to_vec(),
+    pub fn draw_screen(&self, display: &GlutinFacade, border: &[u8], screen: &[u8]) {
+        // generate screen tex
+        let screen_bitmap = RawImage2d::from_raw_rgba(screen.to_vec(),
             (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
-        let screen_tex = Texture2d::new(display, bitmap).unwrap();
-        let uniforms_screen = uniform![
-            tex: Sampler::new(&screen_tex).magnify_filter(MagnifySamplerFilter::Nearest),
+        let screen_tex = Texture2d::new(display, screen_bitmap).unwrap();
+        // generate border tex
+        let border_bitmap = RawImage2d::from_raw_rgba(border.to_vec(),
+            (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+        let border_tex = Texture2d::new(display, border_bitmap).unwrap();
+        // uniforms for screen
+        let uniforms = uniform![
+            tex_screen: Sampler::new(&screen_tex).magnify_filter(MagnifySamplerFilter::Nearest),
+            tex_border: Sampler::new(&border_tex).magnify_filter(MagnifySamplerFilter::Nearest),
             matrix: self.screen_matrix,
         ];
         let mut target = display.draw();
         target.draw(&self.screen_vb,
                     &self.screen_idx,
                     &self.shader,
-                    &uniforms_screen,
+                    &uniforms,
                     &Default::default())
-              .unwrap();
+              .unwrap();        
         target.finish().unwrap();
     }
 }

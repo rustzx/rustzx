@@ -1,4 +1,4 @@
-use zx::screen::BORDER_COLS;
+use zx::constants::BORDER_COLS;
 
 /// Immutable type (Builder is not public in outer module)
 pub struct ZXSpecs {
@@ -13,6 +13,11 @@ pub struct ZXSpecs {
     pub clocks_retrace: usize,
     pub clocks_line: usize,
     pub clocks_line_base: Vec<usize>,
+    // some ula clocks
+    pub clocks_ula_read_shift: usize,
+    pub clocks_ula_read_origin: usize,
+    pub clocks_ula_contention_origin: usize,
+    pub clocks_ula_beam_shift: usize,
     // frame
     pub clocks_frame: usize,
     // lines metrics
@@ -48,8 +53,12 @@ impl ZXSpecsBuilder {
                 clocks_retrace: 0,
                 clocks_line: 0,
                 clocks_line_base: vec![],
+                // some ula clocks
+                clocks_ula_read_shift: 0,
+                clocks_ula_read_origin: 0,
+                clocks_ula_contention_origin: 0,
+                clocks_ula_beam_shift: 0,
                 // frame clocks
-                // TODO: eval
                 clocks_frame: 0,
                 // lines metrics
                 lines_vsync: 0,
@@ -80,6 +89,10 @@ impl ZXSpecsBuilder {
             let line_clocks = self.specs.clocks_line;
             self.specs.clocks_line_base.push(last + line_clocks);
         }
+        self.specs.clocks_ula_read_origin = self.specs.clocks_first_pixel +
+            self.specs.clocks_ula_read_shift;
+        self.specs.clocks_ula_contention_origin = self.specs.clocks_first_pixel -
+            self.specs.contention_offset;
         self.specs
     }
     /// Changes CPU frequency
@@ -100,6 +113,16 @@ impl ZXSpecsBuilder {
     /// Changes first pixel clocks
     pub fn clocks_first_pixel(mut self, value: usize) -> Self {
         self.specs.clocks_first_pixel = value;
+        self
+    }
+    /// Changes shift of time, when ula reads data from memory
+    pub fn clocks_ula_read_shift(mut self, value: usize) -> Self {
+        self.specs.clocks_ula_read_shift = value;
+        self
+    }
+    /// Changes shift of electron beam pixel rendering
+    pub fn clocks_ula_beam_shift(mut self, value: usize) -> Self {
+        self.specs.clocks_ula_beam_shift = value;
         self
     }
     /// Changes lines per top border, screen, bottom border and vsync
