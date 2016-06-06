@@ -1,18 +1,19 @@
 //! Module which contains Z80 registers implementation
-
+//! TODO: inline attributes
 use utils::*;
 use std::fmt;
 use z80::Prefix;
 
 // Flag register bits
-const CARRY_MASK: u8 = 0b00000001;
-const SUB_MASK: u8 = 0b00000010;
-const PARITY_OVERFLOW_MASK: u8 = 0b00000100;
-const F3_MASK: u8 = 0b00001000;
-const HALF_CARRY_MASK: u8 = 0b00010000;
-const F5_MASK: u8 = 0b00100000;
-const ZERO_MASK: u8 = 0b01000000;
-const SIGN_MASK: u8 = 0b10000000;
+
+pub const FLAG_CARRY: u8 = 0b00000001;
+pub const FLAG_SUB: u8 = 0b00000010;
+pub const FLAG_PV: u8 = 0b00000100;
+pub const FLAG_F3: u8 = 0b00001000;
+pub const FLAG_HALF_CARRY: u8 = 0b00010000;
+pub const FLAG_F5: u8 = 0b00100000;
+pub const FLAG_ZERO: u8 = 0b01000000;
+pub const FLAG_SIGN: u8 = 0b10000000;
 
 /// Struct for handling F register flags
 #[derive(Clone, Copy)]
@@ -30,14 +31,14 @@ impl Flag {
     /// Returns current flag mask
     pub fn mask(self) -> u8 {
         match self {
-            Flag::Carry => CARRY_MASK,
-            Flag::Sub => SUB_MASK,
-            Flag::ParityOveflow => PARITY_OVERFLOW_MASK,
-            Flag::F3 => F3_MASK,
-            Flag::HalfCarry => HALF_CARRY_MASK,
-            Flag::F5 => F5_MASK,
-            Flag::Zero => ZERO_MASK,
-            Flag::Sign => SIGN_MASK,
+            Flag::Carry => FLAG_CARRY,
+            Flag::Sub => FLAG_SUB,
+            Flag::ParityOveflow => FLAG_PV,
+            Flag::F3 => FLAG_F3,
+            Flag::HalfCarry => FLAG_HALF_CARRY,
+            Flag::F5 => FLAG_F5,
+            Flag::Zero => FLAG_ZERO,
+            Flag::Sign => FLAG_SIGN,
         }
     }
 }
@@ -452,6 +453,17 @@ impl Regs {
         self.a
     }
 
+    /// Changes flags register
+    pub fn set_flags(&mut self, value: u8) -> u8 {
+        self.f = value;
+        self.f
+    }
+
+    /// Returns F
+    pub fn get_flags(&self) -> u8 {
+        self.f
+    }
+
     /// Returns I
     pub fn get_i(&self) -> u8 {
         self.i
@@ -551,31 +563,32 @@ impl Regs {
     /// Evals condition on flags register
     pub fn eval_condition(&self, condition: Condition) -> bool {
         match condition {
-            Condition::Carry => (self.f & CARRY_MASK) != 0,
-            Condition::NonCarry => (self.f & CARRY_MASK) == 0,
-            Condition::Zero => (self.f & ZERO_MASK) != 0,
-            Condition::NonZero => (self.f & ZERO_MASK) == 0,
-            Condition::SignNegative => (self.f & SIGN_MASK) != 0,
-            Condition::SignPositive => (self.f & SIGN_MASK) == 0,
-            Condition::ParityEven => (self.f & PARITY_OVERFLOW_MASK) != 0,
-            Condition::ParityOdd => (self.f & PARITY_OVERFLOW_MASK) == 0,
+            Condition::Carry => (self.f & FLAG_CARRY) != 0,
+            Condition::NonCarry => (self.f & FLAG_CARRY) == 0,
+            Condition::Zero => (self.f & FLAG_ZERO) != 0,
+            Condition::NonZero => (self.f & FLAG_ZERO) == 0,
+            Condition::SignNegative => (self.f & FLAG_SIGN) != 0,
+            Condition::SignPositive => (self.f & FLAG_SIGN) == 0,
+            Condition::ParityEven => (self.f & FLAG_PV) != 0,
+            Condition::ParityOdd => (self.f & FLAG_PV) == 0,
         }
     }
+// TODO: REMOVE
 
     /// Returns selected flag
     pub fn get_flag(&self, flag: Flag) -> bool {
         self.f & flag.mask() != 0
     }
 
-    /// Changes selected flag
-    pub fn set_flag(&mut self, flag: Flag, value: bool) -> bool {
-        if value {
-            self.f |= flag.mask(); // set bit
-        } else {
-            self.f &= !flag.mask();
-        }
-        value
-    }
+    // Changes selected flag
+    // pub fn set_flag(&mut self, flag: Flag, value: bool) -> bool {
+    //     if value {
+    //         self.f |= flag.mask(); // set bit
+    //     } else {
+    //         self.f &= !flag.mask();
+    //     }
+    //     value
+    // }
 }
 
 impl fmt::Display for Regs {

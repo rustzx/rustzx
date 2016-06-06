@@ -28,13 +28,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     if let Some(reg) = reg {
                         cpu.regs.set_reg_8(reg, data);
                     };
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::HalfCarry, false);
-                    cpu.regs.set_flag(Flag::F3, data & 0b1000 != 0);
-                    cpu.regs.set_flag(Flag::F5, data & 0b100000 != 0);
-                    cpu.regs.set_flag(Flag::Zero, data == 0);
-                    cpu.regs.set_flag(Flag::Sign, data & 0x80 != 0);
-                    cpu.regs.set_flag(Flag::ParityOveflow, tables::PARITY_BIT[data as usize] != 0);
+                    let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
+                    flags |= SZPF3F5_TABLE[data as usize];
+                    cpu.regs.set_flags(flags);
                 }
                 // OUT
                 // [0b01yyy001] : 41 49 51 59 61 69 71 79
@@ -53,7 +49,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry)) as u16;
                     let operand = cpu.regs.get_reg_16(RegName16::from_u2_sp(opcode.p));
                     let hl = cpu.regs.get_hl();
-                    let (sub, pv, half_carry);
+                    let mut flags = 0u8;
                     let result: u32;
                     match opcode.q {
                         // SBC HL, rp[p]
@@ -62,9 +58,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                                          .wrapping_sub(operand as u32)
                                          .wrapping_sub(prev_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
-                            pv = OVERFLOW_SUB_TABLE[(lookup >> 4) as usize] != 0;
-                            half_carry = HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0;
-                            sub = true;
+                            flags |= OVERFLOW_SUB_TABLE[(lookup >> 4) as usize];
+                            flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
+                            flags |= FLAG_SUB;
                         }
                         // ADC HL, rp[p]
                         U1::N1 => {
@@ -72,20 +68,16 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                                          .wrapping_add(operand as u32)
                                          .wrapping_add(prev_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
-                            pv = OVERFLOW_ADD_TABLE[(lookup >> 4) as usize] != 0;
-                            half_carry = HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0;
-                            sub = false;
+                            flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
+                            flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
                         }
                     }
                     // set flags
-                    cpu.regs.set_flag(Flag::Carry, result > 0xFFFF);
-                    cpu.regs.set_flag(Flag::Sub, sub);
-                    cpu.regs.set_flag(Flag::ParityOveflow, pv);
-                    cpu.regs.set_flag(Flag::F3, result & 0x0800 != 0);
-                    cpu.regs.set_flag(Flag::F5, result & 0x2000 != 0);
-                    cpu.regs.set_flag(Flag::HalfCarry, half_carry);
-                    cpu.regs.set_flag(Flag::Zero, (result as u16) == 0);
-                    cpu.regs.set_flag(Flag::Sign, result & 0x8000 != 0);
+                    flags |= bool_to_u8(result > 0xFFFF) * FLAG_CARRY;
+                    flags |= SZF3F5_TABLE[((result >> 8) as u8) as usize];
+                    flags &= !FLAG_ZERO;
+                    flags |= bool_to_u8((result as u16) == 0) * FLAG_ZERO;
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_hl(result as u16);
                     // Clocks 4 + 4 + 7 = 15
                 }
@@ -109,16 +101,13 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                     let acc = cpu.regs.get_acc();
                     let result = 0u8.wrapping_sub(acc);
                     cpu.regs.set_acc(result);
-                    cpu.regs.set_flag(Flag::Sign, result & 0x80 != 0);
-                    cpu.regs.set_flag(Flag::Zero, result == 0);
+                    let mut flags = FLAG_SUB;
+                    flags |= SZF3F5_TABLE[result as usize];
                     let lookup = lookup8_r12(0, acc, result);
-                    cpu.regs.set_flag(Flag::HalfCarry,
-                                      HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
-                    cpu.regs.set_flag(Flag::ParityOveflow, acc == 0x80);
-                    cpu.regs.set_flag(Flag::Sub, true);
-                    cpu.regs.set_flag(Flag::Carry, acc != 0x00);
-                    cpu.regs.set_flag(Flag::F3, result & 0x08 != 0);
-                    cpu.regs.set_flag(Flag::F5, result & 0x20 != 0);
+                    flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
+                    flags |= bool_to_u8(acc == 0x80) * FLAG_PV;
+                    flags |= bool_to_u8(acc != 0x00) * FLAG_CARRY;
+                    cpu.regs.set_flags(flags);
                 }
                 // RETN, RETI
                 U3::N5 => {
@@ -160,13 +149,10 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             let iff2 = cpu.regs.get_iff2();
                             let i = cpu.regs.get_i();
                             cpu.regs.set_acc(i);
-                            cpu.regs.set_flag(Flag::Sub, false);
-                            cpu.regs.set_flag(Flag::HalfCarry, false);
-                            cpu.regs.set_flag(Flag::Sign, (i & 0x80) != 0);
-                            cpu.regs.set_flag(Flag::Zero, i == 0);
-                            cpu.regs.set_flag(Flag::F3, (i & 0x08) != 0);
-                            cpu.regs.set_flag(Flag::F5, (i & 0x20) != 0);
-                            cpu.regs.set_flag(Flag::ParityOveflow, iff2);
+                            let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
+                            flags |= SZF3F5_TABLE[i as usize];
+                            flags |= bool_to_u8(iff2) * FLAG_PV;
+                            cpu.regs.set_flags(flags);
                         }
                         // LD A, R
                         U3::N3 => {
@@ -174,13 +160,10 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             let iff2 = cpu.regs.get_iff2();
                             let r = cpu.regs.get_r();
                             cpu.regs.set_acc(r);
-                            cpu.regs.set_flag(Flag::Sub, false);
-                            cpu.regs.set_flag(Flag::HalfCarry, false);
-                            cpu.regs.set_flag(Flag::Sign, (r & 0x80) != 0);
-                            cpu.regs.set_flag(Flag::Zero, r == 0);
-                            cpu.regs.set_flag(Flag::F3, (r & 0x08) != 0);
-                            cpu.regs.set_flag(Flag::F5, (r & 0x20) != 0);
-                            cpu.regs.set_flag(Flag::ParityOveflow, iff2);
+                            let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
+                            flags |= SZF3F5_TABLE[r as usize];
+                            flags |= bool_to_u8(iff2) * FLAG_PV;
+                            cpu.regs.set_flags(flags);
                         }
                         // RRD
                         U3::N4 => {
@@ -196,14 +179,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             cpu.regs.set_acc(acc);
                             bus.wait_loop(cpu.regs.get_hl(), Clocks(4));
                             bus.write(cpu.regs.get_hl(), mem, Clocks(3));
-                            cpu.regs.set_flag(Flag::Sign, acc & 0x80 != 0);
-                            cpu.regs.set_flag(Flag::Zero, acc == 0);
-                            cpu.regs.set_flag(Flag::HalfCarry, false);
-                            cpu.regs.set_flag(Flag::ParityOveflow,
-                                              tables::PARITY_BIT[acc as usize] != 0);
-                            cpu.regs.set_flag(Flag::Sub, false);
-                            cpu.regs.set_flag(Flag::F3, acc & 0b1000 != 0);
-                            cpu.regs.set_flag(Flag::F5, acc & 0b100000 != 0);
+                            let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
+                            flags |= SZPF3F5_TABLE[acc as usize];
+                            cpu.regs.set_flags(flags);
                             // Clocks: 4 + 4 + 3 + 4 + 3 = 18
                         }
                         // RLD
@@ -219,14 +197,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                             cpu.regs.set_acc(acc);
                             bus.wait_loop(cpu.regs.get_hl(), Clocks(4));
                             bus.write(cpu.regs.get_hl(), mem, Clocks(3));
-                            cpu.regs.set_flag(Flag::Sign, acc & 0x80 != 0);
-                            cpu.regs.set_flag(Flag::Zero, acc == 0);
-                            cpu.regs.set_flag(Flag::HalfCarry, false);
-                            cpu.regs.set_flag(Flag::ParityOveflow,
-                                              tables::PARITY_BIT[acc as usize] != 0);
-                            cpu.regs.set_flag(Flag::Sub, false);
-                            cpu.regs.set_flag(Flag::F3, acc & 0b1000 != 0);
-                            cpu.regs.set_flag(Flag::F5, acc & 0b100000 != 0);
+                            let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
+                            flags |= SZPF3F5_TABLE[acc as usize];
+                            cpu.regs.set_flags(flags);
                             // Clocks: 4 + 4 + 3 + 4 + 3 = 18
                         }
                         // NOP

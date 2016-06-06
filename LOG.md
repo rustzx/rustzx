@@ -1,3 +1,4 @@
+**[07.06.2016]** Speed improvements (maybe :smile:) in flag setting [z80]    
 **[04.06.2016]** Border FX implemented  
 **[28.05.2016]** Some architecture rewrite, working on border    
 **[21.05.2016]** OVERSCAN and SHOCK demo's passed! :sparkles:     

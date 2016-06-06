@@ -86,15 +86,14 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     let acc = cpu.regs.get_reg_16(reg_acc);
                     let operand = cpu.regs.get_reg_16(reg_operand);
                     let temp: u32 = (acc as u32).wrapping_add(operand as u32);
-                    // watch internal_alu.rs and overflows.rs
+                    // watch tables module
                     let lookup = lookup16_r12(acc, operand, temp as u16);
-                    let half_carry = HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0;
-                    let carry = temp > 0xFFFF;
-                    cpu.regs.set_flag(Flag::Carry, carry); //set carry
-                    cpu.regs.set_flag(Flag::Sub, false); // is addition
-                    cpu.regs.set_flag(Flag::HalfCarry, half_carry); // half carry
-                    cpu.regs.set_flag(Flag::F3, temp & 0x0800 != 0); // 3 bit of hi
-                    cpu.regs.set_flag(Flag::F5, temp & 0x2000 != 0); // 5 bit of hi
+                    // get last flags, reset affected by instruction
+                    let mut flags = cpu.regs.get_flags() & (FLAG_ZERO | FLAG_PV | FLAG_SIGN);
+                    flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
+                    flags |= bool_to_u8(temp > 0xFFFF) * FLAG_CARRY;
+                    flags |= F3F5_TABLE[((temp >> 8) as u8) as usize];
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_reg_16(reg_acc, temp as u16);
                 }
             };
@@ -206,27 +205,24 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
             // ------------
             //   execute
             // ------------
+            // carry unaffected
+            let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
             if opcode.z == U3::N4 {
                 // INC
                 result = data.wrapping_add(1);
-                cpu.regs.set_flag(Flag::Sub, false);
-                cpu.regs.set_flag(Flag::ParityOveflow, data == 0x7F);
+                flags |= bool_to_u8(data == 0x7F) * FLAG_PV;
                 let lookup = lookup8_r12(data, 1, result);
-                cpu.regs.set_flag(Flag::HalfCarry,
-                                  HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0);
+                flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
             } else {
                 // DEC
                 result = data.wrapping_sub(1);
-                cpu.regs.set_flag(Flag::Sub, true);
-                cpu.regs.set_flag(Flag::ParityOveflow, data == 0x80);
+                flags |= FLAG_SUB;
+                flags |= bool_to_u8(data == 0x80) * FLAG_PV;
                 let lookup = lookup8_r12(data, 1, result);
-                cpu.regs.set_flag(Flag::HalfCarry,
-                                  HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
+                flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
             }
-            cpu.regs.set_flag(Flag::Zero, result == 0);
-            cpu.regs.set_flag(Flag::Sign, (result & 0x80) != 0); // last bit check
-            cpu.regs.set_flag(Flag::F3, (result & 0x08) != 0); // 3 bit
-            cpu.regs.set_flag(Flag::F5, (result & 0x20) != 0); // 5 bit
+            flags |= SZF3F5_TABLE[result as usize];
+            cpu.regs.set_flags(flags);
             // ------------
             //  write data
             // ------------
@@ -298,11 +294,10 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     } else {
                         data &= 0xFE;
                     };
-                    cpu.regs.set_flag(Flag::HalfCarry, false);
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::Carry, carry);
-                    cpu.regs.set_flag(Flag::F3, data & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, data & 0x20 != 0); // 5 bit
+                    let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
+                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= F3F5_TABLE[data as usize];
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
                 }
                 // RRCA ; Rotate right; lsb will become msb; carry = lsb
@@ -316,11 +311,10 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     } else {
                         data &= 0x7F;
                     };
-                    cpu.regs.set_flag(Flag::HalfCarry, false);
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::Carry, carry);
-                    cpu.regs.set_flag(Flag::F3, data & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, data & 0x20 != 0); // 5 bit
+                    let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
+                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= F3F5_TABLE[data as usize];
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
                 }
                 // RLA Rotate left trough carry
@@ -334,11 +328,10 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     } else {
                         data &= 0xFE;
                     };
-                    cpu.regs.set_flag(Flag::HalfCarry, false);
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::Carry, carry);
-                    cpu.regs.set_flag(Flag::F3, data & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, data & 0x20 != 0); // 5 bit
+                    let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
+                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= F3F5_TABLE[data as usize];
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
                 }
                 // RRA Rotate right trough carry
@@ -352,76 +345,67 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: P
                     } else {
                         data &= 0x7F;
                     };
-                    cpu.regs.set_flag(Flag::HalfCarry, false);
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::Carry, carry);
-                    cpu.regs.set_flag(Flag::F3, data & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, data & 0x20 != 0); // 5 bit
+                    let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
+                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= F3F5_TABLE[data as usize];
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
                 }
                 // DAA [0b00100111] [link to the algorithm in header]
                 U3::N4 => {
                     let acc = cpu.regs.get_acc();
+                    let old_flags = cpu.regs.get_flags();
+                    let mut flags = old_flags & FLAG_SUB;
                     let mut correction;
-                    if (acc > 0x99) || cpu.regs.get_flag(Flag::Carry) {
+                    if (acc > 0x99) || ((old_flags & FLAG_CARRY) != 0) {
                         correction = 0x60_u8;
-                        cpu.regs.set_flag(Flag::Carry, true);
+                        flags |= FLAG_CARRY;
                     } else {
                         correction = 0x00_u8;
-                        cpu.regs.set_flag(Flag::Carry, false);
                     };
-                    if ((acc & 0x0F) > 0x09) || cpu.regs.get_flag(Flag::HalfCarry) {
+                    if ((acc & 0x0F) > 0x09) || ((old_flags & FLAG_HALF_CARRY) != 0) {
                         correction |= 0x06;
                     }
-                    let acc_new = if !cpu.regs.get_flag(Flag::Sub) {
+                    let acc_new = if (old_flags & FLAG_SUB) == 0 {
                         let lookup = lookup8_r12(acc, correction, acc.wrapping_add(correction));
-                        cpu.regs.set_flag(Flag::HalfCarry,
-                                          HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize] != 0);
+                        flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
                         acc.wrapping_add(correction)
                     } else {
                         let lookup = lookup8_r12(acc, correction, acc.wrapping_sub(correction));
-                        cpu.regs.set_flag(Flag::HalfCarry,
-                                          HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize] != 0);
+                        flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
                         acc.wrapping_sub(correction)
                     };
-                    cpu.regs.set_flag(Flag::Sign, acc_new & 0x80 != 0); // Sign
-                    cpu.regs.set_flag(Flag::Zero, acc_new == 0); // Zero
-                    cpu.regs.set_flag(Flag::ParityOveflow,
-                                      tables::PARITY_BIT[acc_new as usize] != 0);
-                    cpu.regs.set_flag(Flag::F3, acc_new & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, acc_new & 0x20 != 0); // 5 bit
+                    flags |= SZPF3F5_TABLE[acc_new as usize];
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(acc_new);
                 }
                 // CPL Invert (Complement)
                 // [0b00101111] : 0x2F
                 U3::N5 => {
                     let data = !cpu.regs.get_acc();
-                    cpu.regs.set_flag(Flag::HalfCarry, true);
-                    cpu.regs.set_flag(Flag::Sub, true);
-                    cpu.regs.set_flag(Flag::F3, data & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, data & 0x20 != 0); // 5 bit
+                    let mut flags = cpu.regs.get_flags() & !(FLAG_F3 | FLAG_F5);
+                    flags |= FLAG_HALF_CARRY | FLAG_SUB | F3F5_TABLE[data as usize];
+                    cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
                 }
                 // SCF  Set carry flag
                 // [0b00110111] : 0x37
                 U3::N6 => {
                     let data = cpu.regs.get_acc();
-                    cpu.regs.set_flag(Flag::F3, data & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, data & 0x20 != 0); // 5 bit
-                    cpu.regs.set_flag(Flag::HalfCarry, false);
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::Carry, true);
+                    let mut flags = cpu.regs.get_flags() & (FLAG_ZERO | FLAG_PV | FLAG_SIGN);
+                    flags |= F3F5_TABLE[data as usize] | FLAG_CARRY;
+                    cpu.regs.set_flags(flags);
                 }
                 // CCF Invert carry flag
                 // [0b00111111] : 0x3F
                 U3::N7 => {
                     let data = cpu.regs.get_acc();
-                    cpu.regs.set_flag(Flag::F3, data & 0x08 != 0); // 3 bit
-                    cpu.regs.set_flag(Flag::F5, data & 0x20 != 0); // 5 bit
-                    let carry = cpu.regs.get_flag(Flag::Carry);
-                    cpu.regs.set_flag(Flag::HalfCarry, carry);
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::Carry, !carry);
+                    let old_carry = (cpu.regs.get_flags() & FLAG_CARRY) != 0;
+                    let mut flags = cpu.regs.get_flags() & (FLAG_SIGN | FLAG_PV | FLAG_ZERO);
+                    flags |= F3F5_TABLE[data as usize];
+                    flags |= bool_to_u8(old_carry) * FLAG_HALF_CARRY;
+                    flags |= bool_to_u8(!old_carry) * FLAG_CARRY;
+                    cpu.regs.set_flags(flags);
                 }
             }
         }

@@ -1,6 +1,6 @@
 [package]
 name = "rustzx"
-version = "0.6.4"
+version = "0.6.7"
 authors = ["Vladislav Nikonov <pacmancoder@gmail.com>"]
 publish = false
 description = "ZX Spectum emulator"

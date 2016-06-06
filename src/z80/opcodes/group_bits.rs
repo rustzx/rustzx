@@ -1,6 +1,7 @@
 use super::*;
-use z80::*;
 use utils::*;
+use z80::*;
+use z80::tables::*;
 
 /// Instruction group which operatis with bits
 /// Includes rotations, setting, reseting, testing.
@@ -60,20 +61,19 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
                 // [0b01yyyzzz] : 0x40...0x7F
                 U2::N1 => {
                     let bit_is_set = (data & (0x01 << bit_number)) != 0;
-                    cpu.regs.set_flag(Flag::Sub, false);
-                    cpu.regs.set_flag(Flag::HalfCarry, true);
-                    cpu.regs.set_flag(Flag::Zero, !bit_is_set);
-                    cpu.regs.set_flag(Flag::ParityOveflow, !bit_is_set);
+                    // only carry is not affected;
+                    let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
+                    flags |= FLAG_HALF_CARRY;
+                    flags |= bool_to_u8(!bit_is_set) * (FLAG_ZERO | FLAG_PV);
                     // NOTE: according to FUSE.
                     // maybe must be based on current bit or something?
-                    cpu.regs.set_flag(Flag::Sign, (data & 0x80 != 0) && (bit_number == 7));
+                    flags |= bool_to_u8((data & 0x80 != 0) && (bit_number == 7)) * FLAG_SIGN;
                     if let BitOperand8::Indirect(addr) = operand {
-                        cpu.regs.set_flag(Flag::F3, addr & 0x0800 != 0);
-                        cpu.regs.set_flag(Flag::F5, addr & 0x2000 != 0);
+                        flags |= F3F5_TABLE[(addr >> 8) as usize];
                     } else {
-                        cpu.regs.set_flag(Flag::F3, (data & 0x08) != 0);
-                        cpu.regs.set_flag(Flag::F5, (data & 0x20) != 0);
+                        flags |= F3F5_TABLE[data as usize];
                     }
+                    cpu.regs.set_flags(flags);
                     result = 0; // mask compiler error
                 }
                 // RES y, r[z]
