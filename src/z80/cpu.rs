@@ -66,8 +66,11 @@ impl Z80 {
     pub fn get_im(&self) -> IntMode {
         self.int_mode
     }
+
     /// Main emulation step function
-    pub fn emulate(&mut self, bus: &mut Z80Bus) {
+    /// return `false` if execution can be continued or true if last event must be executed
+    /// instantly
+    pub fn emulate(&mut self, bus: &mut Z80Bus) -> bool {
         // check interrupts
         if !self.skip_interrupt {
             // at first check nmi
@@ -139,7 +142,7 @@ impl Z80 {
             // allow interrupts again
             self.skip_interrupt = false;
         };
-        // technique with active_prefix is bit.... like a shit...
+        // get first byte
         let byte1 = if self.active_prefix != Prefix::None {
             let tmp = self.active_prefix.to_byte().unwrap();
             self.active_prefix = Prefix::None;
@@ -195,5 +198,15 @@ impl Z80 {
             let opcode = Opcode::from_byte(byte1);
             execute_normal(self, bus, opcode, Prefix::None);
         };
+        // check events on bus
+        // if some events found, then signal that emulator must process events before
+        // next cpu step
+        bus.pc_callback(self.regs.get_pc());
+        // return true if events happened
+        return if bus.instant_event() {
+            true
+        } else {
+            false
+        }
     }
 }

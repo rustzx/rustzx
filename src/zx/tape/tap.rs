@@ -12,6 +12,7 @@ const BIT_ONE_LENGTH: usize = 1710;
 const BIT_ZERO_LENGTH: usize = 855;
 const PAUSE_LENGTH: usize = 3_500_000;
 
+/// state of tape player
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum TapeState {
     Stop,
@@ -22,6 +23,14 @@ enum TapeState {
     NextBit,
     BitHalf(usize),
     Pause,
+}
+
+/// information about block of tape
+#[derive(Clone, Copy)]
+struct BlockInfo {
+    length: usize,
+    pos: usize,
+    end: usize,
 }
 
 pub struct Tap {
@@ -37,11 +46,10 @@ pub struct Tap {
     curr_mask: u8,
     // pulses left to next state
     pulse_counter: usize,
-    /// pos in tape
-    pos: usize,
     /// block info
+    block_info: Vec<BlockInfo>,
     block: usize,
-    block_size: usize,
+    pos_in_block: usize,
     /// between-state timings
     delay: Clocks,
     acc_clocks: Clocks,
@@ -58,9 +66,9 @@ impl Tap {
             curr_byte: 0x00,
             curr_mask: 0x80,
             pulse_counter: 0,
-            pos: 0,
+            block_info: Vec::new(),
             block: 0,
-            block_size: 0,
+            pos_in_block: 0,
             delay: Clocks(0),
             acc_clocks: Clocks(0),
         }
@@ -70,27 +78,76 @@ impl Tap {
         self.curr_bit = true;
         self.curr_byte = 0x00;
         self.curr_mask = 0x80;
-        self.pos = 0;
         self.block = 0;
-        self.block_size = 0;
+        self.pos_in_block = 0;
         self.delay = Clocks(0);
         self.acc_clocks = Clocks(0);
-    }
-    fn clear_data(&mut self) {
-        self.data.clear();
     }
 }
 
 impl ZXTape for Tap {
+
+    /// can autoload only if tape stopped
+    fn can_fast_load(&self) -> bool {
+        self.state == TapeState::Stop
+    }
+
+    /// returns byte of block
+    fn block_byte(&self, offset: usize) -> Option<u8> {
+        let block =  self.block_info[self.block];
+        if offset < block.length {
+            Some(self.data[block.pos + offset])
+        } else {
+            None
+        }
+    }
+
+    /// switches tape player to next block
+    fn next_block(&mut self) {
+        self.block += 1;
+        // make loop
+        if self.block >= self.block_info.len() {
+            self.block = 0;
+        }
+        self.state = TapeState::Stop;
+    }
+
+    /// resets position in block to 0
+    fn reset_pos_in_block(&mut self) {
+        self.pos_in_block = 0;
+    }
+
+    /// returns current bit
     fn current_bit(&self) -> bool {
         self.curr_bit
     }
+
+    /// updates internal structure according new tape file
     fn insert(&mut self, path: &str) -> InsertResult
     {
         if let Ok(mut file) = File::open(path) {
             if let Err(_) = file.read_to_end(&mut self.data) {
                 return InsertResult::Err("TAP file read error");
             }
+            self.block_info.clear();
+            // get all blocks data
+            let mut p = 0;
+            'blocks: loop {
+                // get length of the block
+                let len = make_word(self.data[p + 1], self.data[p]) as usize;
+                // push to vector of blocks
+                self.block_info.push(BlockInfo {
+                    length: len,
+                    pos: p + 2,
+                    end: p + 2 + len - 1,
+                });
+                // shift pos
+                p += 2 + len;
+                // check bounds
+                if p >= self.data.len() {
+                    break 'blocks;
+                }
+            };
             self.reset_state();
             return InsertResult::Ok;
         } else {
@@ -99,6 +156,17 @@ impl ZXTape for Tap {
 
     }
     fn process_clocks(&mut self, clocks: Clocks) {
+        // if there are no blocks
+        if self.block_info.len() == 0 {
+            return;
+        }
+        // get block info, check bunds
+        let block = if self.block >= self.block_info.len() {
+            self.block_info[0]
+        } else {
+            self.block_info[self.block]
+        };
+        // clocks
         let clocks = clocks.count();
         if self.state == TapeState::Stop {
             return;
@@ -110,7 +178,6 @@ impl ZXTape for Tap {
             // if enough accumulated clocks then clear delay and drop some accumulated clocks
             if self.acc_clocks.count() >= self.delay.count() {
                 self.acc_clocks -= self.delay;
-                // self.acc_clocks = 0;
                 self.delay = Clocks(0);
             }
             // return anyway, it is delay!
@@ -124,29 +191,28 @@ impl ZXTape for Tap {
             match self.state {
                 // Stop state.
                 TapeState::Stop => {
-                    // Tape stopped, return HI bit
+                    // Tape stopped, return HI bit, set current block pos to zero
                     self.curr_bit = true;
+                    self.pos_in_block = 0;
+                    // action maked, break state machine
                     break 'state_machine;
                 }
                 // Play state. Starts the tape
                 TapeState::Play => {
                     // out of range play
-                    if self.pos >= self.data.len() {
+                    if self.block >= self.block_info.len() {
                         // if play state happened when position is out of range,
-                        // loop will be breaked on next iteration
+                        // loop will be breaked on next iteration and next block will be with
+                        // number zero
+                        self.block = 0;
                         self.state = TapeState::Stop;
                     } else {
-                        // get block size as lsb word
-                        self.block_size =
-                            make_word(self.data[self.pos + 1], self.data[self.pos]) as usize;
                         // select appropriate pulse count for Pilot sequence
-                        self.pulse_counter = if self.data[self.pos + 2] < 128 {
+                        self.pulse_counter = if self.data[block.pos] < 128 {
                             PILOT_PULSES_HEADER
                         } else {
                             PILOT_PULSES_DATA
                         };
-                        // skip length bytes
-                        self.pos += 2;
                         // so, ok seems to be ok, we can make output bit low
                         self.curr_bit = false;
                         // set delay before next state to one pilot pulse
@@ -193,7 +259,7 @@ impl ZXTape for Tap {
                     // invert bit
                     self.curr_bit = !self.curr_bit;
                     // depending on bit state select timing and switch to new state
-                    if (self.data[self.pos] & self.curr_mask) == 0 {
+                    if (self.data[block.pos + self.pos_in_block] & self.curr_mask) == 0 {
                         self.delay = Clocks(BIT_ZERO_LENGTH);
                         self.state = TapeState::BitHalf(BIT_ZERO_LENGTH);
                     } else {
@@ -203,22 +269,24 @@ impl ZXTape for Tap {
                     };
                     break 'state_machine;
                 }
-                // second half of bit
+                // half of a bit
                 TapeState::BitHalf(pulse_length) => {
+                    // invert bit
                     self.curr_bit = !self.curr_bit;
                     // set timeout same as before
                     self.delay = Clocks(pulse_length);
                     // shift right, to the next bit
                     self.curr_mask >>= 1;
                     if self.curr_mask == 0 {
-                        self.pos += 1;
-                        self.block_size -= 1;
-                        self.state = if self.block_size > 0 {
+                        self.pos_in_block += 1;
+                        // check if we heve next byte in block
+                        self.state = if self.pos_in_block < block.length {
                             TapeState::NextByte
                         } else {
                             TapeState::Pause
                         };
                     } else {
+                        // fetch next bit
                         self.state = TapeState::NextBit;
                     }
                     break 'state_machine;
@@ -226,7 +294,24 @@ impl ZXTape for Tap {
                 // pause after block
                 TapeState::Pause => {
                     self.curr_bit = !self.curr_bit;
-                    // if we still have blocks
+                    // make delay and go to another block. `Play` state can datermine
+                    // the end of tape
+                    self.delay = Clocks(PAUSE_LENGTH);
+                    self.block += 1;
+                    self.pos_in_block = 0;
+                    self.state = TapeState::Play;
+                    // break directly for delay
+                    break 'state_machine;
+
+                    /*if self.block < self.block_info.len() {
+                        // next block
+                        self.delay = Clocks(PAUSE_LENGTH);
+                        self.block += 1;
+                        self.state = TapeState::Play;
+                        // break directly for delay
+                        break 'state_machine;
+                    }
+
                     if self.pos < self.data.len() {
                         // next block
                         self.delay = Clocks(PAUSE_LENGTH);
@@ -237,20 +322,27 @@ impl ZXTape for Tap {
                     } else {
                         // stop the tape. loop will be breaked on next state
                         self.state = TapeState::Stop;
-                    }
+                    }*/
                 }
             }
         }
     }
+
+    /// eject tape, clear internal structure
     fn eject(&mut self) {
-        self.clear_data();
+        self.block_info.clear();
+        self.data.clear();
         self.reset_state();
     }
+
+    /// stop tape playing, set `Stop` state
     fn stop(&mut self) {
         let state = self.state;
         self.prev_state = state;
         self.state = TapeState::Stop;
     }
+
+    /// do play
     fn play(&mut self) {
         if self.state == TapeState::Stop {
             if self.prev_state == TapeState::Stop {
@@ -261,5 +353,9 @@ impl ZXTape for Tap {
             }
         }
     }
-    fn rewind(&mut self) {}
+
+    /// rewind tape to start
+    fn rewind(&mut self) {
+        self.reset_state();
+    }
 }

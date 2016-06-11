@@ -580,15 +580,15 @@ impl Regs {
         self.f & flag.mask() != 0
     }
 
-    // Changes selected flag
-    // pub fn set_flag(&mut self, flag: Flag, value: bool) -> bool {
-    //     if value {
-    //         self.f |= flag.mask(); // set bit
-    //     } else {
-    //         self.f &= !flag.mask();
-    //     }
-    //     value
-    // }
+    /// Changes selected flag
+    pub fn set_flag(&mut self, flag: Flag, value: bool) -> bool {
+        if value {
+            self.f |= flag.mask(); // set bit
+        } else {
+            self.f &= !flag.mask(); // reset bit
+        }
+        value
+    }
 }
 
 impl fmt::Display for Regs {

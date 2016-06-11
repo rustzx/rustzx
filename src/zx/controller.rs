@@ -6,8 +6,11 @@ use std::io::Read;
 
 use utils::{split_word, Clocks};
 use utils::screen::*;
+use utils::events::*;
+use utils::InstantFlag;
 use z80::Z80Bus;
 use zx::{ZXMemory, RomType, RamType};
+use zx::memory::Page;
 use zx::machine::ZXMachine;
 use zx::tape::*;
 use zx::ZXKey;
@@ -15,18 +18,23 @@ use zx::screen::canvas::ZXCanvas;
 use zx::screen::border::ZXBorder;
 use zx::screen::colors::{ZXColor, ZXPalette};
 
+/// Tape loading trap at LD-BREAK routine in ROM
+const ADDR_LD_BREAK: u16 = 0x056B;
+
 /// ZX System controller
 pub struct ZXController {
-    machine: ZXMachine,
-    memory: ZXMemory,
-    canvas: ZXCanvas,
-    border: ZXBorder,
+    pub machine: ZXMachine,
+    pub memory: ZXMemory,
+    pub canvas: ZXCanvas,
+    pub tape: Box<ZXTape>,
+    pub border: ZXBorder,
     keyboard: [u8; 8],
     border_color: u8,
     ear: bool,
     frame_clocks: Clocks,
     passed_frames: usize,
-    tape: Box<ZXTape>,
+    events: EventQueue,
+    instant_event: InstantFlag,
 }
 
 impl ZXController {
@@ -48,6 +56,8 @@ impl ZXController {
             frame_clocks: Clocks(0),
             passed_frames: 0,
             tape: Box::new(Tap::new()),
+            events: EventQueue::new(),
+            instant_event: InstantFlag::new(false),
         }
     }
     pub fn load_rom(&mut self, path: &str) {
@@ -60,13 +70,13 @@ impl ZXController {
         self.memory.load_rom(0, &rom).unwrap();
     }
     pub fn insert_tape(&mut self, path: &str) {
-        (*self.tape).insert(path);
+        self.tape.insert(path);
     }
     pub fn play_tape(&mut self) {
-        (*self.tape).play();
+        self.tape.play();
     }
     pub fn stop_tape(&mut self) {
-        (*self.tape).stop();
+        self.tape.stop();
     }
 
     /// Returns Screen texture
@@ -173,6 +183,21 @@ impl ZXController {
         self.border.new_frame();
     }
 
+    /// force clears all events
+    pub fn clear_events(&mut self) {
+        self.events.clear();
+    }
+
+    /// check events count
+    pub fn no_events(&self) -> bool {
+        self.events.is_empty()
+    }
+
+    /// Returns last event
+    pub fn pop_event(&mut self) -> Option<Event> {
+        self.events.receive_event()
+    }
+
     /// Returns true if all frame clocks has been passed
     pub fn frames_count(&self) -> usize {
         self.passed_frames
@@ -189,7 +214,28 @@ impl ZXController {
 }
 
 impl Z80Bus for ZXController {
-    fn read_internal(&self, addr: u16) -> u8 {
+
+    /// we need to check different breakpoints like tape
+    /// loading detection breakpoint
+    fn pc_callback(&mut self, addr: u16) {
+        // check mapped memory page at 0x0000 .. 0x3FFF
+        match self.memory.get_page_type(0) {
+            // if page is 48K Rom
+            Page::Rom(0) => {
+                // Tape LOAD/VERIFY
+                if addr == ADDR_LD_BREAK {
+                    // Add event (Fast tape loading request) it must be executed
+                    // by emulator immediately
+                    self.events.send_event(Event::new(EventKind::FastTapeLoad, self.frame_clocks));
+                    self.instant_event.set();
+                }
+            }
+            _ => {}
+        }
+    }
+
+
+    fn read_internal(&mut self, addr: u16) -> u8 {
         self.memory.read(addr)
     }
 
@@ -292,4 +338,8 @@ impl Z80Bus for ZXController {
     fn reti(&mut self) {}
 
     fn halt(&mut self, _: bool) {}
+
+    fn instant_event(&self) -> bool {
+        self.instant_event.pick()
+    }
 }

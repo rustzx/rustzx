@@ -104,6 +104,12 @@ impl ZXMemory {
         }
     }
 
+    /// Returns type of mapped page
+    pub fn get_page_type(&self, block: usize) -> Page {
+        assert!(block < MEM_BLOCKS);
+        self.map[block]
+    }
+
     /// Loads ROM from array slice to memory
     /// TODO: make "load_page" fuction, allow to load not only rom's
     pub fn load_rom(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {

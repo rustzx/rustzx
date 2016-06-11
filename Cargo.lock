@@ -1,6 +1,6 @@
 [root]
 name = "rustzx"
-version = "0.6.4"
+version = "0.6.11"
 dependencies = [
  "glium 0.13.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -5,7 +5,9 @@ use utils::*;
 #[allow(unused_variables)]
 pub trait Z80Bus {
     /// Required method for reading byte without waiting
-    fn read_internal(&self, addr: u16) -> u8;
+    /// pass `self` as mut, because method can change state of
+    /// bus or something
+    fn read_internal(&mut self, addr: u16) -> u8;
     /// Required method for write byte to bus without waiting
     fn write_internal(&mut self, addr: u16, data: u8);
     /// Wait some clocks
@@ -59,4 +61,8 @@ pub trait Z80Bus {
     fn int_active(&self) -> bool;
     /// Checks nmi signal
     fn nmi_active(&self) -> bool;
+    /// Must return true if devices on bus invoked events
+    fn instant_event(&self) -> bool;
+    /// invokes breakpoints check on bus device
+    fn pc_callback(&mut self, addr: u16);
 }
