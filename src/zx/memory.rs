@@ -111,13 +111,24 @@ impl ZXMemory {
     }
 
     /// Loads ROM from array slice to memory
-    /// TODO: make "load_page" fuction, allow to load not only rom's
     pub fn load_rom(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {
         if (page as usize + 1) * PAGE_SIZE > self.rom.len() {
             Err(())
         } else {
             let shift = page as usize * PAGE_SIZE;
             let mut slice = &mut self.rom[shift..shift + PAGE_SIZE];
+            slice[..data.len()].clone_from_slice(data);
+            Ok(())
+        }
+    }
+
+    /// Loads RAM from array slice to memory
+    pub fn load_ram(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {
+        if (page as usize + 1) * PAGE_SIZE > self.ram.len() {
+            Err(())
+        } else {
+            let shift = page as usize * PAGE_SIZE;
+            let mut slice = &mut self.ram[shift..shift + PAGE_SIZE];
             slice[..data.len()].clone_from_slice(data);
             Ok(())
         }

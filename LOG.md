@@ -1,3 +1,5 @@
+**[12.06.2016]** Some Comand line arguments fixes/enchantments  
+**[12.06.2016]** SNA files loading  
 **[11.06.2016]** Command line arguments using **clap** crate  
 **[11.06.2016]** Tap files fast loading implemented, finnaly!  
 **[07.06.2016]** Speed improvements (maybe :smile:) in flag setting [z80]    

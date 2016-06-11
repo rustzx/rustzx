@@ -1,6 +1,11 @@
+use std::io::Read;
+use std::fs::File;
+
 use time;
 use z80::*;
+use z80::opcodes::execute_pop_16;
 use zx::{ZXController, ZXMachine};
+use zx::colors::ZXColor;
 use utils::*;
 
 pub struct Emulator {
@@ -22,12 +27,58 @@ impl Emulator {
         }
     }
 
+    /// changes emulation speed
     pub fn set_speed(&mut self, new_speed: EmulationSpeed) {
         self.speed = new_speed;
     }
 
+    /// sets fast loading flag
     pub fn set_fast_load(&mut self, value: bool) {
         self.fast_load = value;
+    }
+
+    pub fn load_sna(&mut self, file: &str) {
+        let mut data = Vec::new();
+        File::open(file).unwrap().read_to_end(&mut data).unwrap();
+        assert!(data.len() == 49179);
+        //i-reg
+        self.cpu.regs.set_i(data[0]);
+        // alt-regs
+        self.cpu.regs.set_hl(make_word(data[2], data[1]));
+        self.cpu.regs.set_de(make_word(data[4], data[3]));
+        self.cpu.regs.set_bc(make_word(data[6], data[5]));
+        self.cpu.regs.exx();
+        // af'
+        self.cpu.regs.set_af(make_word(data[8], data[7]));
+        self.cpu.regs.swap_af_alt();
+        // regs
+        self.cpu.regs.set_hl(make_word(data[10], data[9]));
+        self.cpu.regs.set_de(make_word(data[12], data[11]));
+        self.cpu.regs.set_bc(make_word(data[14], data[13]));
+        // index regs
+        self.cpu.regs.set_iy(make_word(data[16], data[15]));
+        self.cpu.regs.set_ix(make_word(data[18], data[17]));
+        // iff1, iff2
+        self.cpu.regs.set_iff1((data[19] & 0x01) != 0);
+        self.cpu.regs.set_iff1((data[19] & 0x04) != 0);
+        // r
+        self.cpu.regs.set_r(data[20]);
+        // af
+        self.cpu.regs.set_af(make_word(data[22], data[21]));
+        // sp
+        self.cpu.regs.set_sp(make_word(data[24], data[23]));
+        // interrupt mode
+        self.cpu.set_im(data[25]);
+        // set border
+        self.controller.border.set_border(Clocks(0), ZXColor::from_bits(data[26]));
+        // ram pages
+        self.controller.memory.load_ram(0, &data[27..16411]).unwrap();
+        // validate screen, it has been changed
+        self.controller.validate_screen();
+        self.controller.memory.load_ram(1, &data[16411..32795]).unwrap();
+        self.controller.memory.load_ram(2, &data[32795..49179]).unwrap();
+        // RET
+        execute_pop_16(&mut self.cpu, &mut self.controller, RegName16::PC, Clocks(0));
     }
 
     fn process_event(&mut self, event: Event) {

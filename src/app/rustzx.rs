@@ -1,5 +1,4 @@
 //! Main application class module
-//! TODO: Code refactoring
 
 use std::thread;
 use std::fs::*;
@@ -42,13 +41,6 @@ impl RustZXApp {
         RustZXApp {
             emulator: Emulator::new(ZXMachine::Sinclair48K),
         }
-        /*
-        // build new emulator and load tape & rom
-        let mut emulator = Emulator::new(ZXMachine::Sinclair48K);
-        emulator.controller.load_rom("/home/pacmancoder/48.rom");
-        emulator.controller.insert_tape("/home/pacmancoder/test.tap");
-        */
-
     }
     /// starts application
     pub fn start(&mut self) {
@@ -58,9 +50,7 @@ impl RustZXApp {
                           .build_glium()
                           .unwrap();
         let renderer = ZXScreenRenderer::new(&display);
-        let mut speed = EmulationSpeed::Definite(1);
         'render_loop: loop {
-            self.emulator.set_speed(speed);
             let frame_target_dt_ns = ms_to_ns((1000 / 50) as f64);
             let frame_start_ns = time::precise_time_ns();
             // emulation loop
@@ -86,13 +76,13 @@ impl RustZXApp {
                                 f.write_all(&self.emulator.controller.dump()).unwrap();
                             }
                             VKey::F3 => {
-                                speed = EmulationSpeed::Definite(1);
+                                self.emulator.set_speed(EmulationSpeed::Definite(1))
                             }
                             VKey::F4 => {
-                                speed = EmulationSpeed::Definite(16);
+                                self.emulator.set_speed(EmulationSpeed::Definite(1))
                             }
                             VKey::F5 => {
-                                speed = EmulationSpeed::Max;
+                                self.emulator.set_speed(EmulationSpeed::Max)
                             }
                             _ => {
                                 if let Some(key) = vkey_to_zxkey(key_code) {

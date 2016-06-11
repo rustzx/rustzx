@@ -67,6 +67,17 @@ impl Z80 {
         self.int_mode
     }
 
+    /// Changes interrupt mode
+    pub fn set_im(&mut self, value: u8) {
+        assert!(value < 3);
+        self.int_mode = match value {
+            0 => IntMode::IM0,
+            1 => IntMode::IM1,
+            2 => IntMode::IM2,
+            _ => unreachable!(),
+        }
+    }
+
     /// Main emulation step function
     /// return `false` if execution can be continued or true if last event must be executed
     /// instantly

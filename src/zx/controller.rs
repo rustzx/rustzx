@@ -61,6 +61,8 @@ impl ZXController {
             instant_event: InstantFlag::new(false),
         }
     }
+
+    /// loads rom form file
     pub fn load_rom(&mut self, path: &str) {
         let mut rom = Vec::new();
         if let Ok(mut file) = File::open(path) {
@@ -70,15 +72,22 @@ impl ZXController {
         }
         self.memory.load_rom(0, &rom).unwrap();
     }
+    /// load builted-in ROM
     pub fn load_default_rom(&mut self) {
         self.memory.load_rom(0, ROM_48K).unwrap();
     }
+
+    /// inserts new tape
     pub fn insert_tape(&mut self, path: &str) {
         self.tape.insert(path);
     }
+
+    /// plays tape
     pub fn play_tape(&mut self) {
         self.tape.play();
     }
+
+    /// stops tape
     pub fn stop_tape(&mut self) {
         self.tape.stop();
     }
@@ -147,11 +156,13 @@ impl ZXController {
         return 0xFF;
     }
 
+    /// make contention
     fn do_contention(&mut self) {
         let contention = self.machine.contention_clocks(self.frame_clocks);
         self.wait_internal(contention);
     }
 
+    ///make contention + wait some clocks
     fn do_contention_and_wait(&mut self, wait_time: Clocks) {
         let contention = self.machine.contention_clocks(self.frame_clocks);
         self.wait_internal(contention + wait_time);
@@ -185,6 +196,16 @@ impl ZXController {
         self.frame_clocks -= self.machine.specs().clocks_frame;
         self.canvas.new_frame();
         self.border.new_frame();
+    }
+
+    /// Validates screen
+    pub fn validate_screen(&mut self) {
+        for addr in 0x4000..0x5800 {
+            self.canvas.write_bitmap_byte(addr, Clocks(0), self.memory.read(addr));
+        }
+        for addr in 0x5800..0x5B00 {
+            self.canvas.write_attr_byte(addr, Clocks(0), self.memory.read(addr));
+        }
     }
 
     /// force clears all events
@@ -343,6 +364,7 @@ impl Z80Bus for ZXController {
 
     fn halt(&mut self, _: bool) {}
 
+    /// check for instant events
     fn instant_event(&self) -> bool {
         self.instant_event.pick()
     }

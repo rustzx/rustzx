@@ -1,5 +1,4 @@
 //! Module which contains Z80 registers implementation
-//! TODO: inline attributes
 use utils::*;
 use std::fmt;
 use z80::Prefix;
@@ -371,11 +370,33 @@ impl Regs {
         self.pc
     }
 
+    /// Returns af
+    pub fn get_af(&self) -> u16 {
+        make_word(self.a, self.f)
+    }
+
     /// Returns bc
     pub fn get_bc(&self) -> u16 {
         make_word(self.b, self.c)
     }
 
+    /// Returns ix
+    pub fn get_ix(&self) -> u16 {
+        make_word(self.ixh, self.ixl)
+    }
+
+    /// Returns iy
+    pub fn get_iy(&self) -> u16 {
+        make_word(self.iyh, self.iyl)
+    }
+
+    /// Changes AF
+    pub fn set_af(&mut self, value: u16) -> u16 {
+        let (a, f) = split_word(value);
+        self.a = a;
+        self.f = f;
+        value
+    }
 
     /// Changes BC
     pub fn set_bc(&mut self, value: u16) -> u16 {
@@ -411,6 +432,21 @@ impl Regs {
         value
     }
 
+    /// Changes IX
+    pub fn set_ix(&mut self, value: u16) -> u16 {
+        let (ixh, ixl) = split_word(value);
+        self.ixh = ixh;
+        self.ixl = ixl;
+        value
+    }
+
+    /// Changes IY
+    pub fn set_iy(&mut self, value: u16) -> u16 {
+        let (iyh, iyl) = split_word(value);
+        self.iyh = iyh;
+        self.iyl = iyl;
+        value
+    }
 
     /// Increments stack pointer
     pub fn inc_sp(&mut self, value: u16) -> u16 {
@@ -573,7 +609,6 @@ impl Regs {
             Condition::ParityOdd => (self.f & FLAG_PV) == 0,
         }
     }
-// TODO: REMOVE
 
     /// Returns selected flag
     pub fn get_flag(&self, flag: Flag) -> bool {

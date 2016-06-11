@@ -45,7 +45,6 @@ pub fn word_displacement(word: u16, d: i8) -> u16 {
     (word as i32).wrapping_add(d as i32) as u16
 }
 
-// TODO: Check how normal Rust type conversion works
 /// transforms bool to u8
 #[inline]
 pub fn bool_to_u8(value: bool) -> u8 {

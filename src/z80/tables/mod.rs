@@ -1,5 +1,4 @@
 //! Contains internal emulator tables
-//! TODO: Teble generation with build script, not at runtime
 
 use z80::registers::*;
 
