@@ -32,19 +32,26 @@ fn ms_to_ns(s: f64) -> u64 {
 }
 
 /// Application instance type
-pub struct RustZXApp;
+pub struct RustZXApp {
+    pub emulator: Emulator,
+}
 
 impl RustZXApp {
     /// Returns new application instance
     pub fn new() -> RustZXApp {
-        RustZXApp
-    }
-    /// starts application
-    pub fn start(&mut self) {
+        RustZXApp {
+            emulator: Emulator::new(ZXMachine::Sinclair48K),
+        }
+        /*
         // build new emulator and load tape & rom
         let mut emulator = Emulator::new(ZXMachine::Sinclair48K);
         emulator.controller.load_rom("/home/pacmancoder/48.rom");
         emulator.controller.insert_tape("/home/pacmancoder/test.tap");
+        */
+
+    }
+    /// starts application
+    pub fn start(&mut self) {
         // build new glium window
         let display = WindowBuilder::new()
                           .with_dimensions(SCREEN_WIDTH as u32 * 2, SCREEN_HEIGHT as u32 * 2)
@@ -53,14 +60,14 @@ impl RustZXApp {
         let renderer = ZXScreenRenderer::new(&display);
         let mut speed = EmulationSpeed::Definite(1);
         'render_loop: loop {
-            emulator.set_speed(speed);
+            self.emulator.set_speed(speed);
             let frame_target_dt_ns = ms_to_ns((1000 / 50) as f64);
             let frame_start_ns = time::precise_time_ns();
             // emulation loop
-            let cpu_dt_ns = emulator.emulate_frame(MAX_FRAME_TIME_NS);
+            let cpu_dt_ns = self.emulator.emulate_frame(MAX_FRAME_TIME_NS);
             renderer.draw_screen(&display,
-                emulator.controller.get_border_texture(),
-                emulator.controller.get_canvas_texture());
+                self.emulator.controller.get_border_texture(),
+                self.emulator.controller.get_canvas_texture());
             for event in display.poll_events() {
                 match event {
                     Event::Closed => {
@@ -69,14 +76,14 @@ impl RustZXApp {
                     Event::KeyboardInput(state, _, Some(key_code)) => {
                         match key_code {
                             VKey::Insert => {
-                                emulator.controller.play_tape();
+                                self.emulator.controller.play_tape();
                             }
                             VKey::Delete => {
-                                emulator.controller.stop_tape();
+                                self.emulator.controller.stop_tape();
                             }
                             VKey::F2 => {
                                 let mut f = File::create("/home/pacmancoder/snap.rustzx").unwrap();
-                                f.write_all(&emulator.controller.dump()).unwrap();
+                                f.write_all(&self.emulator.controller.dump()).unwrap();
                             }
                             VKey::F3 => {
                                 speed = EmulationSpeed::Definite(1);
@@ -90,8 +97,8 @@ impl RustZXApp {
                             _ => {
                                 if let Some(key) = vkey_to_zxkey(key_code) {
                                     match state {
-                                        KeyState::Pressed => emulator.controller.send_key(key, true),
-                                        KeyState::Released => emulator.controller.send_key(key, false),
+                                        KeyState::Pressed => self.emulator.controller.send_key(key, true),
+                                        KeyState::Released => self.emulator.controller.send_key(key, false),
                                     }
                                 }
                             }

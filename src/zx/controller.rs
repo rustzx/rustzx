@@ -17,6 +17,7 @@ use zx::ZXKey;
 use zx::screen::canvas::ZXCanvas;
 use zx::screen::border::ZXBorder;
 use zx::screen::colors::{ZXColor, ZXPalette};
+use zx::roms::*;
 
 /// Tape loading trap at LD-BREAK routine in ROM
 const ADDR_LD_BREAK: u16 = 0x056B;
@@ -68,6 +69,9 @@ impl ZXController {
             panic!("ROM not found!");
         }
         self.memory.load_rom(0, &rom).unwrap();
+    }
+    pub fn load_default_rom(&mut self) {
+        self.memory.load_rom(0, ROM_48K).unwrap();
     }
     pub fn insert_tape(&mut self, path: &str) {
         self.tape.insert(path);

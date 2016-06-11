@@ -94,6 +94,9 @@ impl ZXTape for Tap {
 
     /// returns byte of block
     fn block_byte(&self, offset: usize) -> Option<u8> {
+        if self.block_info.len() == 0 {
+            return None;
+        };
         let block =  self.block_info[self.block];
         if offset < block.length {
             Some(self.data[block.pos + offset])

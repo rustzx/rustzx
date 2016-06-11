@@ -6,6 +6,7 @@ pub mod keys;
 pub mod tape;
 pub mod machine;
 pub mod constants;
+pub mod roms;
 
 pub use self::controller::ZXController;
 pub use self::machine::{ZXMachine, ZXSpecs};

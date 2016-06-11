@@ -8,6 +8,7 @@ pub struct Emulator {
     cpu: Z80,
     pub controller: ZXController,
     speed: EmulationSpeed,
+    fast_load: bool,
 }
 
 impl Emulator {
@@ -17,6 +18,7 @@ impl Emulator {
             cpu: Z80::new(),
             controller: ZXController::new(machine),
             speed: EmulationSpeed::Definite(1),
+            fast_load: false,
         }
     }
 
@@ -24,12 +26,16 @@ impl Emulator {
         self.speed = new_speed;
     }
 
+    pub fn set_fast_load(&mut self, value: bool) {
+        self.fast_load = value;
+    }
+
     fn process_event(&mut self, event: Event) {
         let Event { kind: e, time: _ } = event;
         match e {
             // NOTE: This can be moved to new mod, `loaders` or something
             // Fast tape loading found, use it
-            EventKind::FastTapeLoad if self.controller.tape.can_fast_load() => {
+            EventKind::FastTapeLoad if self.controller.tape.can_fast_load() && self.fast_load => {
                 // resetting tape pos to beginning.
                 self.controller.tape.reset_pos_in_block();
                 // So, at current moment we at 0x056C in 48K Rom.
@@ -81,7 +87,7 @@ impl Emulator {
                         }
                         // LOAD
                         if (f & FLAG_CARRY) != 0 {
-                            self.controller.memory.write(dest, current_byte);
+                            self.controller.write_internal(dest, current_byte);
                         // VERIFY
                         } else {
                             // check for parity each byte, if this fails - set flags to error state
