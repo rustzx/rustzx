@@ -3,4 +3,5 @@
 mod rustzx;
 mod video;
 mod keyboard;
+pub mod sound_thread;
 pub use self::rustzx::RustZXApp;

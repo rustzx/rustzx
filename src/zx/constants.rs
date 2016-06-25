@@ -20,3 +20,7 @@ pub const BORDER_ROWS: usize = 3;
 pub const SCREEN_WIDTH: usize = CANVAS_WIDTH + BORDER_COLS * 8 * 2;
 pub const SCREEN_HEIGHT: usize = CANVAS_HEIGHT + BORDER_ROWS * 8 * 2;
 pub const PIXEL_COUNT: usize = SCREEN_HEIGHT * SCREEN_WIDTH;
+// 44100 Hz Sample rate
+pub const SAMPLE_RATE: usize = 44100;
+// Frames per second
+pub const FPS: usize = 50;

@@ -62,7 +62,7 @@ impl Tap {
             prev_state: TapeState::Stop,
             state: TapeState::Stop,
             data: Vec::new(),
-            curr_bit: true,
+            curr_bit: false,
             curr_byte: 0x00,
             curr_mask: 0x80,
             pulse_counter: 0,
@@ -75,7 +75,7 @@ impl Tap {
     }
     fn reset_state(&mut self) {
         self.state = TapeState::Stop;
-        self.curr_bit = true;
+        self.curr_bit = false;
         self.curr_byte = 0x00;
         self.curr_mask = 0x80;
         self.block = 0;
@@ -195,7 +195,7 @@ impl ZXTape for Tap {
                 // Stop state.
                 TapeState::Stop => {
                     // Tape stopped, return HI bit, set current block pos to zero
-                    self.curr_bit = true;
+                    self.curr_bit = false;
                     self.pos_in_block = 0;
                     // action maked, break state machine
                     break 'state_machine;
@@ -217,7 +217,7 @@ impl ZXTape for Tap {
                             PILOT_PULSES_DATA
                         };
                         // so, ok seems to be ok, we can make output bit low
-                        self.curr_bit = false;
+                        self.curr_bit = true;
                         // set delay before next state to one pilot pulse
                         self.delay = Clocks(PILOT_LENGTH);
                         self.state = TapeState::Pilot;
@@ -305,27 +305,6 @@ impl ZXTape for Tap {
                     self.state = TapeState::Play;
                     // break directly for delay
                     break 'state_machine;
-
-                    /*if self.block < self.block_info.len() {
-                        // next block
-                        self.delay = Clocks(PAUSE_LENGTH);
-                        self.block += 1;
-                        self.state = TapeState::Play;
-                        // break directly for delay
-                        break 'state_machine;
-                    }
-
-                    if self.pos < self.data.len() {
-                        // next block
-                        self.delay = Clocks(PAUSE_LENGTH);
-                        self.block += 1;
-                        self.state = TapeState::Play;
-                        // break directly for delay
-                        break 'state_machine;
-                    } else {
-                        // stop the tape. loop will be breaked on next state
-                        self.state = TapeState::Stop;
-                    }*/
                 }
             }
         }

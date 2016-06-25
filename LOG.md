@@ -1,3 +1,4 @@
+**[26.06.2016]** Beeper sound implemented :notes:, release planed to July 1 :rocket:  
 **[12.06.2016]** Some Comand line arguments fixes/enchantments  
 **[12.06.2016]** SNA files loading  
 **[11.06.2016]** Command line arguments using **clap** crate  

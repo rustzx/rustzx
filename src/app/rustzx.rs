@@ -1,15 +1,14 @@
 //! Main application class module
-
-use std::thread;
+//! Handles all platform-related, hardware-related stuff
 use std::fs::*;
 use std::io::Write;
-use std::time::Duration;
 
 use time;
 use glium::glutin::{WindowBuilder, Event, ElementState as KeyState};
 use glium::DisplayBuild;
 use glium::glutin::VirtualKeyCode as VKey;
 
+use app::sound_thread::*;
 use app::video::ZXScreenRenderer;
 use app::keyboard::vkey_to_zxkey;
 use zx::*;
@@ -33,18 +32,22 @@ fn ms_to_ns(s: f64) -> u64 {
 /// Application instance type
 pub struct RustZXApp {
     pub emulator: Emulator,
+    pub snd: SoundThread<'static>,
 }
 
 impl RustZXApp {
     /// Returns new application instance
     pub fn new() -> RustZXApp {
+        let emu = Emulator::new(ZXMachine::Sinclair48K);
         RustZXApp {
-            emulator: Emulator::new(ZXMachine::Sinclair48K),
+            emulator: emu,
+            snd: SoundThread::new(),
         }
     }
     /// starts application
     pub fn start(&mut self) {
         // build new glium window
+        self.snd.run_sound_thread();
         let display = WindowBuilder::new()
                           .with_dimensions(SCREEN_WIDTH as u32 * 2, SCREEN_HEIGHT as u32 * 2)
                           .build_glium()
@@ -55,6 +58,13 @@ impl RustZXApp {
             let frame_start_ns = time::precise_time_ns();
             // emulation loop
             let cpu_dt_ns = self.emulator.emulate_frame(MAX_FRAME_TIME_NS);
+            loop {
+                if let Some(sample) = self.emulator.controller.beeper.pop() {
+                    self.snd.send(sample);
+                } else {
+                    break;
+                }
+            }
             renderer.draw_screen(&display,
                 self.emulator.controller.get_border_texture(),
                 self.emulator.controller.get_canvas_texture());
@@ -101,9 +111,9 @@ impl RustZXApp {
 
             // wait some time for 50 FPS
 
-            if emulation_dt_ns < frame_target_dt_ns {
-                thread::sleep(Duration::new(0, (frame_target_dt_ns - emulation_dt_ns) as u32));
-            };
+            // if emulation_dt_ns < frame_target_dt_ns {
+            //     thread::sleep(Duration::new(0, (frame_target_dt_ns - emulation_dt_ns) as u32));
+            // };
             let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
             if let Some(wnd) = display.get_window() {
                 wnd.set_title(&format!("CPU: {:7.3}ms; EMULATOR: {:7.3}ms; FRAME:{:7.3}ms",

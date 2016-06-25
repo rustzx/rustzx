@@ -1,15 +1,17 @@
 #![allow(dead_code)]
 
-// glium as graphics library
+/// glium as graphics library
 #[macro_use]
 extern crate glium;
-// time lib for frame timings
+/// time lib for frame timings
 extern crate time;
-// Lazy static for macine specs
+/// Lazy static for macine specs
 #[macro_use]
 extern crate lazy_static;
-// Command line parser
+/// Command line parser
 extern crate clap;
+/// Library for sound rendering
+extern crate portaudio;
 
 // crate consists of theese modules
 mod utils;
@@ -52,6 +54,10 @@ fn main() {
                             .long("speed")
                             .value_name("SPEED_VALUE")
                             .help("Selects speed for emulator in integer multiplier form"))
+                        .arg(Arg::with_name("NO_SOUND")
+                            .long("nosound")
+                            .help("Disables sound. Use it when you have problems with audio
+                                   playback"))
                         .get_matches();
     // check command line args
     // TODO: move main contol routines up to `Emulator`

@@ -10,17 +10,37 @@ Implementation of ZX Spectrum 48K hardware.
 Watch [LOG](LOG.md) for details and github issues
 for current plans and help requests.
 ## Compiling
-Rustzx is not usable at the moment.
-If you want to test it anyway - copy ROM (machine is 48K) to
-`src/app` folder and name it `48.rom`.
-And then just execute
+Before compiling make shure that **libportaudio** is
+installed.
+On Linux Mint, for example you must to install packages **libportaudio2** and
+**portaudio19-dev**  
+
+Then just build it with cargo:
+
 ```bash
 cargo run --release
 ```
+Use **--help** option when oppening rustzx to get some help.  
+
+Here some examples of usage:
+```bash
+rustzx --help
+rustzx --fastload --tap ~/test.tap
+```
+## Features
+- Can handle tap, sna files
+- Full ZX Spectrum 48K emulation
+- Emulates border
+- Beeper sound emulation
+- Cross-platform
+- Documented source
+- Written in pure rust
+
 ## Screenshots
-![](screenshots/ulatest3.png) ![](screenshots/fusetest.png)  
-![](screenshots/floatspy.png) ![](screenshots/diagnostics.png)  
-![](screenshots/timings.png)
+![](screenshots/rain.png)
+![](screenshots/q.png)   
+![](screenshots/arkanoid.png)
+![](screenshots/sentinel.png)
 ## References
 Of course, I used many resources to find out, how to build my first
 emulator in life. So there is a list of useful references, from where I dig most information about Z80, ULA and other ZX Spectrum hardware parts:  

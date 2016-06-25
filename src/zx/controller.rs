@@ -1,6 +1,5 @@
 //! Contains ZX Spectrum System contrller (like lua or so) of emulator
 //! TODO: Make ZXController Builder
-
 use std::fs::File;
 use std::io::Read;
 
@@ -18,6 +17,7 @@ use zx::screen::canvas::ZXCanvas;
 use zx::screen::border::ZXBorder;
 use zx::screen::colors::{ZXColor, ZXPalette};
 use zx::roms::*;
+use zx::beeper::ZXBeeper;
 
 /// Tape loading trap at LD-BREAK routine in ROM
 const ADDR_LD_BREAK: u16 = 0x056B;
@@ -29,13 +29,16 @@ pub struct ZXController {
     pub canvas: ZXCanvas,
     pub tape: Box<ZXTape>,
     pub border: ZXBorder,
+    pub beeper: ZXBeeper,
     keyboard: [u8; 8],
     border_color: u8,
-    ear: bool,
     frame_clocks: Clocks,
     passed_frames: usize,
     events: EventQueue,
     instant_event: InstantFlag,
+    // audio
+    mic: bool,
+    ear: bool,
 }
 
 impl ZXController {
@@ -51,14 +54,26 @@ impl ZXController {
             memory: memory,
             canvas: canvas,
             border: border,
+            beeper: ZXBeeper::new(),
             keyboard: [0xFF; 8],
             border_color: 0x00,
-            ear: true,
             frame_clocks: Clocks(0),
             passed_frames: 0,
             tape: Box::new(Tap::new()),
             events: EventQueue::new(),
             instant_event: InstantFlag::new(false),
+
+            mic: false,
+            ear: false,
+        }
+    }
+
+    fn frame_pos(&self) -> f64 {
+        let val = self.frame_clocks.count() as f64 / self.machine.specs().clocks_frame as f64;
+        if val > 1.0 {
+            1.0
+        } else {
+            val
         }
     }
 
@@ -196,6 +211,7 @@ impl ZXController {
         self.frame_clocks -= self.machine.specs().clocks_frame;
         self.canvas.new_frame();
         self.border.new_frame();
+        self.beeper.fill_to_end();
     }
 
     /// Validates screen
@@ -280,8 +296,10 @@ impl Z80Bus for ZXController {
     fn wait_internal(&mut self, clk: Clocks) {
         self.frame_clocks += clk;
         (*self.tape).process_clocks(clk);
-        let ear = (*self.tape).current_bit();
-        self.ear = ear;
+        let mic = (*self.tape).current_bit();
+        self.mic = mic;
+        let pos = self.frame_pos();
+        self.beeper.validate(self.ear, self.mic, pos);
         if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
             self.new_frame();
             self.passed_frames += 1;
@@ -320,8 +338,8 @@ impl Z80Bus for ZXController {
                     tmp &= self.keyboard[n];
                 }
             }
-            // invert bit 6 if ear active;
-            if self.ear {
+            // invert bit 6 if mic_hw active;
+            if self.mic {
                 tmp ^= 0x40;
             }
             // 5 and 7 unused
@@ -341,6 +359,10 @@ impl Z80Bus for ZXController {
         if port & 0x0001 == 0 {
             self.border_color = data & 0x07;
             self.border.set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
+            self.mic = data & 0x08 != 0;
+            self.ear = data & 0x10 != 0;
+            let pos = self.frame_pos();
+            self.beeper.validate(self.ear, self.mic, pos);
         }
         // last contention after byte write
         self.io_contention_last(port);
