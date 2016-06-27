@@ -56,7 +56,7 @@ impl ZXScreenRenderer {
         let frag_shader = include_str!("shaders/frag.glsl");
         let program = Program::from_source(display, vert_shader, frag_shader, None).unwrap();
         let mat = [[1.0, 0.0, 0.0, 0.0],
-                   [0.0,1.0, 0.0, 0.0],
+                   [0.0, 1.0, 0.0, 0.0],
                    [0.0, 0.0, 1.0, 0.0],
                    [0.0, 0.0, 0.0, 1.0]];
         ZXScreenRenderer {
@@ -71,11 +71,11 @@ impl ZXScreenRenderer {
     pub fn draw_screen(&self, display: &GlutinFacade, border: &[u8], screen: &[u8]) {
         // generate screen tex
         let screen_bitmap = RawImage2d::from_raw_rgba(screen.to_vec(),
-            (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+                                                      (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
         let screen_tex = Texture2d::new(display, screen_bitmap).unwrap();
         // generate border tex
         let border_bitmap = RawImage2d::from_raw_rgba(border.to_vec(),
-            (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+                                                      (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
         let border_tex = Texture2d::new(display, border_bitmap).unwrap();
         // uniforms for screen
         let uniforms = uniform![

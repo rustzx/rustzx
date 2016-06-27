@@ -54,35 +54,35 @@ impl RustZXApp {
     pub fn init(&mut self) -> &mut Self {
         // Construction of App menu
         let cmd = App::new("rustzx")
-                            .setting(AppSettings::ColoredHelp)
-                            .version(env!("CARGO_PKG_VERSION"))
-                            .author("Vladislav Nikonov <pacmancoder@gmail.com>")
-                            .about("ZX Spectrum emulator written in pure Rust")
-                            .arg(Arg::with_name("ROM")
-                                .long("rom")
-                                .value_name("ROM_PATH")
-                                .help("Selects path to rom, otherwise default will be used"))
-                            .arg(Arg::with_name("TAP")
-                                .long("tap")
-                                .value_name("TAP_PATH")
-                                .help("Selects path to *.tap file"))
-                            .arg(Arg::with_name("FAST_LOAD")
-                                .short("f")
-                                .long("fastload")
-                                .help("Accelerates standard tape loaders"))
-                            .arg(Arg::with_name("SNA")
-                                .long("sna")
-                                .value_name("SNA_PATH")
-                                .help("Selects path to *.sna snapshot file"))
-                            .arg(Arg::with_name("SPEED")
-                                .long("speed")
-                                .value_name("SPEED_VALUE")
-                                .help("Selects speed for emulator in integer multiplier form"))
-                            .arg(Arg::with_name("NO_SOUND")
-                                .long("nosound")
-                                .help("Disables sound. Use it when you have problems with audio
-                                       playback"))
-                            .get_matches();
+                      .setting(AppSettings::ColoredHelp)
+                      .version(env!("CARGO_PKG_VERSION"))
+                      .author("Vladislav Nikonov <pacmancoder@gmail.com>")
+                      .about("ZX Spectrum emulator written in pure Rust")
+                      .arg(Arg::with_name("ROM")
+                               .long("rom")
+                               .value_name("ROM_PATH")
+                               .help("Selects path to rom, otherwise default will be used"))
+                      .arg(Arg::with_name("TAP")
+                               .long("tap")
+                               .value_name("TAP_PATH")
+                               .help("Selects path to *.tap file"))
+                      .arg(Arg::with_name("FAST_LOAD")
+                               .short("f")
+                               .long("fastload")
+                               .help("Accelerates standard tape loaders"))
+                      .arg(Arg::with_name("SNA")
+                               .long("sna")
+                               .value_name("SNA_PATH")
+                               .help("Selects path to *.sna snapshot file"))
+                      .arg(Arg::with_name("SPEED")
+                               .long("speed")
+                               .value_name("SPEED_VALUE")
+                               .help("Selects speed for emulator in integer multiplier form"))
+                      .arg(Arg::with_name("NO_SOUND")
+                               .long("nosound")
+                               .help("Disables sound. Use it when you have problems with audio\
+                                      playback"))
+                      .get_matches();
         // load another if requested
         if let Some(path) = cmd.value_of("ROM") {
             if Path::new(path).is_file() {
@@ -138,7 +138,8 @@ impl RustZXApp {
         let display = WindowBuilder::new()
                           .with_dimensions(SCREEN_WIDTH as u32 * 2, SCREEN_HEIGHT as u32 * 2)
                           .build_glium()
-                          .ok().expect("[ERROR] Glium (OpenGL) initialization error");
+                          .ok()
+                          .expect("[ERROR] Glium (OpenGL) initialization error");
         let renderer = ZXScreenRenderer::new(&display);
         'render_loop: loop {
             let frame_target_dt_ns = ms_to_ns((1000 / 50) as f64);
@@ -158,8 +159,8 @@ impl RustZXApp {
                 }
             }
             renderer.draw_screen(&display,
-                self.emulator.controller.get_border_texture(),
-                self.emulator.controller.get_canvas_texture());
+                                 self.emulator.controller.get_border_texture(),
+                                 self.emulator.controller.get_canvas_texture());
             for event in display.poll_events() {
                 match event {
                     Event::Closed => {
@@ -173,20 +174,18 @@ impl RustZXApp {
                             VKey::Delete => {
                                 self.emulator.controller.stop_tape();
                             }
-                            VKey::F3 => {
-                                self.emulator.set_speed(EmulationSpeed::Definite(1))
-                            }
-                            VKey::F4 => {
-                                self.emulator.set_speed(EmulationSpeed::Definite(2))
-                            }
-                            VKey::F5 => {
-                                self.emulator.set_speed(EmulationSpeed::Max)
-                            }
+                            VKey::F3 => self.emulator.set_speed(EmulationSpeed::Definite(1)),
+                            VKey::F4 => self.emulator.set_speed(EmulationSpeed::Definite(2)),
+                            VKey::F5 => self.emulator.set_speed(EmulationSpeed::Max),
                             _ => {
                                 if let Some(key) = vkey_to_zxkey(key_code) {
                                     match state {
-                                        KeyState::Pressed => self.emulator.controller.send_key(key, true),
-                                        KeyState::Released => self.emulator.controller.send_key(key, false),
+                                        KeyState::Pressed => {
+                                            self.emulator.controller.send_key(key, true)
+                                        }
+                                        KeyState::Released => {
+                                            self.emulator.controller.send_key(key, false)
+                                        }
                                     }
                                 }
                             }
@@ -198,7 +197,7 @@ impl RustZXApp {
             let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
 
             // wait some time for 50 FPS if emulator syncs self not using sound callbacks
-            if (emulation_dt_ns < frame_target_dt_ns) && !self.emulator.have_sound(){
+            if (emulation_dt_ns < frame_target_dt_ns) && !self.emulator.have_sound() {
                 thread::sleep(Duration::new(0, (frame_target_dt_ns - emulation_dt_ns) as u32));
             };
             let frame_dt_ns = time::precise_time_ns() - frame_start_ns;

@@ -45,7 +45,7 @@ pub struct ZXBorder {
 }
 impl ZXBorder {
     /// Returns new instance of border device
-    pub fn new(machine: ZXMachine, palette: ZXPalette,) -> ZXBorder {
+    pub fn new(machine: ZXMachine, palette: ZXPalette) -> ZXBorder {
         ZXBorder {
             machine: machine,
             palette: palette,
@@ -64,8 +64,9 @@ impl ZXBorder {
         // begining of the first line (first pixel timing minus border lines
         // minus left border columns)
         let clocks_origin = specs.clocks_first_pixel -
-            8 * BORDER_ROWS * specs.clocks_line as usize -
-            BORDER_COLS * CLOCKS_PER_COL + specs.clocks_ula_beam_shift;
+                            8 * BORDER_ROWS * specs.clocks_line as usize -
+                            BORDER_COLS * CLOCKS_PER_COL +
+                            specs.clocks_ula_beam_shift;
         // return first pixel pos
         if clocks.count() < clocks_origin {
             return (0, 0, false);
@@ -107,7 +108,7 @@ impl ZXBorder {
     pub fn new_frame(&mut self) {
         // if border was not changed during prev frame then force change color of whole border
         if !self.border_changed {
-                self.beam_last.reset();
+            self.beam_last.reset();
         }
         // fill to end of screen if not already filled
         if !self.beam_block {

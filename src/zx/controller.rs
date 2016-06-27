@@ -263,7 +263,6 @@ impl ZXController {
 }
 
 impl Z80Bus for ZXController {
-
     /// we need to check different breakpoints like tape
     /// loading detection breakpoint
     fn pc_callback(&mut self, addr: u16) {

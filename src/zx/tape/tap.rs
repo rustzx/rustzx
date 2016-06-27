@@ -86,7 +86,6 @@ impl Tap {
 }
 
 impl ZXTape for Tap {
-
     /// can autoload only if tape stopped
     fn can_fast_load(&self) -> bool {
         self.state == TapeState::Stop
@@ -97,7 +96,7 @@ impl ZXTape for Tap {
         if self.block_info.len() == 0 {
             return None;
         };
-        let block =  self.block_info[self.block];
+        let block = self.block_info[self.block];
         if offset < block.length {
             Some(self.data[block.pos + offset])
         } else {
@@ -126,8 +125,7 @@ impl ZXTape for Tap {
     }
 
     /// updates internal structure according new tape file
-    fn insert(&mut self, path: &str) -> InsertResult
-    {
+    fn insert(&mut self, path: &str) -> InsertResult {
         if let Ok(mut file) = File::open(path) {
             if let Err(_) = file.read_to_end(&mut self.data) {
                 return InsertResult::Err("TAP file read error");
@@ -150,7 +148,7 @@ impl ZXTape for Tap {
                 if p >= self.data.len() {
                     break 'blocks;
                 }
-            };
+            }
             self.reset_state();
             return InsertResult::Ok;
         } else {

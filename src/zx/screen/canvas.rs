@@ -47,7 +47,7 @@ impl ZXCanvas {
         }
         self.backbuffer.clone_from_slice(&self.buffer);
         for line in 0..CANVAS_HEIGHT {
-            for col in 0.. ATTR_COLS {
+            for col in 0..ATTR_COLS {
                 self.update_buffer_block(line, col);
             }
         }
@@ -59,7 +59,7 @@ impl ZXCanvas {
         let row = line / 8;
         // get base block index (8x1 stripe)
         let block_base_index = (((line + CANVAS_Y) * SCREEN_WIDTH) + CANVAS_X + col * 8) *
-            BYTES_PER_PIXEL;
+                               BYTES_PER_PIXEL;
         // current attribute of block
         let block_attr = self.attributes[row][col];
         // write pixels to buffer
@@ -71,9 +71,7 @@ impl ZXCanvas {
             } else {
                 block_attr.paper
             };
-            let color_array = self.palette.get_rgba(color,
-                block_attr.brightness
-            );
+            let color_array = self.palette.get_rgba(color, block_attr.brightness);
             self.buffer[pixel..pixel + BYTES_PER_PIXEL].clone_from_slice(color_array);
         }
     }
@@ -112,7 +110,7 @@ impl ZXCanvas {
         };
         let block_time = if beam_line <= row * 8 {
             clocks_origin + (row * 8) * specs.clocks_line as usize + (col / 2) * 8
-        }  else if beam_line < (row + 1) * 8 {
+        } else if beam_line < (row + 1) * 8 {
             clocks_origin + (row * 8 + beam_line % 8) * specs.clocks_line as usize + (col / 2) * 8
         } else {
             clocks_origin + ((row * 8) + 7) * specs.clocks_line as usize + (col / 2) * 8

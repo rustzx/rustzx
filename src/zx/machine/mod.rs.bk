@@ -42,12 +42,10 @@ impl ZXMachine {
     pub fn contention_clocks(self, clocks: Clocks) -> Clocks {
         let specs = self.specs();
         if (clocks.count() < (specs.clocks_first_pixel - 1)) ||
-           (clocks.count() >=
-            (specs.clocks_first_pixel - 1) + specs.lines_screen * specs.clocks_line) {
+           (clocks.count() >= (specs.clocks_first_pixel - 1) + specs.lines_screen * specs.clocks_line) {
             return Clocks(0);
         }
-        let clocks_trough_line = (clocks.count() - (specs.clocks_first_pixel - 1)) %
-                                 specs.clocks_line;
+        let clocks_trough_line = (clocks.count() - (specs.clocks_first_pixel - 1)) % specs.clocks_line;
         if clocks_trough_line >= specs.clocks_screen_row {
             return Clocks(0);
         }

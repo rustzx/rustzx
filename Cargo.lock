@@ -1,6 +1,6 @@
 [root]
 name = "rustzx"
-version = "0.6.28"
+version = "0.7.1"
 dependencies = [
  "clap 2.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glium 0.13.5 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -218,6 +218,6 @@ impl Z80 {
             true
         } else {
             false
-        }
+        };
     }
 }

@@ -1,7 +1,8 @@
 //! Module with hardware key port\masks
+#![cfg_attr(rustfmt, rustfmt_skip)]
 
 // Struct, which contains mast and port of key
-pub struct ZXKey{
+pub struct ZXKey {
     pub half_port: u8,
     pub mask: u8,
 }

@@ -58,7 +58,7 @@ impl ZXBeeper {
             return;
         }
         let last_pos = self.last_pos;
-         self.last_pos = 0;
+        self.last_pos = 0;
         if self.last_pos >= SAMPLES {
             return;
         } else {

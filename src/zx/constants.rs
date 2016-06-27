@@ -1,5 +1,5 @@
 //! Module contains constants
-// addresses
+//! addresses
 pub const BITMAP_BASE_ADDR: u16 = 0x4000;
 pub const ATTR_BASE_ADDR: u16 = 0x5800;
 pub const ATTR_MAX_ADDR: u16 = 0x5AFF;

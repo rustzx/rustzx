@@ -62,7 +62,7 @@ impl Emulator {
         let mut data = Vec::new();
         File::open(file).unwrap().read_to_end(&mut data).unwrap();
         assert!(data.len() == 49179);
-        //i-reg
+        // i-reg
         self.cpu.regs.set_i(data[0]);
         // alt-regs
         self.cpu.regs.set_hl(make_word(data[2], data[1]));
@@ -99,7 +99,10 @@ impl Emulator {
         self.controller.memory.load_ram(1, &data[16411..32795]).unwrap();
         self.controller.memory.load_ram(2, &data[32795..49179]).unwrap();
         // RET
-        execute_pop_16(&mut self.cpu, &mut self.controller, RegName16::PC, Clocks(0));
+        execute_pop_16(&mut self.cpu,
+                       &mut self.controller,
+                       RegName16::PC,
+                       Clocks(0));
     }
 
     /// events processing function
@@ -161,7 +164,7 @@ impl Emulator {
                         // LOAD
                         if (f & FLAG_CARRY) != 0 {
                             self.controller.write_internal(dest, current_byte);
-                        // VERIFY
+                            // VERIFY
                         } else {
                             // check for parity each byte, if this fails - set flags to error state
                             acc = self.controller.memory.read(dest) ^ current_byte;
@@ -236,20 +239,20 @@ impl Emulator {
                         self.controller.clear_events();
                         return time::precise_time_ns() - start_time;
                     };
-                // if speed is maximal.
+                    // if speed is maximal.
                 } else {
                     // if any frame passed then break cpu loop, but try to start new frame
                     if self.controller.frames_count() != 0 {
                         break 'cpu;
                     }
                 }
-            };
+            }
             time += time::precise_time_ns() - start_time;
             // if time is bigger than `max_time` then stop emulation cycle
             if time > max_time {
                 break 'frame;
             }
-        };
+        }
         self.controller.clear_events();
         return time;
     }
