@@ -11,7 +11,8 @@ Licensed under MIT License.
 - Beeper sound emulation
 - Cross-platform
 - Documented source
-- Written in pure rust
+- Written in pure rust  
+ 
 ## Download
 At the moment only `deb` package for amd64 available in releases section.
 ## Compiling
