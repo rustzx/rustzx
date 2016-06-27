@@ -36,6 +36,9 @@ impl ZXBeeper {
     /// validates state of buffer.
     /// `frame_time` - value from 0 to 1, time of state change in percents
     pub fn validate(&mut self, ear: bool, mic: bool, frame_time: f64) {
+        if self.ring_buffer.len() > SAMPLES {
+            return;
+        }
         let mut next_pos = (frame_time * SAMPLES as f64) as usize;
         if next_pos > SAMPLES {
             next_pos = SAMPLES
@@ -51,6 +54,9 @@ impl ZXBeeper {
 
     /// fills all buffer
     pub fn fill_to_end(&mut self) {
+        if self.ring_buffer.len() > SAMPLES {
+            return;
+        }
         let last_pos = self.last_pos;
          self.last_pos = 0;
         if self.last_pos >= SAMPLES {

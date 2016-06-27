@@ -24,20 +24,28 @@ const ADDR_LD_BREAK: u16 = 0x056B;
 
 /// ZX System controller
 pub struct ZXController {
+    // parts of ZX Spectum.
+    // TODO: indirect access
     pub machine: ZXMachine,
     pub memory: ZXMemory,
     pub canvas: ZXCanvas,
     pub tape: Box<ZXTape>,
     pub border: ZXBorder,
     pub beeper: ZXBeeper,
-    keyboard: [u8; 8],
+    pub keyboard: [u8; 8],
+    // current border color
     border_color: u8,
+    // clocls count from frame start
     frame_clocks: Clocks,
+    // frames count, which passed during emulation invokation
     passed_frames: usize,
+    // main event queue
     events: EventQueue,
+    // flag, which signals emulator to break emulation and process last event immediately
     instant_event: InstantFlag,
-    // audio
+    // audio in
     mic: bool,
+    // audio out
     ear: bool,
 }
 
@@ -62,12 +70,12 @@ impl ZXController {
             tape: Box::new(Tap::new()),
             events: EventQueue::new(),
             instant_event: InstantFlag::new(false),
-
             mic: false,
             ear: false,
         }
     }
 
+    /// returns current frame emulation pos in percents
     fn frame_pos(&self) -> f64 {
         let val = self.frame_clocks.count() as f64 / self.machine.specs().clocks_frame as f64;
         if val > 1.0 {

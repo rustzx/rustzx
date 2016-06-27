@@ -11,9 +11,11 @@ struct BeamInfo {
     color: ZXColor,
 }
 impl BeamInfo {
+    /// constructs self with given color at first pixel pos
     fn first_pixel(color: ZXColor) -> BeamInfo {
         BeamInfo::new(0, 0, color)
     }
+    /// constructs self at given pos with given color
     fn new(line: usize, pixel: usize, color: ZXColor) -> BeamInfo {
         BeamInfo {
             line: line,
@@ -21,10 +23,11 @@ impl BeamInfo {
             color: color,
         }
     }
+    /// checks if beam is on first pixel
     fn is_first_pixel(&self) -> bool {
         (self.line == 0) && (self.pixel == 0)
     }
-
+    /// resets position
     fn reset(&mut self) {
         self.line = 0;
         self.pixel = 0;

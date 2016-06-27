@@ -1,7 +1,8 @@
 //! Main application class module
 //! Handles all platform-related, hardware-related stuff
-use std::fs::*;
-use std::io::Write;
+use std::thread;
+use std::time::Duration;
+use std::path::Path;
 
 use time;
 use glium::glutin::{WindowBuilder, Event, ElementState as KeyState};
@@ -15,6 +16,8 @@ use zx::*;
 use zx::constants::*;
 use emulator::*;
 use utils::EmulationSpeed;
+
+use clap::{Arg, App, AppSettings};
 
 // 50 ms
 const MAX_FRAME_TIME_NS: u64 = 50 * 1000000;
@@ -31,38 +34,127 @@ fn ms_to_ns(s: f64) -> u64 {
 
 /// Application instance type
 pub struct RustZXApp {
+    /// main emulator object
     pub emulator: Emulator,
-    pub snd: SoundThread<'static>,
+    /// Sound rendering in a separate thread
+    snd: Option<SoundThread<'static>>,
 }
 
 impl RustZXApp {
     /// Returns new application instance
     pub fn new() -> RustZXApp {
-        let emu = Emulator::new(ZXMachine::Sinclair48K);
+        let emulator = Emulator::new(ZXMachine::Sinclair48K);
         RustZXApp {
-            emulator: emu,
-            snd: SoundThread::new(),
+            emulator: emulator,
+            snd: None,
         }
     }
+
+    /// inits emulator, parses command line arguments
+    pub fn init(&mut self) -> &mut Self {
+        // Construction of App menu
+        let cmd = App::new("rustzx")
+                            .setting(AppSettings::ColoredHelp)
+                            .version(env!("CARGO_PKG_VERSION"))
+                            .author("Vladislav Nikonov <pacmancoder@gmail.com>")
+                            .about("ZX Spectrum emulator written in pure Rust")
+                            .arg(Arg::with_name("ROM")
+                                .long("rom")
+                                .value_name("ROM_PATH")
+                                .help("Selects path to rom, otherwise default will be used"))
+                            .arg(Arg::with_name("TAP")
+                                .long("tap")
+                                .value_name("TAP_PATH")
+                                .help("Selects path to *.tap file"))
+                            .arg(Arg::with_name("FAST_LOAD")
+                                .short("f")
+                                .long("fastload")
+                                .help("Accelerates standard tape loaders"))
+                            .arg(Arg::with_name("SNA")
+                                .long("sna")
+                                .value_name("SNA_PATH")
+                                .help("Selects path to *.sna snapshot file"))
+                            .arg(Arg::with_name("SPEED")
+                                .long("speed")
+                                .value_name("SPEED_VALUE")
+                                .help("Selects speed for emulator in integer multiplier form"))
+                            .arg(Arg::with_name("NO_SOUND")
+                                .long("nosound")
+                                .help("Disables sound. Use it when you have problems with audio
+                                       playback"))
+                            .get_matches();
+        // load another if requested
+        if let Some(path) = cmd.value_of("ROM") {
+            if Path::new(path).is_file() {
+                self.emulator.controller.load_rom(path);
+            } else {
+                println!("[Warning] ROM file \"{}\" not found", path);
+            }
+        } else {
+            // use default rom
+            self.emulator.controller.load_default_rom();
+        }
+        // TAP files
+        if let Some(path) = cmd.value_of("TAP") {
+            if Path::new(path).is_file() {
+                self.emulator.controller.insert_tape(path);
+            } else {
+                println!("[Warning] Tape file \"{}\" not found", path);
+            }
+        }
+        // Tape fast loading flag
+        self.emulator.set_fast_load(cmd.is_present("FAST_LOAD"));
+        // SNA files
+        if let Some(path) = cmd.value_of("SNA") {
+            if Path::new(path).is_file() {
+                self.emulator.load_sna(path);
+            } else {
+                println!("[Warning] Snapshot file \"{}\" not found", path);
+            }
+        }
+        // set speed
+        if let Some(speed_str) = cmd.value_of("SPEED") {
+            if let Ok(speed) = speed_str.parse::<usize>() {
+                self.emulator.set_speed(EmulationSpeed::Definite(speed));
+            }
+        }
+        // disable sound
+        if cmd.is_present("NO_SOUND") {
+            self.emulator.set_sound(false);
+        } else {
+            self.emulator.set_sound(true);
+            self.snd = Some(SoundThread::new());
+        }
+        self
+    }
+
     /// starts application
     pub fn start(&mut self) {
+        // use sound if enabled
+        if let Some(ref mut snd) = self.snd {
+            snd.run_sound_thread();
+        }
         // build new glium window
-        self.snd.run_sound_thread();
         let display = WindowBuilder::new()
                           .with_dimensions(SCREEN_WIDTH as u32 * 2, SCREEN_HEIGHT as u32 * 2)
                           .build_glium()
-                          .unwrap();
+                          .ok().expect("[ERROR] Glium (OpenGL) initialization error");
         let renderer = ZXScreenRenderer::new(&display);
         'render_loop: loop {
             let frame_target_dt_ns = ms_to_ns((1000 / 50) as f64);
             let frame_start_ns = time::precise_time_ns();
             // emulation loop
             let cpu_dt_ns = self.emulator.emulate_frame(MAX_FRAME_TIME_NS);
-            loop {
-                if let Some(sample) = self.emulator.controller.beeper.pop() {
-                    self.snd.send(sample);
-                } else {
-                    break;
+            // if sound enabled sound ganeration allowed then move samples to sound thread
+            if let Some(ref mut snd) = self.snd {
+                if self.emulator.have_sound() {
+                    loop {
+                        if let Some(sample) = self.emulator.controller.beeper.pop() {
+                            snd.send(sample);
+                        } else {
+                            break;
+                        }
+                    }
                 }
             }
             renderer.draw_screen(&display,
@@ -81,15 +173,11 @@ impl RustZXApp {
                             VKey::Delete => {
                                 self.emulator.controller.stop_tape();
                             }
-                            VKey::F2 => {
-                                let mut f = File::create("/home/pacmancoder/snap.rustzx").unwrap();
-                                f.write_all(&self.emulator.controller.dump()).unwrap();
-                            }
                             VKey::F3 => {
                                 self.emulator.set_speed(EmulationSpeed::Definite(1))
                             }
                             VKey::F4 => {
-                                self.emulator.set_speed(EmulationSpeed::Definite(1))
+                                self.emulator.set_speed(EmulationSpeed::Definite(2))
                             }
                             VKey::F5 => {
                                 self.emulator.set_speed(EmulationSpeed::Max)
@@ -109,11 +197,10 @@ impl RustZXApp {
             }
             let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
 
-            // wait some time for 50 FPS
-
-            // if emulation_dt_ns < frame_target_dt_ns {
-            //     thread::sleep(Duration::new(0, (frame_target_dt_ns - emulation_dt_ns) as u32));
-            // };
+            // wait some time for 50 FPS if emulator syncs self not using sound callbacks
+            if (emulation_dt_ns < frame_target_dt_ns) && !self.emulator.have_sound(){
+                thread::sleep(Duration::new(0, (frame_target_dt_ns - emulation_dt_ns) as u32));
+            };
             let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
             if let Some(wnd) = display.get_window() {
                 wnd.set_title(&format!("CPU: {:7.3}ms; EMULATOR: {:7.3}ms; FRAME:{:7.3}ms",

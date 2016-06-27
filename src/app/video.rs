@@ -1,8 +1,6 @@
 //! Module with glium-related types and functions for rendering screen
 //! contains `ZXScreenRenderer`
 
-//pub const BYTES_PER_PIXEL: usize = 4;
-
 use glium::{Surface, VertexBuffer, Program};
 use glium::uniforms::*;
 use glium::texture::RawImage2d;
@@ -91,7 +89,7 @@ impl ZXScreenRenderer {
                     &self.shader,
                     &uniforms,
                     &Default::default())
-              .unwrap();        
+              .unwrap();
         target.finish().unwrap();
     }
 }

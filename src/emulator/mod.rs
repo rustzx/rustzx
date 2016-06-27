@@ -14,6 +14,7 @@ pub struct Emulator {
     pub controller: ZXController,
     speed: EmulationSpeed,
     fast_load: bool,
+    sound_enabled: bool,
 }
 
 impl Emulator {
@@ -24,6 +25,7 @@ impl Emulator {
             controller: ZXController::new(machine),
             speed: EmulationSpeed::Definite(1),
             fast_load: false,
+            sound_enabled: true,
         }
     }
 
@@ -32,11 +34,30 @@ impl Emulator {
         self.speed = new_speed;
     }
 
-    /// sets fast loading flag
+    /// changes fast loading flag
     pub fn set_fast_load(&mut self, value: bool) {
         self.fast_load = value;
     }
 
+    /// changes sound playback flag
+    pub fn set_sound(&mut self, value: bool) {
+        self.sound_enabled = value;
+    }
+
+    /// function for sound generation request check
+    pub fn have_sound(&self) -> bool {
+        if let EmulationSpeed::Definite(1) = self.speed {
+            if self.sound_enabled {
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    /// SNA snapshot loading function
     pub fn load_sna(&mut self, file: &str) {
         let mut data = Vec::new();
         File::open(file).unwrap().read_to_end(&mut data).unwrap();
@@ -81,6 +102,7 @@ impl Emulator {
         execute_pop_16(&mut self.cpu, &mut self.controller, RegName16::PC, Clocks(0));
     }
 
+    /// events processing function
     fn process_event(&mut self, event: Event) {
         let Event { kind: e, time: _ } = event;
         match e {

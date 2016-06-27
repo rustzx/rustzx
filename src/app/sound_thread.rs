@@ -1,4 +1,6 @@
-//! TODO: add error handling
+//! portaudio-based sound rendering module
+//! PortAudio lib inits lazily, so if any error happens,
+//! You can use --nosound flag
 use std::i16;
 use std::sync::mpsc::*;
 use std::cell::Cell;
@@ -17,7 +19,8 @@ type SpeakerStream<'a> = pa::stream::Stream<'a, pa::stream::NonBlocking,pa::stre
 
 lazy_static! {
     pub static ref PA_STATIC: pa::PortAudio = {
-        pa::PortAudio::new().unwrap()
+        pa::PortAudio::new().ok().expect("[ERROR] PortAudio initialization error, try to use
+                                         --nosound option")
     };
 }
 
@@ -35,10 +38,11 @@ impl<'a> SoundThread<'a> {
     }
     pub fn run_sound_thread(&mut self) {
         // settings for stream
-        let mut settings = PA_STATIC.default_output_stream_settings::<i16>(CHANNELS,
-                                                                           SAMPLE_RATE as f64,
-                                                                           FRAMES_PER_BUFFER)
-                                                                           .unwrap();
+        let settings = PA_STATIC.default_output_stream_settings::<i16>(CHANNELS,
+                                                                       SAMPLE_RATE as f64,
+                                                                       FRAMES_PER_BUFFER);
+        let mut settings = settings.ok().expect("[ERROR] PortAudio output stream creation error,
+                                                try to use --nosound option");
         settings.flags = pa::stream_flags::CLIP_OFF;
         // open channel for messages
         let (tx, rx) = sync_channel(BUFFER_SIZE);
@@ -76,13 +80,17 @@ impl<'a> SoundThread<'a> {
         };
         // save channel and stream to handle
         self.channel = Some(tx);
-        let mut stream = PA_STATIC.open_non_blocking_stream(settings, callback).unwrap();
-        stream.start().unwrap();
+        let mut stream = PA_STATIC.open_non_blocking_stream(settings, callback)
+                                  .ok().expect("[ERROR] PortAudio stream oppening error,
+                                               try to use --nosound option");
+        stream.start().ok().expect("[ERROR] PortAudio throwed error on stream start,
+                                   try to use --nosound option");
         self.stream = Some(stream);
     }
     pub fn send(& mut self, value: i16) {
         if let Some(ref channel) = self.channel {
-            channel.send(value).unwrap();
+            channel.send(value).ok().expect("[ERROR] Sound sample sending failed, trye to use
+                                            --nosound option");
         };
     }
 }

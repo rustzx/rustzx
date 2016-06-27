@@ -4,11 +4,15 @@ I develop this project just for fun and for learning the basics of architecture 
 Licensed under MIT License.
 
 [![Build Status](https://travis-ci.org/pacmancoder/rustzx.svg?branch=master)](https://travis-ci.org/pacmancoder/rustzx)
+## Features
+- Can handle tap, sna files
+- Full ZX Spectrum 48K emulation
+- Emulates border
+- Beeper sound emulation
+- Cross-platform
+- Documented source
+- Written in pure rust
 
-## Current progress
-Implementation of ZX Spectrum 48K hardware.  
-Watch [LOG](LOG.md) for details and github issues
-for current plans and help requests.
 ## Compiling
 Before compiling make shure that **libportaudio** is
 installed.
@@ -22,25 +26,26 @@ cargo run --release
 ```
 Use **--help** option when oppening rustzx to get some help.  
 
+## How to use
 Here some examples of usage:
 ```bash
 rustzx --help
 rustzx --fastload --tap ~/test.tap
 ```
-## Features
-- Can handle tap, sna files
-- Full ZX Spectrum 48K emulation
-- Emulates border
-- Beeper sound emulation
-- Cross-platform
-- Documented source
-- Written in pure rust
+For loading tape, press `j` then `Ctrl+p` twice, as on real Spectrum.
+You must see `LOAD ""` on emulator's screen. And then press `Enter`.
+If you `--fastload` option before launching, game will be launched, in other case press `Insert` to insert tape. `Delete` can be used for ejecting tape from tape reader.
+
+Use keys `F3 - F5` to set speed of emulation - this can be usefull when skipping some boring stuff.
 
 ## Screenshots
 ![](screenshots/rain.png)
 ![](screenshots/q.png)   
 ![](screenshots/arkanoid.png)
 ![](screenshots/sentinel.png)
+## Log
+Watch [LOG](LOG.md) for details and github issues
+for current plans and help requests.
 ## References
 Of course, I used many resources to find out, how to build my first
 emulator in life. So there is a list of useful references, from where I dig most information about Z80, ULA and other ZX Spectrum hardware parts:  
@@ -64,3 +69,7 @@ emulator in life. So there is a list of useful references, from where I dig most
 - [Harlequin](http://www.zxdesign.info/harlequin.shtml)
 - And many other great material, which helped me to make rustzx!
 - [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
+## ROM's
+Emulator contains ROM's, created by by Sinclair Research Ltd (now owned by Amstrad plc),
+Amstrad was given permissions for distributing their ROM's with emulators, so they are
+included in source of emulator (mod zx::roms). More about this read [here](https://groups.google.com/forum/?hl=en#!msg/comp.sys.amstrad.8bit/HtpBU2Bzv_U/HhNDSU3MksAJ)
