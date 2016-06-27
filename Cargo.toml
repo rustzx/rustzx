@@ -9,6 +9,19 @@ readme = "README.md"
 keywords = ["emulator", "game", "z80"]
 license = "MIT"
 
+[package.metadata.deb]
+maintainer = "Vladislav Nikonov <pacmancoder@gmail.com>"
+copyright = "2016, Vladislav Nikonov <pacmancoder@gmail.com>"
+license_file = ["LICENSE.md", "3"]
+depends = "$auto"
+extended_description = """\
+ZX Spectrum 48K emulator written in Rust."""
+section = "games"
+priority = "optional"
+assets = [
+    ["target/release/rustzx", "usr/bin/rustzx", "755"],
+]
+
 [dependencies]
 time = "0.1"
 glium = "0.13"

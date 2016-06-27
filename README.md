@@ -12,7 +12,8 @@ Licensed under MIT License.
 - Cross-platform
 - Documented source
 - Written in pure rust
-
+## Download
+At the moment only `deb` package for amd64 available in releases section.
 ## Compiling
 Before compiling make shure that **libportaudio** is
 installed.
