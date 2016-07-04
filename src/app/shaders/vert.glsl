@@ -1,11 +1,11 @@
-#version 140
+#version 110
 
 uniform mat4 matrix;
 
-in vec2 position;
-in vec2 tex_coord;
+attribute vec2 position;
+attribute vec2 tex_coord;
 
-out vec2 v_tex_coord;
+varying vec2 v_tex_coord;
 
 void main() {
     v_tex_coord = tex_coord;
