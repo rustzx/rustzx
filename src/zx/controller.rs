@@ -1,5 +1,6 @@
 //! Contains ZX Spectrum System contrller (like lua or so) of emulator
 //! TODO: Make ZXController Builder
+//! TODO: use fast loading only fhen correct rom selected!
 use std::fs::File;
 use std::io::Read;
 
@@ -9,7 +10,7 @@ use utils::events::*;
 use utils::InstantFlag;
 use z80::Z80Bus;
 use zx::{ZXMemory, RomType, RamType};
-use zx::memory::Page;
+use zx::memory::{Page, PAGE_SIZE};
 use zx::machine::ZXMachine;
 use zx::tape::*;
 use zx::ZXKey;
@@ -47,16 +48,28 @@ pub struct ZXController {
     mic: bool,
     // audio out
     ear: bool,
+    paging_enabled: bool,
+    screen_bank: u8,
 }
 
 impl ZXController {
     /// Returns new ZXController
     pub fn new(machine: ZXMachine) -> ZXController {
-        let memory = match machine {
-            _ => ZXMemory::new(RomType::K16, RamType::K48),
-        };
         let canvas = ZXCanvas::new(machine, ZXPalette::default());
         let border = ZXBorder::new(machine, ZXPalette::default());
+        let (memory, paging, screen_bank);
+        match machine {
+            ZXMachine::Sinclair48K => {
+                memory = ZXMemory::new(RomType::K16, RamType::K48);
+                paging = false;
+                screen_bank = 0;
+            }
+            ZXMachine::Sinclair128K => {
+                memory = ZXMemory::new(RomType::K32, RamType::K128);
+                paging = true;
+                screen_bank = 5;
+            }
+        };
         ZXController {
             machine: machine,
             memory: memory,
@@ -72,6 +85,8 @@ impl ZXController {
             instant_event: InstantFlag::new(false),
             mic: false,
             ear: false,
+            paging_enabled: paging,
+            screen_bank: screen_bank,
         }
     }
 
@@ -86,6 +101,7 @@ impl ZXController {
     }
 
     /// loads rom form file
+    /// TODO: custom 128 K rom loading
     pub fn load_rom(&mut self, path: &str) {
         let mut rom = Vec::new();
         if let Ok(mut file) = File::open(path) {
@@ -93,11 +109,19 @@ impl ZXController {
         } else {
             panic!("ROM not found!");
         }
-        self.memory.load_rom(0, &rom).unwrap();
+        self.memory.load_rom(0, &rom);
     }
     /// load builted-in ROM
     pub fn load_default_rom(&mut self) {
-        self.memory.load_rom(0, ROM_48K).unwrap();
+        match self.machine {
+            ZXMachine::Sinclair48K => {
+                self.memory.load_rom(0, ROM_48K);
+            }
+            ZXMachine::Sinclair128K => {
+                self.memory.load_rom(0, ROM_128K_0)
+                           .load_rom(1, ROM_128K_1);
+            }
+        }
     }
 
     /// inserts new tape
@@ -191,9 +215,17 @@ impl ZXController {
         self.wait_internal(contention + wait_time);
     }
 
+    fn addr_is_contended(&self, addr: u16) -> bool {
+        return if let Page::Ram(bank) = self.memory.get_page(addr) {
+            self.machine.bank_is_contended(bank as usize)
+        } else {
+            false
+        }
+    }
+
     /// Returns early IO contention clocks
     fn io_contention_first(&mut self, port: u16) {
-        if self.machine.addr_is_contended(port) {
+        if self.addr_is_contended(port) {
             self.do_contention();
         };
         self.wait_internal(Clocks(1));
@@ -204,7 +236,7 @@ impl ZXController {
         if self.machine.port_is_contended(port) {
             self.do_contention_and_wait(Clocks(2));
         } else {
-            if self.machine.addr_is_contended(port) {
+            if self.addr_is_contended(port) {
                 self.do_contention_and_wait(Clocks(1));
                 self.do_contention_and_wait(Clocks(1));
                 self.do_contention();
@@ -224,11 +256,15 @@ impl ZXController {
 
     /// Validates screen
     pub fn validate_screen(&mut self) {
-        for addr in 0x4000..0x5800 {
-            self.canvas.write_bitmap_byte(addr, Clocks(0), self.memory.read(addr));
+        for addr in 0x0000..0x1800 {
+            self.canvas.write_bitmap_byte(0x4000 + addr, Clocks(0),
+                                          self.memory.paged_read(Page::Ram(self.screen_bank),
+                                          addr));
         }
-        for addr in 0x5800..0x5B00 {
-            self.canvas.write_attr_byte(addr, Clocks(0), self.memory.read(addr));
+        for addr in 0x1800..0x1B00 {
+            self.canvas.write_attr_byte(0x4000 + addr, Clocks(0),
+                                        self.memory.paged_read(Page::Ram(self.screen_bank),
+                                        addr));
         }
     }
 
@@ -260,6 +296,31 @@ impl ZXController {
     pub fn clocks(&self) -> Clocks {
         self.frame_clocks
     }
+
+    fn write_7ffd(&mut self, val: u8) {
+        if !self.paging_enabled {
+            return;
+        }
+        // remap top 16K of the ram
+        self.memory.remap(3, Page::Ram(val & 0x07));
+        // third block is not pageable
+        // second block is screen buffer, not pageable. but we need to change active buffer
+        let new_screen_bank = if val & 0x08 == 0 {
+            5
+        } else {
+            7
+        };
+        if new_screen_bank != self.screen_bank {
+            self.screen_bank = new_screen_bank;
+            self.validate_screen();
+        }
+        // remap ROM
+        self.memory.remap(0, Page::Rom((val >> 4) & 0x01));
+        // check paging allow bit
+        if val & 0x20 != 0 {
+            self.paging_enabled = false;
+        }
+    }
 }
 
 impl Z80Bus for ZXController {
@@ -267,18 +328,19 @@ impl Z80Bus for ZXController {
     /// loading detection breakpoint
     fn pc_callback(&mut self, addr: u16) {
         // check mapped memory page at 0x0000 .. 0x3FFF
-        match self.memory.get_page_type(0) {
-            // if page is 48K Rom
-            Page::Rom(0) => {
-                // Tape LOAD/VERIFY
-                if addr == ADDR_LD_BREAK {
-                    // Add event (Fast tape loading request) it must be executed
-                    // by emulator immediately
-                    self.events.send_event(Event::new(EventKind::FastTapeLoad, self.frame_clocks));
-                    self.instant_event.set();
-                }
+        let check_fast_load = match self.machine {
+            ZXMachine::Sinclair48K if self.memory.get_bank_type(0) == Page::Rom(0) => true,
+            ZXMachine::Sinclair128K if self.memory.get_bank_type(0) == Page::Rom(1) => true,
+            _ => false,
+        };
+        if check_fast_load {
+            // Tape LOAD/VERIFY
+            if addr == ADDR_LD_BREAK {
+                // Add event (Fast tape loading request) it must be executed
+                // by emulator immediately
+                self.events.send_event(Event::new(EventKind::FastTapeLoad, self.frame_clocks));
+                self.instant_event.set();
             }
-            _ => {}
         }
     }
 
@@ -289,14 +351,27 @@ impl Z80Bus for ZXController {
 
     fn write_internal(&mut self, addr: u16, data: u8) {
         self.memory.write(addr, data);
-        match addr {
-            0x4000...0x57FF => {
-                self.canvas.write_bitmap_byte(addr, self.frame_clocks, data);
+        // if ram then compare bank to screen bank
+        if let Page::Ram(bank) = self.memory.get_page(addr) {
+            if bank == self.screen_bank {
+                let rel_addr = addr % PAGE_SIZE as u16;
+                match rel_addr {
+                    // bitmap change
+                    0x0000...0x17FF => {
+                        self.canvas.write_bitmap_byte(0x4000 + rel_addr, self.frame_clocks,
+                                                      self.memory
+                                                          .paged_read(Page::Ram(self.screen_bank),
+                                                                      rel_addr));
+                    }
+                    0x1800...0x1AFF => {
+                        self.canvas.write_attr_byte(0x4000 + rel_addr, self.frame_clocks,
+                                                    self.memory
+                                                        .paged_read(Page::Ram(self.screen_bank),
+                                                                    rel_addr));
+                    }
+                    _ => {}
+                }
             }
-            0x5800...0x5AFF => {
-                self.canvas.write_attr_byte(addr, self.frame_clocks, data);
-            }
-            _ => {}
         }
     }
 
@@ -315,13 +390,12 @@ impl Z80Bus for ZXController {
 
     fn wait_mreq(&mut self, addr: u16, clk: Clocks) {
         match self.machine {
-            ZXMachine::Sinclair48K => {
+            ZXMachine::Sinclair48K | ZXMachine::Sinclair128K=> {
                 // contention in low 16k RAM
-                if self.machine.addr_is_contended(addr) {
+                if self.addr_is_contended(addr) {
                     self.do_contention();
                 }
             }
-            _ => {}
         }
         self.wait_internal(clk);
     }
@@ -351,6 +425,9 @@ impl Z80Bus for ZXController {
             }
             // 5 and 7 unused
             tmp
+        } else  if port == 0xFFFD {
+            // TODO: AY CHIP
+            0
         } else {
             self.floating_bus_value()
         };
@@ -362,7 +439,7 @@ impl Z80Bus for ZXController {
     fn write_io(&mut self, port: u16, data: u8) {
         // first contention
         self.io_contention_first(port);
-        // if port from lua
+        // if ula-port
         if port & 0x0001 == 0 {
             self.border_color = data & 0x07;
             self.border.set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
@@ -370,6 +447,15 @@ impl Z80Bus for ZXController {
             self.ear = data & 0x10 != 0;
             let pos = self.frame_pos();
             self.beeper.validate(self.ear, self.mic, pos);
+        }
+        // if memory paging port
+        match self.machine {
+            ZXMachine::Sinclair128K => {
+                if (port & 0x0002 == 0) && (port & 0x8000 == 0) {
+                    self.write_7ffd(data);
+                }
+            }
+            _ => {}
         }
         // last contention after byte write
         self.io_contention_last(port);

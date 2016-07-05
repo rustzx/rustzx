@@ -12,7 +12,10 @@ Licensed under MIT License.
 - Cross-platform
 - Documented source
 - Written in pure rust  
- 
+
+## Current status  
+Working on 128K mode implementation
+
 ## Download
 At the moment only `deb` package for amd64 available in releases section.
 ## Compiling
@@ -36,7 +39,11 @@ rustzx --fastload --tap ~/test.tap
 ```
 For loading tape, press `j` then `Ctrl+p` twice, as on real Spectrum.
 You must see `LOAD ""` on emulator's screen. And then press `Enter`.
-If you `--fastload` option before launching, game will be launched, in other case press `Insert` to insert tape. `Delete` can be used for ejecting tape from tape reader.
+If you `--fastload` option before launching, game will be launched, in other
+case press `Insert` to insert tape. `Delete` can be used for ejecting tape from
+tape reader. `--128k` flag launches emulator in 128K mode.  
+
+For advenced info use `--help` flag
 
 Use keys `F3 - F5` to set speed of emulation - this can be usefull when skipping some boring stuff.
 

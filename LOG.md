@@ -1,3 +1,6 @@
+**[06.07.2016]** Base 128K features implemented
+**[05.07.2016]** v0.8 development started in branch `develop`  
+**[27.06.2016]** Release v0.7.1  
 **[26.06.2016]** Beeper sound implemented :notes:, release planed to July 1 :rocket:  
 **[12.06.2016]** Some Comand line arguments fixes/enchantments  
 **[12.06.2016]** SNA files loading  

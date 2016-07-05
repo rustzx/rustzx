@@ -22,6 +22,22 @@ lazy_static! {
         };
 }
 
+lazy_static! {
+    /// ZX Spectrum 128K Specs
+    pub static ref SPECS_128K: ZXSpecs = {
+        ZXSpecsBuilder::new()
+            .freq_cpu(3_546_900)
+            .clocks_first_pixel(14362)
+            .clocks_ula_read_shift(2)
+            .clocks_ula_beam_shift(1)
+            .clocks_row(24, 128, 24, 52)
+            .lines(48, 192, 48, 23)
+            .contention([6, 5, 4, 3, 2, 1, 0, 0], 1)
+            .interrupt_length(32)
+            .build()
+    };
+}
+
 /// Machine type
 #[derive(Clone, Copy, Debug)]
 pub enum ZXMachine {
@@ -34,7 +50,7 @@ impl ZXMachine {
     pub fn specs(self) -> &'static ZXSpecs {
         match self {
             ZXMachine::Sinclair48K => &SPECS_48K,
-            _ => unimplemented!(),
+            ZXMachine::Sinclair128K => &SPECS_128K,
         }
     }
 
@@ -57,17 +73,22 @@ impl ZXMachine {
     /// Checks port contention on machine
     pub fn port_is_contended(self, port: u16) -> bool {
         match self {
-            ZXMachine::Sinclair48K => {
+            ZXMachine::Sinclair48K | ZXMachine::Sinclair128K => {
                 // every even port
                 (port & 0x0001) == 0
             }
-            ZXMachine::Sinclair128K => false,
         }
     }
 
-    /// Checks address contention on machine
-    pub fn addr_is_contended(self, addr: u16) -> bool {
-        // how this works for other machines?
-        (addr >= 0x4000) && (addr < 0x8000)
+    pub fn bank_is_contended(self, page: usize) -> bool {
+        match self {
+            ZXMachine::Sinclair48K => {
+                page == 0
+            }
+            ZXMachine::Sinclair128K => {
+                let contended_pages = [1, 3, 5, 7];
+                contended_pages.iter().any(|&x| x == page)
+            }
+        }
     }
 }

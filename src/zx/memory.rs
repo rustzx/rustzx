@@ -1,10 +1,10 @@
-const PAGE_SIZE: usize = 16 * 1024;
-const SIZE_16K: usize = PAGE_SIZE;
-const SIZE_32K: usize = PAGE_SIZE * 2;
-const SIZE_48K: usize = PAGE_SIZE * 3;
-const SIZE_64K: usize = PAGE_SIZE * 4;
-const SIZE_128K: usize = PAGE_SIZE * 8;
-const MEM_BLOCKS: usize = 4;
+pub const PAGE_SIZE: usize = 16 * 1024;
+pub const SIZE_16K: usize = PAGE_SIZE;
+pub const SIZE_32K: usize = PAGE_SIZE * 2;
+pub const SIZE_48K: usize = PAGE_SIZE * 3;
+pub const SIZE_64K: usize = PAGE_SIZE * 4;
+pub const SIZE_128K: usize = PAGE_SIZE * 8;
+pub const MEM_BLOCKS: usize = 4;
 
 /// Rom type enum
 pub enum RomType {
@@ -21,7 +21,7 @@ pub enum RamType {
 }
 
 // Page info and type
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Page {
     Ram(u8),
     Rom(u8),
@@ -76,69 +76,90 @@ impl ZXMemory {
         }
     }
 
+    pub fn paged_read(&self, page: Page, addr: u16) -> u8 {
+        assert!((addr as usize) < PAGE_SIZE);
+        match page {
+            Page::Rom(page) => self.rom[(page as usize) * PAGE_SIZE + addr as usize],
+            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + addr as usize],
+        }
+    }
+
     /// Writes value to memory
     pub fn write(&mut self, addr: u16, value: u8) {
         let page = self.map[(addr as usize) / PAGE_SIZE];
         let addr_rel = addr as usize % PAGE_SIZE;
         match page {
-            Page::Ram(page) => {
-                self.ram[(page as usize) * PAGE_SIZE + addr_rel] = value;
-            }
+            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + addr_rel] = value,
             _ => {}
         };
     }
 
     /// Changes memory map
-    pub fn remap(&mut self, block: usize, page: Page) -> Result<(), ()> {
-        if block < MEM_BLOCKS {
-            match page {
-                Page::Ram(page) if (page as usize + 1) * PAGE_SIZE > self.ram.len() => Err(()),
-                Page::Rom(page) if (page as usize + 1) * PAGE_SIZE > self.rom.len() => Err(()),
-                _ => {
-                    self.map[block] = page;
-                    Ok(())
-                }
+    /// # Panics
+    /// panics when ram page number is out of range. This must me checked at
+    /// development stage
+    pub fn remap(&mut self, block: usize, page: Page) -> &mut ZXMemory {
+        match page {
+            Page::Ram(page) if (page as usize + 1) * PAGE_SIZE > self.ram.len() => {
+                panic!("[ERROR] Ram page {} do not exists!", page);
             }
-        } else {
-            Err(())
+            Page::Rom(page) if (page as usize + 1) * PAGE_SIZE > self.rom.len() => {
+                panic!("[ERROR] Rom page {} do not exists!", page);
+            }
+            _ => {}
         }
+        self.map[block] = page;
+        self
     }
 
-    /// Returns type of mapped page
-    pub fn get_page_type(&self, block: usize) -> Page {
+    /// Returns bank type of mapped page
+    pub fn get_bank_type(&self, block: usize) -> Page {
         assert!(block < MEM_BLOCKS);
         self.map[block]
     }
 
+    pub fn get_page(&self, addr: u16) -> Page {
+        self.map[addr as usize / PAGE_SIZE]
+    }
+
     /// Loads ROM from array slice to memory
-    pub fn load_rom(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {
+    /// # Panics
+    /// panics when ram page number is out of range. This must me checked at
+    /// development stage
+    pub fn load_rom(&mut self, page: u8, data: &[u8]) -> &mut ZXMemory {
         if (page as usize + 1) * PAGE_SIZE > self.rom.len() {
-            Err(())
-        } else {
-            let shift = page as usize * PAGE_SIZE;
+            panic!("[ERROR] Rom page {} do not exists!", page);
+        }
+        let shift = page as usize * PAGE_SIZE;
+        {
             let mut slice = &mut self.rom[shift..shift + PAGE_SIZE];
             slice[..data.len()].clone_from_slice(data);
-            Ok(())
         }
+        self
     }
 
     /// Loads RAM from array slice to memory
-    pub fn load_ram(&mut self, page: u8, data: &[u8]) -> Result<(), ()> {
+    /// # Panics
+    /// panics when ram page number is out of range. This must me checked at
+    /// development stage
+    pub fn load_ram(&mut self, page: u8, data: &[u8]) -> &mut ZXMemory {
         if (page as usize + 1) * PAGE_SIZE > self.ram.len() {
-            Err(())
-        } else {
-            let shift = page as usize * PAGE_SIZE;
+            panic!("[ERROR] Ram page {} do not exists!", page);
+        }
+        let shift = page as usize * PAGE_SIZE;
+        {
             let mut slice = &mut self.ram[shift..shift + PAGE_SIZE];
             slice[..data.len()].clone_from_slice(data);
-            Ok(())
         }
+        self
     }
 
     /// Dumps current address space
     pub fn dump(&self) -> Vec<u8> {
-        let mut out = self.rom.clone();
-        let mut ram = self.ram.clone();
-        out.append(&mut ram);
+        let mut out = Vec::new();
+        for n in 0..SIZE_64K {
+            out.push(self.read(n as u16));
+        }
         out
     }
 }

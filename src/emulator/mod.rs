@@ -93,11 +93,11 @@ impl Emulator {
         // set border
         self.controller.border.set_border(Clocks(0), ZXColor::from_bits(data[26]));
         // ram pages
-        self.controller.memory.load_ram(0, &data[27..16411]).unwrap();
+        self.controller.memory.load_ram(0, &data[27..16411]);
         // validate screen, it has been changed
         self.controller.validate_screen();
-        self.controller.memory.load_ram(1, &data[16411..32795]).unwrap();
-        self.controller.memory.load_ram(2, &data[32795..49179]).unwrap();
+        self.controller.memory.load_ram(1, &data[16411..32795]);
+        self.controller.memory.load_ram(2, &data[32795..49179]);
         // RET
         execute_pop_16(&mut self.cpu,
                        &mut self.controller,

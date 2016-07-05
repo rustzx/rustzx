@@ -15,6 +15,8 @@ const FRAMES_PER_BUFFER: u32 = 256;
 // 64 K buffer for sound
 const BUFFER_SIZE: usize = 1024;
 
+const VOL_DEVIDER: i16 = 4;
+
 type SpeakerStream<'a> = pa::stream::Stream<'a, pa::stream::NonBlocking, pa::stream::Output<i16>>;
 
 lazy_static! {
@@ -93,7 +95,7 @@ impl<'a> SoundThread<'a> {
     }
     pub fn send(&mut self, value: i16) {
         if let Some(ref channel) = self.channel {
-            channel.send(value)
+            channel.send(value / VOL_DEVIDER)
                    .ok()
                    .expect("[ERROR] Sound sample sending failed, trye to use--nosound option");
         };
