@@ -3,6 +3,11 @@
 pub const BITMAP_BASE_ADDR: u16 = 0x4000;
 pub const ATTR_BASE_ADDR: u16 = 0x5800;
 pub const ATTR_MAX_ADDR: u16 = 0x5AFF;
+// relative addresses
+pub const BITMAP_MAX_REL: u16 = 0x17FF;
+pub const ATTR_BASE_REL: u16 = 0x1800;
+pub const ATTR_MAX_REL: u16 = 0x1AFF;
+
 // main spectrum screen (canvas) constants
 pub const CANVAS_WIDTH: usize = 256;
 pub const CANVAS_HEIGHT: usize = 192;

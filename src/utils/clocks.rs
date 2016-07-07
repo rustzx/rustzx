@@ -1,6 +1,6 @@
 use std::ops::{AddAssign, Add, SubAssign, Sub};
 /// Clocks count
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub struct Clocks(pub usize);
 
 impl Add for Clocks {

@@ -141,7 +141,6 @@ impl RustZXApp {
 
     /// starts application
     pub fn start(&mut self) {
-        //let mut emulator = self.emulator.take().expect("[Error] start method invoked before init");
         // use sound if enabled
         if let Some(ref mut snd) = self.snd {
             snd.run_sound_thread();
@@ -217,7 +216,7 @@ impl RustZXApp {
 
                 // wait some time for 50 FPS if emulator syncs self not using sound callbacks
                 if (emulation_dt_ns < frame_target_dt_ns) && !emulator.have_sound() {
-                    thread::sleep(Duration::new(0, (frame_target_dt_ns - emulation_dt_ns) as u32));
+                    thread::sleep(Duration::new(0, ((frame_target_dt_ns - emulation_dt_ns) as u32) / 4));
                 };
                 let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
                 if let Some(wnd) = display.get_window() {

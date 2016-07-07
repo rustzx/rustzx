@@ -4,7 +4,7 @@ use zx::constants::BORDER_COLS;
 pub struct ZXSpecs {
     // frequencies
     pub freq_cpu: usize,
-    // first_pixel_clocks
+    // first_pixel_read_clocks (contention start)
     pub clocks_first_pixel: usize,
     // row clocks
     pub clocks_left_border: usize,

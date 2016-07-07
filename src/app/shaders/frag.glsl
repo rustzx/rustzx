@@ -1,10 +1,9 @@
 #version 110
 
 varying vec2 v_tex_coord;
-uniform sampler2D tex_screen;
-uniform sampler2D tex_border;
+uniform sampler2D tex;
 
 void main() {
-    vec4 scr = texture2D(tex_screen, v_tex_coord);
-    gl_FragColor =  scr + texture2D(tex_border, v_tex_coord) * (1.0 - scr.a);
+    vec4 tex_sample = texture2D(tex, v_tex_coord);
+    gl_FragColor =  tex_sample;
 }

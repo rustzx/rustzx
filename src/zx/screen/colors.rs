@@ -75,6 +75,14 @@ impl ZXAttribute {
             },
         }
     }
+
+    pub fn active_color(&self, state: bool, enable_flash: bool) -> ZXColor {
+        if state ^ (self.flash && enable_flash) {
+            self.ink
+        } else {
+            self.paper
+        }
+    }
 }
 // TODO: make non-copyable and pass as ref in
 // other types

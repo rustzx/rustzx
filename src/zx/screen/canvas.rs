@@ -1,130 +1,249 @@
-//! ZX Spectrum screen module
-//! Consists of ZXCanvas type and functions for bitmap addr encode/decode
-//! Produces RGBA bitmap screen
-//! *Block* in this module is 8x1 pixels chunk
-//! *Col* and *Row* are 8 pixels chunks.
-//! **Emulated** border is 32 pixels wide and 24 pixels tall
-
+//! Module describes ZX Spectrum screen
+//! *block* - is 8x1 pxels stripe.
 use utils::*;
-use super::colors::*;
-use zx::machine::ZXMachine;
-use zx::constants::*;
 use utils::screen::*;
+use zx::constants::*;
+use zx::screen::colors::*;
+use zx::machine::ZXMachine;
 
-/// ZXSpectrum screen sctruct
+const BUFFER_LENGTH: usize = CANVAS_HEIGHT * CANVAS_WIDTH * BYTES_PER_PIXEL;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zx::constants::*;
+    use zx::machine::*;
+    use utils::Clocks;
+    #[test]
+    fn blocks_difference() {
+        assert_eq!(BlocksCount::new(1, 0).passed_from(&BlocksCount::new(0, 0)), ATTR_COLS);
+        assert_eq!(BlocksCount::new(3, 3).passed_from(&BlocksCount::new(3, 1)), 2);
+        assert_eq!(BlocksCount::new(2, 30).passed_from(&BlocksCount::new(1, 0)), ATTR_COLS + 30);
+        assert_eq!(BlocksCount::new(3, 30).passed_from(&BlocksCount::new(0, 1)),
+                   2 * ATTR_COLS + 30 + (ATTR_COLS - 1));
+        assert_eq!(BlocksCount::new(0, 0).passed_from(&BlocksCount::new(SCREEN_HEIGHT, 0)), 0);
+    }
+
+    #[test]
+    fn from_clocks() {
+        assert_eq!(BlocksCount::from_clocks(Clocks(14336), ZXMachine::Sinclair48K),
+                   BlocksCount::new(0, 1));
+        assert_eq!(BlocksCount::from_clocks(Clocks(14335), ZXMachine::Sinclair48K),
+                   BlocksCount::new(0, 0));
+        assert_eq!(BlocksCount::from_clocks(Clocks(14336 + 223), ZXMachine::Sinclair48K),
+                   BlocksCount::new(1, 0));
+        assert_eq!(BlocksCount::from_clocks(Clocks(14336 + 224), ZXMachine::Sinclair48K),
+                   BlocksCount::new(1, 1));
+        assert_eq!(BlocksCount::from_clocks(Clocks(14336 + 16), ZXMachine::Sinclair48K),
+                   BlocksCount::new(0, 5));
+    }
+
+}
+
+/// Represents how much 8x1 have been **passed**.
+#[derive(PartialEq, Eq, Debug)]
+pub struct BlocksCount {
+    pub lines: usize,
+    pub columns: usize,
+}
+
+impl BlocksCount {
+    pub fn new(lines: usize, columns: usize) -> BlocksCount {
+        BlocksCount {
+            lines: lines,
+            columns: columns,
+        }
+    }
+
+    /// Constructs self from clocks count, taking into account machine type
+    pub fn from_clocks(clocks: Clocks, machine: ZXMachine) -> BlocksCount {
+        // get reference to specs for less words
+        let specs = machine.specs();
+        let mut lines;
+        let mut columns;
+        if clocks.count() < specs.clocks_ula_read_origin {
+            // zero blocks passed
+            lines = 0;
+            columns = 0;
+        } else {
+            // clocks relative to first pixel rendering
+            let clocks = clocks.count() - specs.clocks_ula_read_origin;
+            // so find passed lines and columns count
+            lines = clocks / specs.clocks_line;
+            columns = (clocks % specs.clocks_line) / CLOCKS_PER_COL;
+            // columns must contain PASSED blocks, so increment it.
+            columns += 1;
+            // if out of visible canvas line
+            if columns > ATTR_COLS {
+                lines += 1;
+                columns = 0;
+            };
+            if lines >= CANVAS_HEIGHT {
+                lines = 0;
+                columns = 0;
+            }
+        };
+        BlocksCount {
+            lines: lines,
+            columns: columns,
+        }
+    }
+
+    /// Returns count of blocks between positions
+    /// # Notes
+    /// `prev` must be lover than `self`
+    pub fn passed_from(&self, prev: &BlocksCount) -> usize {
+        if self.lines < prev.lines {
+            ATTR_COLS - prev.columns
+            //self.lines * ATTR_COLS + self.columns
+        } else  if self.lines == prev.lines {
+            // if positions on the same line => just use difference in columns.
+            self.columns - prev.columns
+        } else {
+            // add blocks left from start line, blocks on lines between and blocks on end line
+            (ATTR_COLS - prev.columns) + (self.lines - prev.lines - 1) * ATTR_COLS + self.columns
+        }
+    }
+}
+
+struct ScreenBank {
+    pub attributes: [ZXAttribute; ATTR_COLS * ATTR_ROWS],
+    pub bitmap: [u8; ATTR_COLS * CANVAS_HEIGHT],
+}
+
 pub struct ZXCanvas {
-    attributes: [[ZXAttribute; ATTR_COLS]; ATTR_ROWS],
-    bitmap: [[u8; ATTR_COLS]; CANVAS_HEIGHT],
-    // Output texture
-    backbuffer: [u8; PIXEL_COUNT * BYTES_PER_PIXEL],
-    buffer: [u8; PIXEL_COUNT * BYTES_PER_PIXEL],
     machine: ZXMachine,
     palette: ZXPalette,
+    last_blocks: BlocksCount,
     flash: bool,
-    frame_counter: u64,
+    frame_counter: usize,
+    // bitmap buffers
+    buffer: [u8; BUFFER_LENGTH],
+    back_buffer: [u8; BUFFER_LENGTH],
+    // memory
+    banks: [ScreenBank; 2],
+    active_bank: usize,
+    next_bank: usize,
 }
 
 impl ZXCanvas {
-    /// Returns new screen intance
-    pub fn new(machine_type: ZXMachine, palette_type: ZXPalette) -> ZXCanvas {
+    pub fn new(machine: ZXMachine) -> ZXCanvas {
         ZXCanvas {
-            attributes: [[ZXAttribute::from_byte(0); ATTR_COLS]; ATTR_ROWS],
-            bitmap: [[0; ATTR_COLS]; CANVAS_HEIGHT],
-            buffer: [0; PIXEL_COUNT * BYTES_PER_PIXEL],
-            backbuffer: [0; PIXEL_COUNT * BYTES_PER_PIXEL],
-            machine: machine_type,
-            palette: palette_type,
+            machine: machine,
+            palette: ZXPalette::default(),
+            last_blocks: BlocksCount::new(0, 0),
             flash: false,
             frame_counter: 0,
+            buffer: [0; BUFFER_LENGTH],
+            back_buffer: [0; BUFFER_LENGTH],
+            banks: [
+                ScreenBank {
+                    attributes: [ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS],
+                    bitmap: [0; ATTR_COLS * CANVAS_HEIGHT],
+                },
+                ScreenBank {
+                    attributes: [ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS],
+                    bitmap: [0; ATTR_COLS * CANVAS_HEIGHT],
+                }
+            ],
+            active_bank: 0,
+            next_bank: 0,
         }
     }
 
-    /// Invokes actions, preformed at frame start (screen redraw)
+    /// changes flash switch
+    fn switch_flash(&mut self) {
+        self.flash = !self.flash;
+    }
+
+    /// transforms zx spectrum bank to local index
+    fn local_bank(&self, bank: usize) -> Option<usize> {
+        match self.machine {
+            ZXMachine::Sinclair48K if bank == 0 => Some(0),
+            ZXMachine::Sinclair128K if bank == 5 => Some(0),
+            ZXMachine::Sinclair128K if bank == 7 => Some(1),
+            _ => None,
+        }
+    }
+
+    /// selects bank of memory
+    pub fn switch_bank(&mut self, bank: usize) {
+        if let Some(bank) = self.local_bank(bank) {
+            self.active_bank = bank;
+        }
+    }
+
+    /// renders some  8x1 blocks
+    /// `memory` - reference to ZXMemory
+    /// `bank` - current memory bank (usefull for models > 48K)
+    /// `current` clocks count.
+    /// if clocks < previous call clocks then discard processing
+    pub fn process_clocks(&mut self, clocks: Clocks) {
+        let blocks = BlocksCount::from_clocks(clocks, self.machine);
+        // so, let's count of 8x1 blocks, which passed.
+        let count = blocks.passed_from(&self.last_blocks);
+        if count > 0 {
+            // fill pixels from prev to current
+            let prev_block = self.last_blocks.lines * ATTR_COLS + self.last_blocks.columns;
+            let curr_block = blocks.lines * ATTR_COLS + blocks.columns;
+            // so we know that some blocks have been passed
+            // block holds current blocks index
+            for block in prev_block..curr_block {
+                let bitmap = self.banks[self.active_bank].bitmap[block];
+                // one attr per 8x8 area
+                let attr_row = block / (ATTR_COLS * 8);
+                let attr_col = block % ATTR_COLS;
+                let attr = self.banks[self.active_bank].attributes[attr_row * ATTR_COLS + attr_col];
+                for pixel in 0..8 {
+                    // from most significant bit
+                    let state = ((bitmap << pixel) & 0x80) != 0;
+                    let color = self.palette.get_rgba(attr.active_color(state, self.flash),
+                                                      attr.brightness);
+                    let index = (block * 8 + pixel) * BYTES_PER_PIXEL;
+                    self.buffer[index..index + BYTES_PER_PIXEL].clone_from_slice(color);
+                }
+            }
+            // cahnge last block to current
+            self.last_blocks = blocks;
+        }
+    }
+
+    /// starts new frame
     pub fn new_frame(&mut self) {
-        self.frame_counter += 1;
+        // post finished bitmap to second buffer (all not-rendered part will be updated)
+        self.back_buffer.clone_from_slice(&self.buffer);
+        self.last_blocks = BlocksCount::new(0, 0);
         if self.frame_counter % 16 == 0 {
-            self.flash = !self.flash;
+            self.switch_flash();
         }
-        self.backbuffer.clone_from_slice(&self.buffer);
-        for line in 0..CANVAS_HEIGHT {
-            for col in 0..ATTR_COLS {
-                self.update_buffer_block(line, col);
+        self.frame_counter += 1;
+    }
+
+    /// updates data if screen ram
+    /// NOTE: testing, avoid clocks check.
+    pub fn update(&mut self, rel_addr: u16, bank: usize, _clocks: Clocks, data: u8) {
+        if let Some(bank) = self.local_bank(bank) {
+            match rel_addr {
+                // change bitmap
+                0...BITMAP_MAX_REL => {
+                    let line = bitmap_line_rel(rel_addr);
+                    let col = bitmap_col_rel(rel_addr);
+                    self.banks[bank].bitmap[line * ATTR_COLS + col] = data;
+                }
+                // change attribute
+                ATTR_BASE_REL...ATTR_MAX_REL => {
+                    let row = attr_row_rel(rel_addr);
+                    let col = attr_col_rel(rel_addr);
+                    self.banks[bank].attributes[row * ATTR_COLS + col] =
+                        ZXAttribute::from_byte(data);
+                }
+                // no screen changes
+                _ => {}
             }
         }
     }
 
-    /// Updates given 8x1 block in pixel buffer
-    fn update_buffer_block(&mut self, line: usize, col: usize) {
-        let data = self.bitmap[line][col];
-        let row = line / 8;
-        // get base block index (8x1 stripe)
-        let block_base_index = (((line + CANVAS_Y) * SCREEN_WIDTH) + CANVAS_X + col * 8) *
-                               BYTES_PER_PIXEL;
-        // current attribute of block
-        let block_attr = self.attributes[row][col];
-        // write pixels to buffer
-        for bit in 0..8 {
-            let pixel = block_base_index + bit * BYTES_PER_PIXEL;
-            let state = (((data << bit) & 0x80) != 0) ^ (block_attr.flash & self.flash);
-            let color = if state {
-                block_attr.ink
-            } else {
-                block_attr.paper
-            };
-            let color_array = self.palette.get_rgba(color, block_attr.brightness);
-            self.buffer[pixel..pixel + BYTES_PER_PIXEL].clone_from_slice(color_array);
-        }
-    }
-
-    /// Writes bitmap with `address` to screen representation
-    /// # Panics
-    /// Panics when addr in not in 0x4000..0x5800 range
-    pub fn write_bitmap_byte(&mut self, addr: u16, clocks: Clocks, data: u8) {
-        // check address boundaries
-        assert!(addr >= BITMAP_BASE_ADDR && addr < ATTR_BASE_ADDR);
-        let line = get_bitmap_line(addr);
-        let col = get_bitmap_col(addr);
-        self.bitmap[line][col] = data;
-        let specs = self.machine.specs();
-        let clocks_origin = specs.clocks_ula_read_origin;
-        // taking into acount that contention starts from first pixel clocks - 1
-        let block_time = clocks_origin + line * specs.clocks_line as usize + (col / 2) * 8;
-        if clocks.count() < block_time {
-            self.update_buffer_block(line, col);
-        }
-    }
-
-    /// Writes attribute with `address` to screen representation
-    pub fn write_attr_byte(&mut self, addr: u16, clocks: Clocks, value: u8) {
-        assert!(addr >= ATTR_BASE_ADDR && addr <= ATTR_MAX_ADDR);
-        let row = get_attr_row(addr);
-        let col = get_attr_col(addr);
-        self.attributes[row][col] = ZXAttribute::from_byte(value);
-        let specs = self.machine.specs();
-
-        let clocks_origin = specs.clocks_ula_read_origin;
-        let beam_line = if clocks.count() < clocks_origin + (col / 2 * 8) {
-            0
-        } else {
-            ((clocks.count() - (clocks_origin + (col / 2 * 8))) / specs.clocks_line as usize) + 1
-        };
-        let block_time = if beam_line <= row * 8 {
-            clocks_origin + (row * 8) * specs.clocks_line as usize + (col / 2) * 8
-        } else if beam_line < (row + 1) * 8 {
-            clocks_origin + (row * 8 + beam_line % 8) * specs.clocks_line as usize + (col / 2) * 8
-        } else {
-            clocks_origin + ((row * 8) + 7) * specs.clocks_line as usize + (col / 2) * 8
-        };
-        // if next line of beam is smaller than next attr block
-        if clocks.count() < block_time as usize {
-            for line_shift in (beam_line % 8 + row * 8)..((row + 1) * 8) {
-                self.update_buffer_block(line_shift, col);
-            }
-        }
-    }
-
-    /// Clones screen texture
     pub fn texture(&self) -> &[u8] {
-        &self.backbuffer
+        &self.buffer
     }
 }

@@ -55,7 +55,7 @@ pub struct ZXController {
 impl ZXController {
     /// Returns new ZXController
     pub fn new(machine: ZXMachine) -> ZXController {
-        let canvas = ZXCanvas::new(machine, ZXPalette::default());
+        //let canvas = ZXCanvas::new(machine, ZXPalette::default());
         let border = ZXBorder::new(machine, ZXPalette::default());
         let (memory, paging, screen_bank);
         match machine {
@@ -73,7 +73,7 @@ impl ZXController {
         ZXController {
             machine: machine,
             memory: memory,
-            canvas: canvas,
+            canvas: ZXCanvas::new(machine),
             border: border,
             beeper: ZXBeeper::new(),
             keyboard: [0xFF; 8],
@@ -194,7 +194,7 @@ impl ZXController {
         let col = (clocks / 8) * 2 + (clocks % 8) / 2;
         if row < 192 && clocks < 124 && ((clocks & 0x04) == 0) {
             if clocks % 2 == 0 {
-                return self.memory.read(get_bitmap_line_addr(row) + col as u16);
+                return self.memory.read(bitmap_line_addr(row) + col as u16);
             } else {
                 let byte = (row / 8) * 32 + col;
                 return self.memory.read(0x5800 + byte as u16);
@@ -256,16 +256,20 @@ impl ZXController {
 
     /// Validates screen
     pub fn validate_screen(&mut self) {
-        for addr in 0x0000..0x1800 {
-            self.canvas.write_bitmap_byte(0x4000 + addr, Clocks(0),
-                                          self.memory.paged_read(Page::Ram(self.screen_bank),
-                                          addr));
-        }
-        for addr in 0x1800..0x1B00 {
-            self.canvas.write_attr_byte(0x4000 + addr, Clocks(0),
-                                        self.memory.paged_read(Page::Ram(self.screen_bank),
-                                        addr));
-        }
+        // for addr in 0x0000..0x1B00 {
+        //     self.canvas.write_active(0x4000 + addr, Clocks(0),
+        //                              self.memory.paged_read(Page::Ram(self.screen_bank), addr));
+        // }
+        // for addr in 0x0000..0x1800 {
+        //     self.canvas.write_bitmap_byte(0x4000 + addr, Clocks(0),
+        //                                   self.memory.paged_read(Page::Ram(self.screen_bank),
+        //                                   addr));
+        // }
+        // for addr in 0x1800..0x1B00 {
+        //     self.canvas.write_attr_byte(0x4000 + addr, Clocks(0),
+        //                                 self.memory.paged_read(Page::Ram(self.screen_bank),
+        //                                 addr));
+        // }
     }
 
     /// force clears all events
@@ -310,10 +314,8 @@ impl ZXController {
         } else {
             7
         };
-        if new_screen_bank != self.screen_bank {
-            self.screen_bank = new_screen_bank;
-            self.validate_screen();
-        }
+        self.canvas.switch_bank(new_screen_bank as usize);
+        self.screen_bank = new_screen_bank;
         // remap ROM
         self.memory.remap(0, Page::Rom((val >> 4) & 0x01));
         // check paging allow bit
@@ -353,25 +355,7 @@ impl Z80Bus for ZXController {
         self.memory.write(addr, data);
         // if ram then compare bank to screen bank
         if let Page::Ram(bank) = self.memory.get_page(addr) {
-            if bank == self.screen_bank {
-                let rel_addr = addr % PAGE_SIZE as u16;
-                match rel_addr {
-                    // bitmap change
-                    0x0000...0x17FF => {
-                        self.canvas.write_bitmap_byte(0x4000 + rel_addr, self.frame_clocks,
-                                                      self.memory
-                                                          .paged_read(Page::Ram(self.screen_bank),
-                                                                      rel_addr));
-                    }
-                    0x1800...0x1AFF => {
-                        self.canvas.write_attr_byte(0x4000 + rel_addr, self.frame_clocks,
-                                                    self.memory
-                                                        .paged_read(Page::Ram(self.screen_bank),
-                                                                    rel_addr));
-                    }
-                    _ => {}
-                }
-            }
+            self.canvas.update(addr % PAGE_SIZE as u16, bank as usize, self.frame_clocks, data);
         }
     }
 
@@ -382,6 +366,9 @@ impl Z80Bus for ZXController {
         self.mic = mic;
         let pos = self.frame_pos();
         self.beeper.validate(self.ear, self.mic, pos);
+
+        self.canvas.process_clocks(self.frame_clocks);
+
         if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
             self.new_frame();
             self.passed_frames += 1;

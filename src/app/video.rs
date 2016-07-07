@@ -45,6 +45,7 @@ pub struct ZXScreenRenderer {
     screen_idx: NoIndices,
     shader: Program,
     screen_matrix: [[f32; 4]; 4],
+    canvas_matrix: [[f32; 4]; 4],
 }
 
 impl ZXScreenRenderer {
@@ -55,41 +56,56 @@ impl ZXScreenRenderer {
         let vert_shader = include_str!("shaders/vert.glsl");
         let frag_shader = include_str!("shaders/frag.glsl");
         let program = Program::from_source(display, vert_shader, frag_shader, None).unwrap();
-        let mat = [[1.0, 0.0, 0.0, 0.0],
-                   [0.0, 1.0, 0.0, 0.0],
-                   [0.0, 0.0, 1.0, 0.0],
-                   [0.0, 0.0, 0.0, 1.0]];
+        let mat_scr = [[1.0, 0.0, 0.0, 0.0],
+                       [0.0, 1.0, 0.0, 0.0],
+                       [0.0, 0.0, 1.0, 0.0],
+                       [0.0, 0.0, 0.0, 1.0]];
+        let mat_canvas = [[CANVAS_WIDTH as f32 /SCREEN_WIDTH as f32, 0.0, 0.0, 0.0],
+                          [0.0, CANVAS_HEIGHT as f32 / SCREEN_HEIGHT as f32, 0.0, 0.0],
+                          [0.0, 0.0, 1.0, 0.0],
+                          [0.0, 0.0, 0.0, 1.0]];
+
         ZXScreenRenderer {
             screen_vb: vb,
             screen_idx: idx,
             shader: program,
-            screen_matrix: mat,
+            screen_matrix: mat_scr,
+            canvas_matrix: mat_canvas,
         }
     }
 
     /// Main screen rendering function
-    pub fn draw_screen(&self, display: &GlutinFacade, border: &[u8], screen: &[u8]) {
+    pub fn draw_screen(&self, display: &GlutinFacade, border: &[u8], canvas: &[u8]) {
         // generate screen tex
-        let screen_bitmap = RawImage2d::from_raw_rgba(screen.to_vec(),
-                                                      (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
-        let screen_tex = Texture2d::new(display, screen_bitmap).unwrap();
+        let canvas_bitmap = RawImage2d::from_raw_rgba(canvas.to_vec(),
+                                                      (CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32));
+        let canvas_tex = Texture2d::new(display, canvas_bitmap).unwrap();
         // generate border tex
         let border_bitmap = RawImage2d::from_raw_rgba(border.to_vec(),
                                                       (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
         let border_tex = Texture2d::new(display, border_bitmap).unwrap();
         // uniforms for screen
-        let uniforms = uniform![
-            tex_screen: Sampler::new(&screen_tex).magnify_filter(MagnifySamplerFilter::Nearest),
-            tex_border: Sampler::new(&border_tex).magnify_filter(MagnifySamplerFilter::Nearest),
+        let uniforms_border = uniform![
+            tex: Sampler::new(&border_tex).magnify_filter(MagnifySamplerFilter::Nearest),
             matrix: self.screen_matrix,
+        ];
+        let uniforms_canvas = uniform![
+            tex: Sampler::new(&canvas_tex).magnify_filter(MagnifySamplerFilter::Nearest),
+            matrix: self.canvas_matrix,
         ];
         let mut target = display.draw();
         target.draw(&self.screen_vb,
                     &self.screen_idx,
                     &self.shader,
-                    &uniforms,
+                    &uniforms_border,
                     &Default::default())
               .unwrap();
+        target.draw(&self.screen_vb,
+                    &self.screen_idx,
+                    &self.shader,
+                    &uniforms_canvas,
+                    &Default::default())
+            .unwrap();
         target.finish().unwrap();
     }
 }
