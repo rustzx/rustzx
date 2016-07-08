@@ -1,6 +1,6 @@
 [package]
 name = "rustzx"
-version = "0.8.0"
+version = "0.8.4"
 authors = ["Vladislav Nikonov <pacmancoder@gmail.com>"]
 publish = false
 description = "ZX Spectum emulator"
@@ -8,19 +8,6 @@ repository = "https://github.com/pacmancoder/rustzx"
 readme = "README.md"
 keywords = ["emulator", "game", "z80"]
 license = "MIT"
-
-# [package.metadata.deb]
-# maintainer = "Vladislav Nikonov <pacmancoder@gmail.com>"
-# copyright = "2016, Vladislav Nikonov <pacmancoder@gmail.com>"
-# license_file = ["LICENSE.md", "3"]
-# depends = "$auto"
-# extended_description = """\
-# ZX Spectrum 48K emulator written in Rust."""
-# section = "games"
-# priority = "optional"
-# assets = [
-    # ["target/release/rustzx", "usr/bin/rustzx", "755"],
-# ]
 
 [dependencies]
 time = "0.1"

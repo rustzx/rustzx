@@ -1,5 +1,10 @@
-pub const BYTES_PER_PIXEL: usize = 4;
+//! Contains Color generation related types
+use zx::constants::BYTES_PER_PIXEL;
+
+/// struct represents single pixel color as array of bytes
 pub type ColorArray = [u8; BYTES_PER_PIXEL];
+
+/// splits usize value to 4 bytes
 #[cfg_attr(rustfmt, rustfmt_skip)]
 fn split_in_bytes(val: usize) -> ColorArray {
     return [
@@ -10,6 +15,7 @@ fn split_in_bytes(val: usize) -> ColorArray {
     ];
 }
 
+/// Represents color brightness
 #[derive(Clone, Copy)]
 pub enum ZXBrightness {
     Normal,
@@ -76,6 +82,7 @@ impl ZXAttribute {
         }
     }
 
+    /// Returns active color of pixel in current attribute
     pub fn active_color(&self, state: bool, enable_flash: bool) -> ZXColor {
         if state ^ (self.flash && enable_flash) {
             self.ink
@@ -84,9 +91,8 @@ impl ZXAttribute {
         }
     }
 }
-// TODO: make non-copyable and pass as ref in
-// other types
-#[derive(Clone, Copy)]
+
+/// represents set of colors
 struct ColorSet {
     black: ColorArray,
     blue: ColorArray,
@@ -100,16 +106,15 @@ struct ColorSet {
 /// Structure, that holds palette information.
 /// It have method to transform ZX Spectrum screen data
 /// to 4-byte rgba bixel
-#[derive(Clone, Copy)]
 pub struct ZXPalette {
     transparent: ColorArray,
+    // 2 color sets
     bright: ColorSet,
     normal: ColorSet,
 }
 
 impl ZXPalette {
     /// Returns default palette
-    /// TODO: Use `Default` trait?
     #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn default() -> ZXPalette {
         ZXPalette {

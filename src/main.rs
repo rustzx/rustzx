@@ -1,3 +1,7 @@
+//! RustZX - ZX Spectum emulator
+//! Copyright (c) 2016 Vladislav Nikonov
+//! The MIT License (MIT)
+//! View full License text in file `LICENSE.md`
 #![allow(dead_code)]
 
 /// glium as graphics library

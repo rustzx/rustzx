@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use utils::{EmulationSpeed, Clocks};
 
-/// type of happened event
+/// Type of happened event
 pub enum EventKind {
     Accelerate(EmulationSpeed),
     Deaccelerate,

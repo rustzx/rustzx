@@ -1,7 +1,14 @@
+//! Contains Tape handling type and functions
+
 mod tap;
+// reexport Tap Tape player
 pub use self::tap::Tap;
+
 use utils::Clocks;
 
+/// Result of tape insertion,
+/// `Err` contains string, which describes
+/// what caused errror
 pub enum InsertResult {
     Ok,
     Err(&'static str),

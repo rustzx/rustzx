@@ -1,21 +1,29 @@
+
+// page size in bytes
 pub const PAGE_SIZE: usize = 16 * 1024;
+// different memory blocks size's
 pub const SIZE_16K: usize = PAGE_SIZE;
 pub const SIZE_32K: usize = PAGE_SIZE * 2;
 pub const SIZE_48K: usize = PAGE_SIZE * 3;
 pub const SIZE_64K: usize = PAGE_SIZE * 4;
 pub const SIZE_128K: usize = PAGE_SIZE * 8;
+// count of all memory blocks
 pub const MEM_BLOCKS: usize = 4;
 
-/// Rom type enum
+/// Rom can be:
+/// - 16K (Sinclair48K)
+/// - 32K (Sinclair128K, 2+)
+/// - 64k (Amstrad 3+)
 pub enum RomType {
     K16,
     K32,
     K64,
 }
 
-/// Ram type enum
+/// Ram can be:
+/// - 48K (Sinclair48K)
+/// - 128K (Sinclair128K, Amstrad 2+, Amstrad 3+)
 pub enum RamType {
-    K16,
     K48,
     K128,
 }
@@ -40,11 +48,8 @@ impl ZXMemory {
     pub fn new(rom_type: RomType, ram_type: RamType) -> ZXMemory {
         let ram_size;
         let mem_map;
+        // build memory map.
         match ram_type {
-            RamType::K16 => {
-                ram_size = SIZE_16K;
-                mem_map = [Page::Rom(0), Page::Ram(0), Page::Ram(0), Page::Ram(0)];
-            }
             RamType::K48 => {
                 ram_size = SIZE_48K;
                 mem_map = [Page::Rom(0), Page::Ram(0), Page::Ram(1), Page::Ram(2)];
@@ -76,6 +81,7 @@ impl ZXMemory {
         }
     }
 
+    /// Returns value of data with relative `addr` at `bank`
     pub fn paged_read(&self, page: Page, addr: u16) -> u8 {
         assert!((addr as usize) < PAGE_SIZE);
         match page {
@@ -118,6 +124,7 @@ impl ZXMemory {
         self.map[block]
     }
 
+    /// Returns bank type of address
     pub fn get_page(&self, addr: u16) -> Page {
         self.map[addr as usize / PAGE_SIZE]
     }

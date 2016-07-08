@@ -1,17 +1,19 @@
 //! Z80 CPU module
-//! TODO: INT MODE 0
 
 use utils::*;
-use super::*;
-use super::opcodes::*;
+use z80::*;
+use z80::opcodes::*;
 
 /// Z80 Processor struct
 pub struct Z80 {
+    /// Contains Z80 registers data
     pub regs: Regs,
+    /// active if Z80 waiting for interrupt
     pub halted: bool,
+    /// enabled if interrupt check will be skipped nex time
     pub skip_interrupt: bool,
+    /// type of interrupt
     pub int_mode: IntMode,
-    io_as_rom: bool,
     active_prefix: Prefix,
 }
 
@@ -23,7 +25,6 @@ impl Z80 {
             halted: false,
             skip_interrupt: false,
             int_mode: IntMode::IM0,
-            io_as_rom: false,
             active_prefix: Prefix::None,
         }
     }
@@ -31,32 +32,21 @@ impl Z80 {
     /// Reads byte from memory and increments PC
     #[inline]
     pub fn fetch_byte(&mut self, bus: &mut Z80Bus, clk: Clocks) -> u8 {
-        if self.io_as_rom {
-            bus.read_interrupt()
-        } else {
-            let addr = self.regs.get_pc();
-            self.regs.inc_pc(1);
-            bus.read(addr, clk)
-        }
+        let addr = self.regs.get_pc();
+        self.regs.inc_pc(1);
+        bus.read(addr, clk)
     }
 
     /// Reads word from memory and increments PC twice
     #[inline]
     pub fn fetch_word(&mut self, bus: &mut Z80Bus, clk: Clocks) -> u16 {
-        if self.io_as_rom {
-            let (hi, lo);
-            lo = bus.read_interrupt();
-            hi = bus.read_interrupt();
-            make_word(hi, lo)
-        } else {
-            let (hi_addr, lo_addr);
-            lo_addr = self.regs.get_pc();
-            let lo = bus.read(lo_addr, clk);
-            hi_addr = self.regs.inc_pc(1);
-            let hi = bus.read(hi_addr, clk);
-            self.regs.inc_pc(1);
-            make_word(hi, lo)
-        }
+        let (hi_addr, lo_addr);
+        lo_addr = self.regs.get_pc();
+        let lo = bus.read(lo_addr, clk);
+        hi_addr = self.regs.inc_pc(1);
+        let hi = bus.read(hi_addr, clk);
+        self.regs.inc_pc(1);
+        make_word(hi, lo)
     }
     /// Checks is cpu halted
     pub fn is_halted(&self) -> bool {
@@ -115,19 +105,10 @@ impl Z80 {
                 match self.int_mode {
                     // execute instruction on the bus
                     IntMode::IM0 => {
-                        // TODO: return back normal interrupt detection?
                         // for zx spectrum same as IM1
                         execute_push_16(self, bus, RegName16::PC, Clocks(3));
                         self.regs.set_pc(0x0038);
                         bus.wait_internal(Clocks(7));
-                        /*bus.wait_loop(self.regs.get_pc(), Clocks(2));
-                        // disable nested interrupt check
-                        self.skip_interrupt = true;
-                        // set io as rom and execute instruction on it.
-                        self.io_as_rom = true;
-                        self.emulate(bus);
-                        self.io_as_rom = false;*/
-                        // 2 + instruction clocks
                     }
                     // push pc and jump to 0x0038
                     IntMode::IM1 => {

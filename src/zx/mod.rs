@@ -1,4 +1,5 @@
 //! Module with ZX Spectrum related things
+//! One of core platform-independent modules
 pub mod memory;
 pub mod controller;
 pub mod screen;
@@ -9,6 +10,8 @@ pub mod constants;
 pub mod roms;
 pub mod beeper;
 
+// re-export most of things
+// TODO: in-deep rewiew re-exports recursively
 pub use self::controller::ZXController;
 pub use self::machine::{ZXMachine, ZXSpecs};
 pub use self::memory::{ZXMemory, RomType, RamType};

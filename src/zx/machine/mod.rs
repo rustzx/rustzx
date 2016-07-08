@@ -80,6 +80,7 @@ impl ZXMachine {
         }
     }
 
+    /// Returns contention status of bank
     pub fn bank_is_contended(self, page: usize) -> bool {
         match self {
             ZXMachine::Sinclair48K => {

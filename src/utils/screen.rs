@@ -9,9 +9,6 @@ pub fn bitmap_line_addr(line: usize) -> u16 {
     (0x4000 | (line << 5) & 0x1800 | (line << 8) & 0x0700 | (line << 2) & 0x00E0) as u16
 }
 
-// ===========================================================================
-// Used by `Canvas`
-
 /// Get pixel id from address
 pub fn bitmap_line_rel(addr: u16) -> usize {
     assert!(addr < ATTR_BASE_REL);

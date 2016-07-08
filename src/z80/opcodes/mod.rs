@@ -9,6 +9,7 @@ mod group_nonprefixed;
 mod group_bits;
 mod group_extended;
 
+// re-export all functions
 pub use self::types::*;
 pub use self::internal_alu::*;
 pub use self::internal_rot::*;

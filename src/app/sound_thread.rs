@@ -1,6 +1,8 @@
 //! portaudio-based sound rendering module
 //! PortAudio lib inits lazily, so if any error happens,
 //! You can use --nosound flag
+//! ### abbr
+//! PA = `PortAudio`
 use std::i16;
 use std::sync::mpsc::*;
 use std::cell::Cell;
@@ -10,15 +12,17 @@ use portaudio as pa;
 
 // Mono
 const CHANNELS: i32 = 1;
-// get 256 samples per one callback
+/// 256 samples per one callback
 const FRAMES_PER_BUFFER: u32 = 256;
-// 64 K buffer for sound
+/// 64 K buffer for sound
 const BUFFER_SIZE: usize = 1024;
-
+/// Main volume devider
 const VOL_DEVIDER: i16 = 4;
 
+/// type that describes PortAudio outout stream
 type SpeakerStream<'a> = pa::stream::Stream<'a, pa::stream::NonBlocking, pa::stream::Output<i16>>;
 
+// init PA
 lazy_static! {
     pub static ref PA_STATIC: pa::PortAudio = {
         pa::PortAudio::new().ok().expect("[ERROR] PortAudio initialization error, try to use\
@@ -32,12 +36,15 @@ pub struct SoundThread<'a> {
 }
 
 impl<'a> SoundThread<'a> {
+    /// Constructs new thread
     pub fn new() -> SoundThread<'a> {
+        // construct new sound thread, everything is closed before running sound thread
         SoundThread {
             channel: None,
             stream: None,
         }
     }
+    /// Runs sound thread
     pub fn run_sound_thread(&mut self) {
         // settings for stream
         let settings = PA_STATIC.default_output_stream_settings::<i16>(CHANNELS,
@@ -47,8 +54,9 @@ impl<'a> SoundThread<'a> {
                                    .expect("[ERROR] PortAudio output stream creation error,try \
                                             to use --nosound option");
         settings.flags = pa::stream_flags::CLIP_OFF;
-        // open channel for messages
+        // open channel for messages between main and sound thread
         let (tx, rx) = sync_channel(BUFFER_SIZE);
+        // cell for storeing last state of sound playback
         let last_state = Cell::new(i16::min_value());
         // set callback
         let callback = move |pa::OutputStreamCallbackArgs { buffer, frames, .. }| {
@@ -91,6 +99,7 @@ impl<'a> SoundThread<'a> {
               .ok()
               .expect("[ERROR] PortAudio throwed error on stream start,try to use --nosound \
                        option");
+        // store reference to stream
         self.stream = Some(stream);
     }
     pub fn send(&mut self, value: i16) {

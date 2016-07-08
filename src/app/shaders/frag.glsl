@@ -1,3 +1,4 @@
+// Simple shader for textured triangles drawing
 #version 110
 
 varying vec2 v_tex_coord;

@@ -1,8 +1,11 @@
+//! TAP file tape player
+
 use super::*;
 use std::fs::File;
 use std::io::Read;
 use utils::{make_word, Clocks};
 
+// main constants
 const PILOT_LENGTH: usize = 2168;
 const PILOT_PULSES_HEADER: usize = 8063;
 const PILOT_PULSES_DATA: usize = 3223;
@@ -73,6 +76,7 @@ impl Tap {
             acc_clocks: Clocks(0),
         }
     }
+    /// resets internal tape state
     fn reset_state(&mut self) {
         self.state = TapeState::Stop;
         self.curr_bit = false;
@@ -156,6 +160,8 @@ impl ZXTape for Tap {
         }
 
     }
+
+    /// makes internal state change based on clocks count
     fn process_clocks(&mut self, clocks: Clocks) {
         // if there are no blocks
         if self.block_info.len() == 0 {
@@ -308,21 +314,21 @@ impl ZXTape for Tap {
         }
     }
 
-    /// eject tape, clear internal structure
+    /// ejects tape, clears internal state
     fn eject(&mut self) {
         self.block_info.clear();
         self.data.clear();
         self.reset_state();
     }
 
-    /// stop tape playing, set `Stop` state
+    /// stops tape playback, sets `Stop` state
     fn stop(&mut self) {
         let state = self.state;
         self.prev_state = state;
         self.state = TapeState::Stop;
     }
 
-    /// do play
+    /// starts playback
     fn play(&mut self) {
         if self.state == TapeState::Stop {
             if self.prev_state == TapeState::Stop {
@@ -334,7 +340,7 @@ impl ZXTape for Tap {
         }
     }
 
-    /// rewind tape to start
+    /// rewinds tape to start
     fn rewind(&mut self) {
         self.reset_state();
     }

@@ -1,8 +1,13 @@
+//! Contains platform-independent beeper implementation
 use std::collections::VecDeque;
+
 use zx::constants::{SAMPLE_RATE, FPS};
 
-pub type SoundSample = i16;
+/// samples per frame
 const SAMPLES: usize = SAMPLE_RATE / FPS;
+
+/// internal sample type
+pub type SoundSample = i16;
 
 /// transforms ear + mic to sample
 fn earmic_to_sample(ear: bool, mic: bool) -> i16 {
@@ -36,13 +41,17 @@ impl ZXBeeper {
     /// validates state of buffer.
     /// `frame_time` - value from 0 to 1, time of state change in percents
     pub fn validate(&mut self, ear: bool, mic: bool, frame_time: f64) {
+        // on buffer ovefflow
         if self.ring_buffer.len() > SAMPLES {
             return;
         }
+        // find next position in samples
         let mut next_pos = (frame_time * SAMPLES as f64) as usize;
         if next_pos > SAMPLES {
             next_pos = SAMPLES
         };
+        // if all ok, and current position is greater than previous
+        // then push sample to buffer
         if next_pos > self.last_pos {
             for _ in self.last_pos..next_pos {
                 self.ring_buffer.push_back(self.last_sample);
@@ -52,11 +61,13 @@ impl ZXBeeper {
         }
     }
 
-    /// fills all buffer
+    /// Fills all buffer
     pub fn fill_to_end(&mut self) {
+        // if buffer is full the njust exit
         if self.ring_buffer.len() > SAMPLES {
             return;
         }
+        // fill with samples and reset pos
         let last_pos = self.last_pos;
         self.last_pos = 0;
         if self.last_pos >= SAMPLES {

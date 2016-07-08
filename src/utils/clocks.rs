@@ -1,5 +1,7 @@
+
 use std::ops::{AddAssign, Add, SubAssign, Sub};
 /// Clocks count
+/// It also have different Trait implementations
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd)]
 pub struct Clocks(pub usize);
 

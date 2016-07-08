@@ -1,9 +1,9 @@
 //! Contains ZX Spectrum System contrller (like lua or so) of emulator
 //! TODO: Make ZXController Builder
-//! TODO: use fast loading only fhen correct rom selected!
 use std::fs::File;
 use std::io::Read;
 
+// use almost everything :D
 use utils::{split_word, Clocks};
 use utils::screen::*;
 use utils::events::*;
@@ -19,6 +19,7 @@ use zx::screen::border::ZXBorder;
 use zx::screen::colors::{ZXColor, ZXPalette};
 use zx::roms::*;
 use zx::beeper::ZXBeeper;
+use zx::constants::*;
 
 /// Tape loading trap at LD-BREAK routine in ROM
 const ADDR_LD_BREAK: u16 = 0x056B;
@@ -129,7 +130,7 @@ impl ZXController {
             }
         }
     }
-    /// load builted-in ROM
+    /// loads builted-in ROM
     pub fn load_default_rom(&mut self) {
         match self.machine {
             ZXMachine::Sinclair48K => {
@@ -140,36 +141,6 @@ impl ZXController {
                            .load_rom(1, ROM_128K_1);
             }
         }
-    }
-
-    /// inserts new tape
-    pub fn insert_tape(&mut self, path: &str) {
-        self.tape.insert(path);
-    }
-
-    /// plays tape
-    pub fn play_tape(&mut self) {
-        self.tape.play();
-    }
-
-    /// stops tape
-    pub fn stop_tape(&mut self) {
-        self.tape.stop();
-    }
-
-    /// Returns Screen texture
-    pub fn get_canvas_texture(&self) -> &[u8] {
-        self.canvas.texture()
-    }
-
-    /// Returns border texture
-    pub fn get_border_texture(&self) -> &[u8] {
-        self.border.texture()
-    }
-
-    /// get current border color
-    pub fn get_border_color(&self) -> u8 {
-        self.border_color
     }
 
     /// Changes key state in controller
@@ -210,7 +181,8 @@ impl ZXController {
         let row = clocks / specs.clocks_line;
         let clocks = clocks % specs.clocks_line;
         let col = (clocks / 8) * 2 + (clocks % 8) / 2;
-        if row < 192 && clocks < 124 && ((clocks & 0x04) == 0) {
+        if row < CANVAS_HEIGHT && clocks < specs.clocks_screen_row - CLOCKS_PER_COL
+            && ((clocks & 0x04) == 0) {
             if clocks % 2 == 0 {
                 return self.memory.read(bitmap_line_addr(row) + col as u16);
             } else {
@@ -233,6 +205,7 @@ impl ZXController {
         self.wait_internal(contention + wait_time);
     }
 
+    // check addr contention
     fn addr_is_contended(&self, addr: u16) -> bool {
         return if let Page::Ram(bank) = self.memory.get_page(addr) {
             self.machine.bank_is_contended(bank as usize)
@@ -270,24 +243,6 @@ impl ZXController {
         self.canvas.new_frame();
         self.border.new_frame();
         self.beeper.fill_to_end();
-    }
-
-    /// Validates screen
-    pub fn validate_screen(&mut self) {
-        // for addr in 0x0000..0x1B00 {
-        //     self.canvas.write_active(0x4000 + addr, Clocks(0),
-        //                              self.memory.paged_read(Page::Ram(self.screen_bank), addr));
-        // }
-        // for addr in 0x0000..0x1800 {
-        //     self.canvas.write_bitmap_byte(0x4000 + addr, Clocks(0),
-        //                                   self.memory.paged_read(Page::Ram(self.screen_bank),
-        //                                   addr));
-        // }
-        // for addr in 0x1800..0x1B00 {
-        //     self.canvas.write_attr_byte(0x4000 + addr, Clocks(0),
-        //                                 self.memory.paged_read(Page::Ram(self.screen_bank),
-        //                                 addr));
-        // }
     }
 
     /// force clears all events
@@ -364,11 +319,12 @@ impl Z80Bus for ZXController {
         }
     }
 
-
+    /// read data without taking onto account contention
     fn read_internal(&mut self, addr: u16) -> u8 {
         self.memory.read(addr)
     }
 
+    /// write data without taking onto account contention
     fn write_internal(&mut self, addr: u16, data: u8) {
         self.memory.write(addr, data);
         // if ram then compare bank to screen bank
@@ -377,6 +333,7 @@ impl Z80Bus for ZXController {
         }
     }
 
+    /// Cahnges internal state on clocks count change (emualtion processing)
     fn wait_internal(&mut self, clk: Clocks) {
         self.frame_clocks += clk;
         (*self.tape).process_clocks(clk);
@@ -384,15 +341,14 @@ impl Z80Bus for ZXController {
         self.mic = mic;
         let pos = self.frame_pos();
         self.beeper.validate(self.ear, self.mic, pos);
-
         self.canvas.process_clocks(self.frame_clocks);
-
         if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
             self.new_frame();
             self.passed_frames += 1;
         }
     }
 
+    // wait with memory request pin active
     fn wait_mreq(&mut self, addr: u16, clk: Clocks) {
         match self.machine {
             ZXMachine::Sinclair48K | ZXMachine::Sinclair128K=> {
@@ -405,11 +361,13 @@ impl Z80Bus for ZXController {
         self.wait_internal(clk);
     }
 
+    /// wait without memory request pin active
     fn wait_no_mreq(&mut self, addr: u16, clk: Clocks) {
         // only for 48 K!
         self.wait_mreq(addr, clk);
     }
 
+    /// read io from hardware
     fn read_io(&mut self, port: u16) -> u8 {
         // all contentions check
         self.io_contention_first(port);
@@ -441,6 +399,7 @@ impl Z80Bus for ZXController {
         output
     }
 
+    /// write value to hardware port
     fn write_io(&mut self, port: u16, data: u8) {
         // first contention
         self.io_contention_first(port);
@@ -468,23 +427,29 @@ impl Z80Bus for ZXController {
         self.wait_internal(Clocks(1));
     }
 
+    /// value, requested during `INT0` interrupt
     fn read_interrupt(&mut self) -> u8 {
         0xFF
     }
 
+    /// checks system maskable interrupt pin state
     fn int_active(&self) -> bool {
         self.frame_clocks.count() % self.machine.specs().clocks_frame <
         self.machine.specs().interrupt_length
     }
 
+    /// checks non-maskable interrupt pin state
     fn nmi_active(&self) -> bool {
         false
     }
+
+    /// CPU calls it when RETI instruction was processed
     fn reti(&mut self) {}
 
+    /// CPU calls when was being halted
     fn halt(&mut self, _: bool) {}
 
-    /// check for instant events
+    /// checks instant events
     fn instant_event(&self) -> bool {
         self.instant_event.pick()
     }

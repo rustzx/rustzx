@@ -1,6 +1,7 @@
 //! Provides function `vkey_to_zxkey` for translatng glutin key to internal format enum
-
+// Key type passed to main function
 use glium::glutin::VirtualKeyCode as VKey;
+// emulator key-related stuff
 use zx::keys::*;
 
 /// returns `ZXKey` from glutin `VirtualKeyCode`

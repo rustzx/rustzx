@@ -1,10 +1,11 @@
+//! Contains ZXSpectrum border implementation
 use utils::Clocks;
 use zx::constants::*;
 use zx::machine::*;
 use super::colors::*;
 
-#[derive(Clone, Copy)]
 /// Internal struct, which contains information about beam position and color
+#[derive(Clone, Copy)]
 struct BeamInfo {
     line: usize,
     pixel: usize,
