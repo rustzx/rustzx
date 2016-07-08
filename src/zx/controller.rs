@@ -100,16 +100,34 @@ impl ZXController {
         }
     }
 
-    /// loads rom form file
-    /// TODO: custom 128 K rom loading
+    /// loads rom from file
+    /// for 128-K machines path must contain ".0" in the tail
+    /// and second rom bank will be loaded automatically
     pub fn load_rom(&mut self, path: &str) {
-        let mut rom = Vec::new();
-        if let Ok(mut file) = File::open(path) {
-            file.read_to_end(&mut rom).unwrap();
-        } else {
-            panic!("ROM not found!");
+        match self.machine {
+            // Single ROM file
+            ZXMachine::Sinclair48K => {
+                let mut rom = Vec::new();
+                File::open(path).ok().expect("[ERROR] ROM not found").read_to_end(&mut rom)
+                                                                     .unwrap();
+                self.memory.load_rom(0, &rom);
+            }
+            // Two ROM's
+            ZXMachine::Sinclair128K => {
+                let mut rom0 = Vec::new();
+                let mut rom1 = Vec::new();
+                File::open(path).ok().expect("[ERROR] ROM0 not found").read_to_end(&mut rom0)
+                                                                      .unwrap();
+                let mut second_path = path.to_owned();
+                second_path.pop();
+                second_path.push('1');
+                File::open(second_path).ok().expect("[ERROR] ROM1 not found").read_to_end(&mut rom1)
+                                                                      .unwrap();
+                self.memory.load_rom(0, &rom0)
+                           .load_rom(1, &rom1);
+                println!("ROM's Loaded");
+            }
         }
-        self.memory.load_rom(0, &rom);
     }
     /// load builted-in ROM
     pub fn load_default_rom(&mut self) {

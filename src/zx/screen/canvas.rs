@@ -6,39 +6,8 @@ use zx::constants::*;
 use zx::screen::colors::*;
 use zx::machine::ZXMachine;
 
+// size of screen buffer in bytes
 const BUFFER_LENGTH: usize = CANVAS_HEIGHT * CANVAS_WIDTH * BYTES_PER_PIXEL;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use zx::constants::*;
-    use zx::machine::*;
-    use utils::Clocks;
-    #[test]
-    fn blocks_difference() {
-        assert_eq!(BlocksCount::new(1, 0).passed_from(&BlocksCount::new(0, 0)), ATTR_COLS);
-        assert_eq!(BlocksCount::new(3, 3).passed_from(&BlocksCount::new(3, 1)), 2);
-        assert_eq!(BlocksCount::new(2, 30).passed_from(&BlocksCount::new(1, 0)), ATTR_COLS + 30);
-        assert_eq!(BlocksCount::new(3, 30).passed_from(&BlocksCount::new(0, 1)),
-                   2 * ATTR_COLS + 30 + (ATTR_COLS - 1));
-        assert_eq!(BlocksCount::new(0, 0).passed_from(&BlocksCount::new(SCREEN_HEIGHT, 0)), 0);
-    }
-
-    #[test]
-    fn from_clocks() {
-        assert_eq!(BlocksCount::from_clocks(Clocks(14336), ZXMachine::Sinclair48K),
-                   BlocksCount::new(0, 1));
-        assert_eq!(BlocksCount::from_clocks(Clocks(14335), ZXMachine::Sinclair48K),
-                   BlocksCount::new(0, 0));
-        assert_eq!(BlocksCount::from_clocks(Clocks(14336 + 223), ZXMachine::Sinclair48K),
-                   BlocksCount::new(1, 0));
-        assert_eq!(BlocksCount::from_clocks(Clocks(14336 + 224), ZXMachine::Sinclair48K),
-                   BlocksCount::new(1, 1));
-        assert_eq!(BlocksCount::from_clocks(Clocks(14336 + 16), ZXMachine::Sinclair48K),
-                   BlocksCount::new(0, 5));
-    }
-
-}
 
 /// Represents how much 8x1 have been **passed**.
 #[derive(PartialEq, Eq, Debug)]
@@ -48,6 +17,7 @@ pub struct BlocksCount {
 }
 
 impl BlocksCount {
+    /// Constructs new `BlocksCount`
     pub fn new(lines: usize, columns: usize) -> BlocksCount {
         BlocksCount {
             lines: lines,
@@ -106,11 +76,13 @@ impl BlocksCount {
     }
 }
 
+/// Represents Single memory bank of screen
 struct ScreenBank {
     pub attributes: [ZXAttribute; ATTR_COLS * ATTR_ROWS],
     pub bitmap: [u8; ATTR_COLS * CANVAS_HEIGHT],
 }
 
+/// Represents ZXSpectrum emulated mid part of screen (canvas)
 pub struct ZXCanvas {
     machine: ZXMachine,
     palette: ZXPalette,
@@ -127,6 +99,7 @@ pub struct ZXCanvas {
 }
 
 impl ZXCanvas {
+    /// Constructs new canvas of `machine`
     pub fn new(machine: ZXMachine) -> ZXCanvas {
         ZXCanvas {
             machine: machine,
@@ -174,9 +147,7 @@ impl ZXCanvas {
     }
 
     /// renders some  8x1 blocks
-    /// `memory` - reference to ZXMemory
-    /// `bank` - current memory bank (usefull for models > 48K)
-    /// `current` clocks count.
+    /// `clocks` - current  clocks count form frame start.
     /// if clocks < previous call clocks then discard processing
     pub fn process_clocks(&mut self, clocks: Clocks) {
         let blocks = BlocksCount::from_clocks(clocks, self.machine);
@@ -219,7 +190,7 @@ impl ZXCanvas {
         self.frame_counter += 1;
     }
 
-    /// updates data if screen ram
+    /// Updates data if screen ram
     /// NOTE: testing, avoid clocks check.
     pub fn update(&mut self, rel_addr: u16, bank: usize, _clocks: Clocks, data: u8) {
         if let Some(bank) = self.local_bank(bank) {
@@ -243,6 +214,7 @@ impl ZXCanvas {
         }
     }
 
+    /// Returns reference to canvas main texture
     pub fn texture(&self) -> &[u8] {
         &self.buffer
     }

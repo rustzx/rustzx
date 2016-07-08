@@ -141,6 +141,8 @@ impl RustZXApp {
 
     /// starts application
     pub fn start(&mut self) {
+        // NOTE: for debug, frame = 1 sec when enabled
+        let mut longframe = false;
         // use sound if enabled
         if let Some(ref mut snd) = self.snd {
             snd.run_sound_thread();
@@ -152,7 +154,7 @@ impl RustZXApp {
                               .build_glium()
                               .ok()
                               .expect("[ERROR] Glium (OpenGL) initialization error");
-            let renderer = ZXScreenRenderer::new(&display);
+            let mut renderer = ZXScreenRenderer::new(&display);
             'render_loop: loop {
                 let frame_target_dt_ns = ms_to_ns((1000 / 50) as f64);
                 let frame_start_ns = time::precise_time_ns();
@@ -195,6 +197,7 @@ impl RustZXApp {
                                 VKey::F3 => emulator.set_speed(EmulationSpeed::Definite(1)),
                                 VKey::F4 => emulator.set_speed(EmulationSpeed::Definite(2)),
                                 VKey::F5 => emulator.set_speed(EmulationSpeed::Max),
+                                VKey::F6 => longframe = !longframe,
                                 _ => {
                                     if let Some(key) = vkey_to_zxkey(key_code) {
                                         match state {
@@ -209,6 +212,9 @@ impl RustZXApp {
                                 }
                             }
                         }
+                        Event::Resized(width, height) => {
+                            renderer.resize_viewport(width, height);
+                        }
                         _ => {}
                     }
                 }
@@ -216,7 +222,11 @@ impl RustZXApp {
 
                 // wait some time for 50 FPS if emulator syncs self not using sound callbacks
                 if (emulation_dt_ns < frame_target_dt_ns) && !emulator.have_sound() {
-                    thread::sleep(Duration::new(0, ((frame_target_dt_ns - emulation_dt_ns) as u32) / 4));
+                    if longframe {
+                            thread::sleep(Duration::new(0, 1_000_000_000));
+                    } else {
+                        thread::sleep(Duration::new(0, ((frame_target_dt_ns - emulation_dt_ns) as u32) / 4));
+                    }
                 };
                 let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
                 if let Some(wnd) = display.get_window() {

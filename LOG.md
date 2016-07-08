@@ -1,3 +1,4 @@
+**[07.07.2016]** ZXScreen rewrite
 **[06.07.2016]** Base 128K features implemented
 **[05.07.2016]** v0.8 development started in branch `develop`  
 **[27.06.2016]** Release v0.7.1  

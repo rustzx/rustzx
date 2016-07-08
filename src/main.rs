@@ -12,6 +12,8 @@ extern crate lazy_static;
 extern crate clap;
 /// Library for sound rendering
 extern crate portaudio;
+/// library for vector/matrix math
+extern crate cgmath;
 
 // crate consists of theese modules
 mod utils;
