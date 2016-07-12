@@ -8,7 +8,7 @@ pub mod tape;
 pub mod machine;
 pub mod constants;
 pub mod roms;
-pub mod beeper;
+pub mod sound;
 
 // re-export most of things
 // TODO: in-deep rewiew re-exports recursively
@@ -18,4 +18,3 @@ pub use self::memory::{ZXMemory, RomType, RamType};
 pub use self::screen::*;
 pub use self::keys::*;
 pub use self::tape::ZXTape;
-pub use self::beeper::*;

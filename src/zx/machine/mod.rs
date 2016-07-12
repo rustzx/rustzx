@@ -39,7 +39,7 @@ lazy_static! {
 }
 
 /// Machine type
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ZXMachine {
     Sinclair48K,
     Sinclair128K,

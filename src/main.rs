@@ -18,6 +18,10 @@ extern crate clap;
 extern crate portaudio;
 /// library for vector/matrix math
 extern crate cgmath;
+/// for some numeric traits
+extern crate num;
+/// AY chip emulation library pacmancoder/rust-ayumi
+extern crate ayumi;
 
 // crate consists of theese modules
 mod utils;

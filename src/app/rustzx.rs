@@ -182,6 +182,8 @@ impl RustZXApp {
                               .build_glium()
                               .ok()
                               .expect("[ERROR] Glium (OpenGL) initialization error");
+            display.get_window().unwrap().set_title(
+                &format!("RustZX v{}", env!("CARGO_PKG_VERSION")));
             let mut renderer = ZXScreenRenderer::new(&display);
             // this
             'render_loop: loop {
@@ -195,7 +197,7 @@ impl RustZXApp {
                     // if can be turned off even on speed change, so check it everytime
                     if emulator.have_sound() {
                         loop {
-                            if let Some(sample) = emulator.controller.beeper.pop() {
+                            if let Some(sample) = emulator.controller.mixer.pop_buffer() {
                                 // NOTE: Blockig function. This also syncs frames, if sound
                                 // is enabled
                                 snd.send(sample);
