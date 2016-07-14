@@ -1,5 +1,7 @@
 # rustzx
-ZX Spectrum emulator which I writing in rust.   
+![logo](assets/logo_small.png)  
+
+ZX Spectrum emulator which I writing in rust.
 I develop this project just for fun and for learning the basics of computer
 architecture.  
 Licensed under MIT License.
