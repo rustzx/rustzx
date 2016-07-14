@@ -6,18 +6,15 @@
 use std::i16;
 use std::sync::mpsc::*;
 use std::cell::Cell;
-use zx::constants::SAMPLE_RATE;
+use zx::sound::{CHANNELS, SAMPLE_RATE};
+use zx::sound::sample::SoundSample;
 
 use portaudio as pa;
 
-// Mono
-const CHANNELS: i32 = 1;
 /// 256 samples per one callback
 const FRAMES_PER_BUFFER: u32 = 256;
-/// 64 K buffer for sound
+/// 1K samples buffer for sound
 const BUFFER_SIZE: usize = 1024;
-/// Main volume devider
-const VOL_DEVIDER: i16 = 4;
 
 /// type that describes PortAudio outout stream
 type SpeakerStream<'a> = pa::stream::Stream<'a, pa::stream::NonBlocking, pa::stream::Output<i16>>;
@@ -31,7 +28,7 @@ lazy_static! {
 }
 
 pub struct SoundThread<'a> {
-    channel: Option<SyncSender<i16>>,
+    channel: Option<SyncSender<SoundSample<i16>>>,
     stream: Option<SpeakerStream<'a>>,
 }
 
@@ -47,7 +44,7 @@ impl<'a> SoundThread<'a> {
     /// Runs sound thread
     pub fn run_sound_thread(&mut self) {
         // settings for stream
-        let settings = PA_STATIC.default_output_stream_settings::<i16>(CHANNELS,
+        let settings = PA_STATIC.default_output_stream_settings::<i16>(CHANNELS as i32,
                                                                        SAMPLE_RATE as f64,
                                                                        FRAMES_PER_BUFFER);
         let mut settings = settings.ok()
@@ -57,36 +54,25 @@ impl<'a> SoundThread<'a> {
         // open channel for messages between main and sound thread
         let (tx, rx) = sync_channel(BUFFER_SIZE);
         // cell for storeing last state of sound playback
-        let last_state = Cell::new(i16::min_value());
+        let last_state = Cell::new(SoundSample::new(0, 0));
         // set callback
         let callback = move |pa::OutputStreamCallbackArgs { buffer, frames, .. }| {
             // index to buffer
             let mut n = 0;
             // last value of "speaker bit"
             let mut last = last_state.get();
-            loop {
-                // if provided more samples than needed then break loop
-                if n >= frames {
-                    break;
-                }
-                // if we have sample then write it to the buffer
+            for _ in 0..frames {
                 if let Some(sample) = rx.try_recv().ok() {
                     last = sample;
-                    buffer[n] = sample;
+                    buffer[n] = sample.left;
+                    buffer[n + 1] = sample.right;
                 } else {
-                    break;
+                    buffer[n] = last.left;
+                    buffer[n + 1] = last.right;
                 }
-                // write successefull, increment index
-                n += 1;
+                n += 2;
             }
             last_state.set(last);
-            // fill to end
-            if n < frames {
-                for k in n..frames {
-                    buffer[k] = last;
-                }
-            }
-            // continue streaming
             pa::Continue
         };
         // save channel and stream to handle
@@ -102,9 +88,9 @@ impl<'a> SoundThread<'a> {
         // store reference to stream
         self.stream = Some(stream);
     }
-    pub fn send(&mut self, value: i16) {
+    pub fn send(&mut self, value: SoundSample<i16>) {
         if let Some(ref channel) = self.channel {
-            channel.send(value / VOL_DEVIDER)
+            channel.send(value)
                    .ok()
                    .expect("[ERROR] Sound sample sending failed, trye to use--nosound option");
         };

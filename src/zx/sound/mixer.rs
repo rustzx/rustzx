@@ -1,12 +1,12 @@
 //! Module implemets zx spectrum audio devices mixer
 use std::i16;
 use std::collections::VecDeque;
-use zx::sound::{SAMPLES, SoundSample, samples_from_time, SampleGenerator};
-use zx::sound::beeper::*;
-use zx::sound::ay::*;
+use zx::sound::{SAMPLES, samples_from_time};
+use zx::sound::sample::{SoundSample, SampleGenerator};
+use zx::sound::beeper::ZXBeeper;
+use zx::sound::ay::{ZXAyChip, ZXAYMode};
 
 /// Main sound mixer.
-/// TODO: parametrize
 pub struct ZXMixer {
     /// direct access to beeper device
     pub beeper: ZXBeeper,
@@ -18,6 +18,8 @@ pub struct ZXMixer {
     master_volume: f64,
     beeper_volume: f64,
     ay_volume: f64,
+    use_ay: bool,
+    use_beeper: bool,
 }
 
 impl ZXMixer {
@@ -25,27 +27,27 @@ impl ZXMixer {
     /// # Arguments
     /// - `use_beeper` - process beeper or not
     /// - `use_ay` - process ay chip or not
-    pub fn new(_use_beeper: bool, _use_ay: bool ) -> ZXMixer {
+    pub fn new(use_beeper: bool, use_ay: bool) -> ZXMixer {
         ZXMixer {
             beeper: ZXBeeper::new(),
-            ay: ZXAyChip::new(),
+            ay: ZXAyChip::new(ZXAYMode::Mono),
             ring_buffer: VecDeque::with_capacity(SAMPLES),
             last_pos: 0,
-            last_sample: 0,
-            master_volume: 1.0,
+            last_sample: SoundSample::new(0, 0),
+            master_volume: 0.5,
             beeper_volume: 1.0,
             ay_volume: 1.0,
+            use_ay: use_ay,
+            use_beeper: use_beeper,
         }
     }
-
-    fn gen_sample(&mut self) -> SoundSample<i16> {
-        // TODO: find out how to mix channels equally
-        let sample_float = (/*self.beeper.gen_float_sample() + */self.ay.gen_float_sample()) / 2f64
-            * self.master_volume;
-        let sample = (sample_float * i16::max_value() as f64) as i16;
-        self.last_sample = sample;
-        sample
+    /// changes volume
+    /// # Arguments
+    /// - `volume` - value in range 0..1
+    pub fn volume(&mut self, volume: f64) {
+        self.master_volume = volume;
     }
+
     /// Updates internal buffer of mixer and fills it with new samples
     pub fn process(&mut self, current_time: f64) {
         // buffer overflow
@@ -67,6 +69,7 @@ impl ZXMixer {
         }
     }
 
+    /// fills buffer to eng on new frame
     pub fn new_frame(&mut self) {
         if self.ring_buffer.len() < SAMPLES {
             for _ in self.ring_buffer.len()..SAMPLES {
@@ -76,7 +79,23 @@ impl ZXMixer {
         self.last_pos = 0;
     }
 
+    /// Returns front of queue
     pub fn pop_buffer(&mut self) -> Option<SoundSample<i16>> {
         self.ring_buffer.pop_front()
+    }
+
+    fn gen_sample(&mut self) -> SoundSample<i16> {
+        let mut master_float = if self.use_beeper {
+            self.beeper.gen_sample()
+        }  else {
+            SoundSample::new(0.0, 0.0)
+        };
+        // prevent AY sound generation if disabled [it is pretty long process]
+        if self.use_ay {
+            master_float.mix(&self.ay.gen_sample());
+        }
+        let master = master_float.mul_eq(self.master_volume).into_i16();
+        self.last_sample = master;
+        master
     }
 }

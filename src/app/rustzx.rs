@@ -1,23 +1,23 @@
 //! Main application class module
 //! Handles all platform-related, hardware-related stuff
 //! and command-line interface
-// std section
+
 use std::thread;
 use std::time::Duration;
 use std::path::Path;
 use std::io::Write;
 use std::fs::File;
-// crates
 use time;
 use clap::{Arg, App, AppSettings};
 use glium::glutin::{WindowBuilder, Event, ElementState as KeyState, VirtualKeyCode as VKey};
 use glium::DisplayBuild;
-// emulator
 use app::sound_thread::*;
 use app::video::ZXScreenRenderer;
 use app::keyboard::vkey_to_zxkey;
 use zx::*;
 use zx::constants::*;
+use zx::settings::ZXSettings;
+use zx::sound::ay::ZXAYMode;
 use emulator::*;
 use utils::EmulationSpeed;
 
@@ -89,7 +89,7 @@ impl RustZXApp {
                                .help("Selects speed for emulator in integer multiplier form"))
                       .arg(Arg::with_name("NO_SOUND")
                                .long("nosound")
-                               .help("Disables sound. Use it when you have problems with audio\
+                               .help("Disables sound. Use it when you have problems with audio \
                                       playback"))
                       .arg(Arg::with_name("128K")
                                .long("128k")
@@ -97,16 +97,50 @@ impl RustZXApp {
                       .arg(Arg::with_name("SCALE")
                                 .long("scale")
                                 .value_name("SCALE_VALUE")
-                                .help("Selects default screen size. possible values are positive\
+                                .help("Selects default screen size. possible values are positive \
                                        integers. Default value is 2"))
+                      .arg(Arg::with_name("AY")
+                                .long("ay")
+                                .value_name("AY_TYPE")
+                                .possible_values(&["none", "mono", "abc", "acb"])
+                                .help("Selects AY mode. Use none to disable. \
+                                       For stereo features use abc or acb, default is mono."))
+                      .arg(Arg::with_name("NOBEEPER")
+                                .long("nobeeper")
+                                .help("Disables beeper"))
+                      .arg(Arg::with_name("VOLUME")
+                                .long("volume")
+                                .value_name("VOLUME_VALUE")
+                                .help("Selects volume - value in range 0..200. Volume over 100 \
+                                       can cause sound artifacts"))
                       .get_matches();
+        let mut settings = ZXSettings::new();
         // select machine type
-        let machine = if cmd.is_present("128K") {
-            ZXMachine::Sinclair128K
+        if cmd.is_present("128K") {
+            settings.machine(ZXMachine::Sinclair128K)
         } else {
-            ZXMachine::Sinclair48K
+            settings.machine(ZXMachine::Sinclair48K)
         };
-        let mut emulator = Emulator::new(machine);
+        if let Some(value) = cmd.value_of("AY") {
+            match value {
+                "none" => { settings.ay(false) },
+                "mono" => { settings.ay_mode(ZXAYMode::Mono) },
+                "abc" => { settings.ay_mode(ZXAYMode::ABC) },
+                "acb" => { settings.ay_mode(ZXAYMode::ACB) },
+                _ => unreachable!(),
+            };
+        };
+        if cmd.is_present("NOBEEPER") {
+            settings.beeper(false);
+        } 
+        if let Some(value) = cmd.value_of("VOLUME") {
+            if let Ok(value) = value.parse::<usize>() {
+                settings.volume(value);
+            } else {
+                println!("[Warning] Volume value is incorrect, setting volume to 100");
+            }
+        };
+        let mut emulator = Emulator::new(&settings);
         // load another if requested
         if let Some(path) = cmd.value_of("ROM") {
             if Path::new(path).is_file() {

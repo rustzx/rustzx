@@ -1,11 +1,20 @@
 use utils::make_word;
-use zx::constants::SAMPLE_RATE;
-use zx::sound::*;
-use ayumi::*;
+use zx::sound::SAMPLE_RATE;
+use zx::sound::sample::{SoundSample, SampleGenerator};
+use ayumi::{Ayumi, ToneChannel, ChipType};
 
-// AY chip runs on the same frequency on 128K, 2+, 3+
+/// AY chip runs on the same frequency on 128K, 2+, 3+
 const AY_FREQ: f64 = 1773400.0;
 
+/// AY output mode
+#[derive(Clone, Copy)]
+pub enum ZXAYMode {
+    Mono,
+    ABC,
+    ACB,
+}
+
+/// AY Chip implementation using Ayumi lib
 pub struct ZXAyChip {
     ay: Ayumi,
     current_reg: usize,
@@ -14,19 +23,34 @@ pub struct ZXAyChip {
 
 impl ZXAyChip {
     /// Constructs new AY Chip
-    pub fn new() -> ZXAyChip {
+    pub fn new(mode: ZXAYMode) -> ZXAyChip {
         // configure ayumi
-        let mut ayumi = Ayumi::new(ChipType::AY, AY_FREQ, SAMPLE_RATE as i32);
-        ayumi.tone(ToneChannel::A).pan(0.5, true);
-        ayumi.tone(ToneChannel::B).pan(0.5, true);
-        ayumi.tone(ToneChannel::C).pan(0.5, true);
-        ZXAyChip {
-            ay: ayumi,
+        let mut out = ZXAyChip {
+            ay: Ayumi::new(ChipType::AY, AY_FREQ, SAMPLE_RATE as i32),
             current_reg: 0,
             regs: [0; 16],
-        }
+        };
+        out.mode(mode);
+        out
     }
 
+    /// Changes AY mode
+    pub fn mode(&mut self, mode: ZXAYMode) {
+        let (a, b, c) = match mode {
+            ZXAYMode::Mono => {
+                (0.5, 0.5, 0.5)
+            }
+            ZXAYMode::ABC => {
+                (0.0, 0.5, 1.0)
+            }
+            ZXAYMode::ACB => {
+                (0.0, 1.0, 0.5)
+            }
+        };
+        self.ay.tone(ToneChannel::A).pan(a, true);
+        self.ay.tone(ToneChannel::B).pan(b, true);
+        self.ay.tone(ToneChannel::C).pan(c, true);
+    }
     /// Selects active AY register to write
     pub fn select_reg(&mut self, reg: u8) {
         // AY chip have only 16 regs [0...15]
@@ -95,15 +119,15 @@ impl ZXAyChip {
         // find out what we need to do with value
     }
 
+    /// reads register value
     pub fn read(&self) -> u8 {
         self.regs[self.current_reg]
     }
 }
 
-impl SampleGenerator for ZXAyChip {
-    fn gen_float_sample(&mut self) -> SoundSample<f64> {
-        // pan of channels is equal we'll get single channel as a sample value
-        let sample = self.ay.process().remove_dc().sample().right;
-        sample
+impl SampleGenerator<f64> for ZXAyChip {
+    fn gen_sample(&mut self) -> SoundSample<f64> {
+        let sample = self.ay.process().sample();
+        *SoundSample::new(sample.left, sample.right).normalize(-1.0, 1.0)
     }
 }

@@ -1,16 +1,15 @@
 //! Platform-independent high-level Emulator interaction module
-// crates
 use time;
-//emulator
-use z80::*;
-use zx::{ZXController, ZXMachine};
+
 use utils::*;
+use z80::*;
+use zx::ZXController;
+use zx::settings::ZXSettings;
 
 mod loaders;
 
 /// Represents main Emulator structure
 pub struct Emulator {
-    machine: ZXMachine,
     cpu: Z80,
     // direct access to controller devices and control methods
     pub controller: ZXController,
@@ -21,11 +20,12 @@ pub struct Emulator {
 
 impl Emulator {
     /// Constructs new emulator
-    pub fn new(machine: ZXMachine) -> Emulator {
+    /// # Arguments
+    /// `settings` - emulator settings
+    pub fn new(settings: &ZXSettings) -> Emulator {
         Emulator {
-            machine: machine,
             cpu: Z80::new(),
-            controller: ZXController::new(machine),
+            controller: ZXController::new(&settings),
             speed: EmulationSpeed::Definite(1),
             fast_load: false,
             sound_enabled: true,

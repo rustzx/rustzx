@@ -9,6 +9,7 @@ pub mod machine;
 pub mod constants;
 pub mod roms;
 pub mod sound;
+pub mod settings;
 
 // re-export most of things
 // TODO: in-deep rewiew re-exports recursively

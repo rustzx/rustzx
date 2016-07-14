@@ -191,8 +191,7 @@ impl ZXCanvas {
     }
 
     /// Updates data if screen ram
-    /// NOTE: testing, avoid clocks check.
-    pub fn update(&mut self, rel_addr: u16, bank: usize, _clocks: Clocks, data: u8) {
+    pub fn update(&mut self, rel_addr: u16, bank: usize, data: u8) {
         if let Some(bank) = self.local_bank(bank) {
             match rel_addr {
                 // change bitmap

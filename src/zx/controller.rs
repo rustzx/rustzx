@@ -1,5 +1,4 @@
 //! Contains ZX Spectrum System contrller (like lua or so) of emulator
-//! TODO: Make ZXController Builder
 use std::fs::File;
 use std::io::Read;
 
@@ -20,9 +19,7 @@ use zx::screen::colors::{ZXColor, ZXPalette};
 use zx::roms::*;
 use zx::constants::*;
 use zx::sound::mixer::ZXMixer;
-
-/// Tape loading trap at LD-BREAK routine in ROM
-const ADDR_LD_BREAK: u16 = 0x056B;
+use zx::settings::ZXSettings;
 
 /// ZX System controller
 pub struct ZXController {
@@ -55,12 +52,10 @@ pub struct ZXController {
 }
 
 impl ZXController {
-    /// Returns new ZXController
-    pub fn new(machine: ZXMachine) -> ZXController {
-        //let canvas = ZXCanvas::new(machine, ZXPalette::default());
-        let border = ZXBorder::new(machine, ZXPalette::default());
+    /// Returns new ZXController from settings
+    pub fn new(settings: &ZXSettings) -> ZXController {
         let (memory, paging, screen_bank);
-        match machine {
+        match settings.machine {
             ZXMachine::Sinclair48K => {
                 memory = ZXMemory::new(RomType::K16, RamType::K48);
                 paging = false;
@@ -72,13 +67,12 @@ impl ZXController {
                 screen_bank = 5;
             }
         };
-        ZXController {
-            machine: machine,
+        let mut out = ZXController {
+            machine: settings.machine,
             memory: memory,
-            canvas: ZXCanvas::new(machine),
-            border: border,
-            // beeper: ZXBeeper::new(),
-            mixer: ZXMixer::new(true, true),
+            canvas: ZXCanvas::new(settings.machine),
+            border: ZXBorder::new(settings.machine, ZXPalette::default()),
+            mixer: ZXMixer::new(settings.beeper_enabled, settings.ay_enabled),
             keyboard: [0xFF; 8],
             border_color: 0x00,
             frame_clocks: Clocks(0),
@@ -90,7 +84,10 @@ impl ZXController {
             ear: false,
             paging_enabled: paging,
             screen_bank: screen_bank,
-        }
+        };
+        out.mixer.ay.mode(settings.ay_mode);
+        out.mixer.volume(settings.volume as f64 / 200.0);
+        out
     }
 
     /// returns current frame emulation pos in percents
@@ -331,7 +328,7 @@ impl Z80Bus for ZXController {
         self.memory.write(addr, data);
         // if ram then compare bank to screen bank
         if let Page::Ram(bank) = self.memory.get_page(addr) {
-            self.canvas.update(addr % PAGE_SIZE as u16, bank as usize, self.frame_clocks, data);
+            self.canvas.update(addr % PAGE_SIZE as u16, bank as usize, data);
         }
     }
 
@@ -342,8 +339,8 @@ impl Z80Bus for ZXController {
         let mic = (*self.tape).current_bit();
         self.mic = mic;
         let pos = self.frame_pos();
+        self.mixer.beeper.change_bit(self.mic | self.ear);
         self.mixer.process(pos);
-        //self.beeper.validate(self.ear, self.mic, pos);
         self.canvas.process_clocks(self.frame_clocks);
         if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
             self.new_frame();
@@ -405,45 +402,19 @@ impl Z80Bus for ZXController {
     fn write_io(&mut self, port: u16, data: u8) {
         // first contention
         self.io_contention_first(port);
-        // if ula-port
-        /*if port & 0x0001 == 0 {
+        // find active port
+        if port & 0xC002 == 0xC000 {
+            self.mixer.ay.select_reg(data);
+        } else if port & 0xC002 == 0x8000 {
+            self.mixer.ay.write(data);
+        } else if port & 0x0001 == 0 {
             self.border_color = data & 0x07;
             self.border.set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
             self.mic = data & 0x08 != 0;
             self.ear = data & 0x10 != 0;
-            // fix mic + ear levels
-            self.mixer.beeper.change_bit(self.ear ^ self.mic);
-            // self.beeper.validate(self.ear, self.mic, pos);
-        }
-        // if memory paging port
-        match self.machine {
-            ZXMachine::Sinclair128K => {
-                if (port & 0x0002 == 0) && (port & 0x8000 == 0) {
-                    self.write_7ffd(data);
-                }
-            }
-            _ => {}
-        }*/
-        match port {
-            _ if port & 0xC002 == 0xC000 => {
-                self.mixer.ay.select_reg(data);
-            }
-            _ if port & 0xC002 == 0x8000 => {
-                self.mixer.ay.write(data);
-            }
-            _ if port & 0x0001 == 0 => {
-                self.border_color = data & 0x07;
-                self.border.set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
-                self.mic = data & 0x08 != 0;
-                self.ear = data & 0x10 != 0;
-                // fix mic + ear levels
-                self.mixer.beeper.change_bit(self.ear ^ self.mic);
-                // self.beeper.validate(self.ear, self.mic, pos);
-            }
-            _ if (port & 0x8002 == 0) && (self.machine == ZXMachine::Sinclair128K) => {
-                self.write_7ffd(data);
-            }
-            _ => {}
+            self.mixer.beeper.change_bit(self.mic | self.ear);
+        } else if (port & 0x8002 == 0) && (self.machine == ZXMachine::Sinclair128K) {
+            self.write_7ffd(data);
         }
         // last contention after byte write
         self.io_contention_last(port);
