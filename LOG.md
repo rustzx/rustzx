@@ -1,3 +1,6 @@
+**[14.08.2016]** Kempston Joystick
+**[14.08.2016]** AY implementation finished  
+**[12.08.2016]** AY implementation start  
 **[09.08.2016]** Refactoring  
 **[08.08.2016]** Aspect ratio correction, custom 128K rom loading  
 **[08.08.2016]** Window scale selection with `--scale` option  

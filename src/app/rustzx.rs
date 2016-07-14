@@ -18,6 +18,7 @@ use zx::*;
 use zx::constants::*;
 use zx::settings::ZXSettings;
 use zx::sound::ay::ZXAYMode;
+use zx::joy::kempston::*;
 use emulator::*;
 use utils::EmulationSpeed;
 
@@ -113,6 +114,11 @@ impl RustZXApp {
                                 .value_name("VOLUME_VALUE")
                                 .help("Selects volume - value in range 0..200. Volume over 100 \
                                        can cause sound artifacts"))
+                      .arg(Arg::with_name("KEMPSTON")
+                                .short("k")
+                                .long("kempston")
+                                .help("Enables Kempston joystick. Controlls via arrow keys and \
+                                       Alt buttons"))
                       .get_matches();
         let mut settings = ZXSettings::new();
         // select machine type
@@ -121,6 +127,9 @@ impl RustZXApp {
         } else {
             settings.machine(ZXMachine::Sinclair48K)
         };
+        if cmd.is_present("KEMPSTON") {
+            settings.use_kempston();
+        }
         if let Some(value) = cmd.value_of("AY") {
             match value {
                 "none" => { settings.ay(false) },
@@ -132,7 +141,7 @@ impl RustZXApp {
         };
         if cmd.is_present("NOBEEPER") {
             settings.beeper(false);
-        } 
+        }
         if let Some(value) = cmd.value_of("VOLUME") {
             if let Ok(value) = value.parse::<usize>() {
                 settings.volume(value);
@@ -254,6 +263,14 @@ impl RustZXApp {
                         }
                         // Key press check
                         Event::KeyboardInput(state, _, Some(key_code)) => {
+                            let state = match state {
+                                KeyState::Pressed => {
+                                    true
+                                }
+                                KeyState::Released => {
+                                    false
+                                }
+                            };
                             match key_code {
                                 // tape controll
                                 VKey::Insert => {
@@ -261,6 +278,32 @@ impl RustZXApp {
                                 }
                                 VKey::Delete => {
                                     emulator.controller.tape.stop();
+                                }
+                                // Kempston
+                                VKey::Left => {
+                                    if let Some(ref mut joy) = emulator.controller.kempston {
+                                        joy.key(KempstonKey::Left, state);
+                                    }
+                                }
+                                VKey::Right => {
+                                    if let Some(ref mut joy) = emulator.controller.kempston {
+                                        joy.key(KempstonKey::Right, state);
+                                    }
+                                }
+                                VKey::Up => {
+                                    if let Some(ref mut joy) = emulator.controller.kempston {
+                                        joy.key(KempstonKey::Up, state);
+                                    }
+                                }
+                                VKey::Down => {
+                                    if let Some(ref mut joy) = emulator.controller.kempston {
+                                        joy.key(KempstonKey::Down, state);
+                                    }
+                                }
+                                VKey::RAlt | VKey::LAlt => {
+                                    if let Some(ref mut joy) = emulator.controller.kempston {
+                                        joy.key(KempstonKey::Fire, state);
+                                    }
                                 }
                                 // 0x0000...0xFFFF memory dump
                                 VKey::F2 => {
@@ -279,14 +322,7 @@ impl RustZXApp {
                                 // and passed to emulator
                                 _ => {
                                     if let Some(key) = vkey_to_zxkey(key_code) {
-                                        match state {
-                                            KeyState::Pressed => {
-                                                emulator.controller.send_key(key, true)
-                                            }
-                                            KeyState::Released => {
-                                                emulator.controller.send_key(key, false)
-                                            }
-                                        }
+                                        emulator.controller.send_key(key, state)
                                     }
                                 }
                             }

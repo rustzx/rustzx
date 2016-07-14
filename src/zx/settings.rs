@@ -7,7 +7,8 @@ pub struct ZXSettings {
     pub ay_mode: ZXAYMode,
     pub ay_enabled: bool,
     pub beeper_enabled: bool,
-    pub volume: usize
+    pub volume: usize,
+    pub kempston: bool,
 }
 
 impl ZXSettings {
@@ -19,6 +20,7 @@ impl ZXSettings {
             ay_enabled: false,
             beeper_enabled: true,
             volume: 100,
+            kempston: false,
         }
     }
     /// Changes machine type
@@ -53,6 +55,10 @@ impl ZXSettings {
         } else {
             val
         };
+        self
+    }
+    pub fn use_kempston(&mut self) -> &mut Self {
+        self.kempston = true;
         self
     }
 }

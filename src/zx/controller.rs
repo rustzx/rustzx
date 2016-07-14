@@ -1,4 +1,4 @@
-//! Contains ZX Spectrum System contrller (like lua or so) of emulator
+//! Contains ZX Spectrum System contrller (like ula or so) of emulator
 use std::fs::File;
 use std::io::Read;
 
@@ -20,16 +20,17 @@ use zx::roms::*;
 use zx::constants::*;
 use zx::sound::mixer::ZXMixer;
 use zx::settings::ZXSettings;
+use zx::joy::kempston::*;
 
 /// ZX System controller
 pub struct ZXController {
     // parts of ZX Spectum.
-    // TODO: indirect access
     pub machine: ZXMachine,
     pub memory: ZXMemory,
     pub canvas: ZXCanvas,
     pub tape: Box<ZXTape>,
     pub border: ZXBorder,
+    pub kempston: Option<KempstonJoy>,
     //pub beeper: ZXBeeper,
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
@@ -67,11 +68,17 @@ impl ZXController {
                 screen_bank = 5;
             }
         };
+        let kempston = if settings.kempston {
+            Some(KempstonJoy::new())
+        } else {
+            None
+        };
         let mut out = ZXController {
             machine: settings.machine,
             memory: memory,
             canvas: ZXCanvas::new(settings.machine),
             border: ZXBorder::new(settings.machine, ZXPalette::default()),
+            kempston: kempston,
             mixer: ZXMixer::new(settings.beeper_enabled, settings.ay_enabled),
             keyboard: [0xFF; 8],
             border_color: 0x00,
@@ -375,6 +382,7 @@ impl Z80Bus for ZXController {
         // find out what we need to do
         let (h, _) = split_word(port);
         let output = if port & 0x0001 == 0 {
+            // ULA port
             let mut tmp: u8 = 0xFF;
             for n in 0..8 {
                 // if bit of row reset
@@ -389,7 +397,14 @@ impl Z80Bus for ZXController {
             // 5 and 7 unused
             tmp
         } else  if port & 0xC002 == 0xC000 {
+            // AY regs
             self.mixer.ay.read()
+        } else if self.kempston.is_some() && (port & 0x0020 == 0) {
+            if let Some(ref joy) = self.kempston {
+                joy.read()
+            } else {
+                unreachable!()
+            }
         } else {
             self.floating_bus_value()
         };

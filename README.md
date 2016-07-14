@@ -1,51 +1,62 @@
 # rustzx
 ZX Spectrum emulator which I writing in rust.   
-I develop this project just for fun and for learning the basics of architecture architecture.  
+I develop this project just for fun and for learning the basics of computer
+architecture.  
 Licensed under MIT License.
 
 [![Build Status](https://travis-ci.org/pacmancoder/rustzx.svg?branch=master)](https://travis-ci.org/pacmancoder/rustzx)
 ## Features
-- Can handle tap, sna files
-- Full ZX Spectrum 48K emulation
-- Emulates border
-- Beeper sound emulation
+- Written in pure rust  
 - Cross-platform
 - Documented source
-- Written in pure rust  
+- Full ZX Spectrum 48K and 128K emulation
+- Perfect emulation of Z80 core
+- Highly precise AY chip emulation with Ayumi library
+- Beeper sound emulation
+- Can handle tap, sna files
+- Fast loading of tap files with standard loader
+- Emulates border
+- Kempston joystick emulation
+- Correct contentons
 
-## Current status  
-Working on 128K mode implementation
 
-## Download
+## Current status [v0.8.x]
+Preparing 0.8.x release
+
+## Download [v0.7.1]
 At the moment only `deb` package for amd64 available in releases section.
 ## Compiling
 Before compiling make shure that **libportaudio** is
-installed.
-On Linux Mint, for example you must to install packages **libportaudio2** and
+installed.  
+On Ubuntu/Mint, for example you must to install packages **libportaudio2** and
 **portaudio19-dev**  
+On Arch/Manjaro you must install **portaudio** package
 
-Then just build it with cargo:
+Then just install it with cargo (`~/.cargo/bin` must be in your **PATH**)
 
 ```bash
-cargo run --release
+cargo install
 ```
-Use **--help** option when oppening rustzx to get some help.  
+For advenced info use `--help` flag
 
 ## How to use
 Here some examples of usage:
 ```bash
 rustzx --help
-rustzx --fastload --tap ~/test.tap
+rustzx --fastload --tap test.tap
+rustzx -f --128k --AY abc --tap test128.tap
+rustzx --rom tester.rom --scale 3 --volume 50
 ```
-For loading tape, press `j` then `Ctrl+p` twice, as on real Spectrum.
+For loading tape in 48K mode, press `j` then `Ctrl+p` twice, as on real Spectrum.
 You must see `LOAD ""` on emulator's screen. And then press `Enter`.
 If you `--fastload` option before launching, game will be launched, in other
 case press `Insert` to insert tape. `Delete` can be used for ejecting tape from
-tape reader. `--128k` flag launches emulator in 128K mode.  
-
-For advenced info use `--help` flag
+tape reader. `--128k` flag launches emulator in 128K mode. For loading tape just
+press `Enter`.
 
 Use keys `F3 - F5` to set speed of emulation - this can be usefull when skipping some boring stuff.
+Use `F6` to display FPS in window title. You can press `F2` for 64K memory
+space dump.
 
 ## Screenshots
 ![](screenshots/rain.png)

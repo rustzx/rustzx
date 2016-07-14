@@ -10,6 +10,7 @@ pub mod constants;
 pub mod roms;
 pub mod sound;
 pub mod settings;
+pub mod joy;
 
 // re-export most of things
 // TODO: in-deep rewiew re-exports recursively
