@@ -36,8 +36,8 @@ extern crate time;
 extern crate lazy_static;
 /// Command line parser
 extern crate clap;
-/// Library for sound rendering
-extern crate portaudio;
+/// For sound rendering
+extern crate sdl2;
 /// library for vector/matrix math
 extern crate cgmath;
 /// for some numeric traits

@@ -11,9 +11,9 @@ use time;
 use clap::{Arg, App, AppSettings};
 use glium::glutin::{WindowBuilder, Event, ElementState as KeyState, VirtualKeyCode as VKey};
 use glium::DisplayBuild;
-use app::sound_thread::*;
 use app::video::ZXScreenRenderer;
 use app::keyboard::vkey_to_zxkey;
+use app::sound::*;
 use zx::*;
 use zx::constants::*;
 use zx::settings::ZXSettings;
@@ -46,7 +46,7 @@ pub struct RustZXApp {
     /// main emulator object
     pub emulator: Option<Emulator>,
     /// Sound rendering in a separate thread
-    snd: Option<SoundThread<'static>>,
+    snd: Option<Box<SoundDevice>>,
     scale: usize,
 }
 
@@ -190,7 +190,7 @@ impl RustZXApp {
             emulator.set_sound(false);
         } else {
             emulator.set_sound(true);
-            self.snd = Some(SoundThread::new());
+            self.snd = Some(Box::new(SoundSdl::new()));
         }
         // find out scale factor
         if let Some(scale_str) = cmd.value_of("SCALE") {
@@ -207,10 +207,6 @@ impl RustZXApp {
     /// Starts application itself
     pub fn start(&mut self) {
         let mut debug = false;
-        // use sound if enabled
-        if let Some(ref mut snd) = self.snd {
-            snd.run_sound_thread();
-        }
         if let Some(ref mut emulator) = self.emulator {
             // check scale boundaries
             let scale = if self.scale > 0 && self.scale <= 10 {
@@ -240,10 +236,8 @@ impl RustZXApp {
                     // if can be turned off even on speed change, so check it everytime
                     if emulator.have_sound() {
                         loop {
-                            if let Some(sample) = emulator.controller.mixer.pop_buffer() {
-                                // NOTE: Blockig function. This also syncs frames, if sound
-                                // is enabled
-                                snd.send(sample);
+                            if let Some(sample) = emulator.controller.mixer.pop() {
+                                snd.send_sample(sample);
                             } else {
                                 break;
                             }
@@ -336,11 +330,10 @@ impl RustZXApp {
                 }
                 // how long emulation iteration was
                 let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
-                // wait some time for 50 FPS if emulator syncs self not using sound callbacks
-                if (emulation_dt_ns < frame_target_dt_ns) && !emulator.have_sound() {
+                if emulation_dt_ns < frame_target_dt_ns  && !emulator.have_sound() {
                     // sleep untill frame sync
                     thread::sleep(Duration::new(
-                        0, (frame_target_dt_ns - emulation_dt_ns) as u32));
+                        0, ((frame_target_dt_ns - emulation_dt_ns) as f64) as u32));
                 };
                 // get exceed clocks and use them on next iteration
                 let frame_dt_ns = time::precise_time_ns() - frame_start_ns;

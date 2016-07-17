@@ -1,5 +1,4 @@
 //! Module implemets zx spectrum audio devices mixer
-use std::i16;
 use std::collections::VecDeque;
 use zx::sound::{SAMPLES, samples_from_time};
 use zx::sound::sample::{SoundSample, SampleGenerator};
@@ -12,9 +11,9 @@ pub struct ZXMixer {
     pub beeper: ZXBeeper,
     /// direct access to AY device
     pub ay: ZXAyChip,
-    ring_buffer: VecDeque<SoundSample<i16>>,
+    ring_buffer: VecDeque<SoundSample<f32>>,
     last_pos: usize,
-    last_sample: SoundSample<i16>,
+    last_sample: SoundSample<f32>,
     master_volume: f64,
     beeper_volume: f64,
     ay_volume: f64,
@@ -33,7 +32,7 @@ impl ZXMixer {
             ay: ZXAyChip::new(ZXAYMode::Mono),
             ring_buffer: VecDeque::with_capacity(SAMPLES),
             last_pos: 0,
-            last_sample: SoundSample::new(0, 0),
+            last_sample: SoundSample::new(0.0, 0.0),
             master_volume: 0.5,
             beeper_volume: 1.0,
             ay_volume: 1.0,
@@ -79,12 +78,11 @@ impl ZXMixer {
         self.last_pos = 0;
     }
 
-    /// Returns front of queue
-    pub fn pop_buffer(&mut self) -> Option<SoundSample<i16>> {
+    pub fn pop(&mut self) -> Option<SoundSample<f32>> {
         self.ring_buffer.pop_front()
     }
 
-    fn gen_sample(&mut self) -> SoundSample<i16> {
+    fn gen_sample(&mut self) -> SoundSample<f32> {
         let mut master_float = if self.use_beeper {
             self.beeper.gen_sample()
         }  else {
@@ -94,7 +92,7 @@ impl ZXMixer {
         if self.use_ay {
             master_float.mix(&self.ay.gen_sample());
         }
-        let master = master_float.mul_eq(self.master_volume).into_i16();
+        let master = master_float.mul_eq(self.master_volume).into_f32();
         self.last_sample = master;
         master
     }

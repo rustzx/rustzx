@@ -3,6 +3,6 @@
 mod rustzx;
 mod video;
 mod keyboard;
-mod sound_thread;
+mod sound;
 // main re-export
 pub use self::rustzx::RustZXApp;
