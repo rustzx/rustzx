@@ -1,0 +1,106 @@
+use super::{VideoDevice, TextureInfo, Rect};
+use sdl2::rect::Rect as SdlRect;
+use sdl2::render::{Renderer, Texture};
+use sdl2::pixels::PixelFormatEnum as PixelFormat;
+use settings::RustzxSettings;
+use backends::SDL_CONTEXT;
+use std::collections::HashMap;
+
+/// Represents real SDL video backend
+pub struct VideoSdl {
+    renderer: Renderer<'static>,
+    texteres: HashMap<TextureInfo, Texture>,
+    next_tex_id: usize,
+}
+
+impl VideoSdl {
+    /// constructs new renderer with application settings
+    pub fn new(settings: &RustzxSettings) -> VideoSdl {
+        // init video subsystem
+        let mut video_subsystem = None;
+        SDL_CONTEXT.with(|sdl| {
+            video_subsystem = sdl.borrow_mut().video().ok();
+        });
+        if let Some(video) = video_subsystem {
+            // construct window and renderer form it
+            let (width, height) = settings.screen_size;
+            // TODO: is opengl needed?
+            let window = video.window(&format!("RustZX v{}", env!("CARGO_PKG_VERSION")),
+                                      width as u32, height as u32)
+                              .position_centered()
+                              .opengl()
+                              .build()
+                              .expect("[ERROR] Sdl window buil fail");
+            let renderer = window.renderer()
+                                 .present_vsync()
+                                 .build()
+                                 .expect("[ERROR] Sdl Renderer build error");
+            VideoSdl {
+                renderer: renderer,
+                texteres: HashMap::new(),
+                next_tex_id: 0,
+            }
+        } else {
+            panic!("[ERROR] Sdl video init fail!");
+        }
+    }
+}
+
+impl VideoDevice for VideoSdl {
+    fn gen_texture(&mut self, width: u32, height: u32) -> TextureInfo {
+        let id = self.next_tex_id;
+        // create texture in backend
+        let tex = self.renderer.create_texture_streaming(PixelFormat::ABGR8888, width, height)
+                               .expect("[ERROR] Sdl texture creation error");
+        let tex_info = TextureInfo {
+            id: id,
+            width: width,
+            height: height,
+        };
+        // bind id in map
+        self.texteres.insert(tex_info, tex);
+        self.next_tex_id += 1;
+        tex_info
+    }
+
+    fn set_title(&mut self, title: &str) {
+        self.renderer.window_mut().unwrap().set_title(title).unwrap();
+    }
+
+    fn update_texture(&mut self, tex: TextureInfo, buffer: &[u8]) {
+        // find texture
+        let mut tex_sdl = self.texteres.get_mut(&tex).expect("[ERROR] Wrong texrure ID on update");
+        // send data
+        tex_sdl.with_lock(None, |out, pitch| {
+            for y in 0..tex.height {
+                for x in 0..tex.width {
+                    let offset_dest = (y * pitch as u32 + x * 4) as usize;
+                    let offset_src = (y * tex.width * 4 + x * 4) as usize;
+                    for n in 0..4 {
+                        out[offset_dest + n] = buffer[offset_src + n];
+                    }
+                }
+            }
+        }).expect("[ERROR] Texture update error");
+    }
+    fn begin(&mut self) {
+        // clear surface
+        self.renderer.clear();
+    }
+    fn draw_texture_2d(&mut self, tex: TextureInfo, rect: Option<Rect>) {
+        // find texture
+        let tex = self.texteres.get_mut(&tex).expect("[ERROR] Wrong texrure ID on draw");
+        // construct sdl rect
+        let dest_rect = if let Some(rect) = rect {
+            Some(SdlRect::new(rect.x, rect.y, rect.w, rect.h))
+        } else {
+            None
+        };
+        // render
+        self.renderer.copy(tex, None, dest_rect);
+    }
+    fn end(&mut self) {
+        // display buffer
+        self.renderer.present();
+    }
+}

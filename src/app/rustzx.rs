@@ -1,24 +1,24 @@
 //! Main application class module
 //! Handles all platform-related, hardware-related stuff
 //! and command-line interface
+//! TODO: make rustzxbuilder
 
 use std::thread;
 use std::time::Duration;
 use std::path::Path;
-use std::io::Write;
-use std::fs::File;
 use time;
 use clap::{Arg, App, AppSettings};
-use glium::glutin::{WindowBuilder, Event, ElementState as KeyState, VirtualKeyCode as VKey};
-use glium::DisplayBuild;
-use app::video::ZXScreenRenderer;
-use app::keyboard::vkey_to_zxkey;
+// use glium::glutin::{WindowBuilder, Event, ElementState as KeyState, VirtualKeyCode as VKey};
+// use glium::DisplayBuild;
+//use app::video::ZXScreenRenderer;
+//use app::keyboard::vkey_to_zxkey;
 use app::sound::*;
+use app::video::*;
+use app::events::*;
 use zx::*;
 use zx::constants::*;
-use zx::settings::ZXSettings;
 use zx::sound::ay::ZXAYMode;
-use zx::joy::kempston::*;
+use settings::RustzxSettings;
 use emulator::*;
 use utils::EmulationSpeed;
 
@@ -41,21 +41,32 @@ fn frame_length_ns(fps: usize) -> u64 {
     ms_to_ns(1000 as f64 / fps as f64)
 }
 
+// TODO: FIX! MAKE BULDER
 /// Application instance type
-pub struct RustZXApp {
+pub struct RustzxApp {
     /// main emulator object
-    pub emulator: Option<Emulator>,
+    emulator: Option<Emulator>,
     /// Sound rendering in a separate thread
     snd: Option<Box<SoundDevice>>,
-    scale: usize,
+    video: Option<Box<VideoDevice>>,
+    events: Option<Box<EventDevice>>,
+    tex_border: Option<TextureInfo>,
+    tex_canvas: Option<TextureInfo>,
+    settings: Option<RustzxSettings>,
+    scale: u32,
 }
 
-impl RustZXApp {
+impl RustzxApp {
     /// Returns new application instance
-    pub fn new() -> RustZXApp {
-        RustZXApp {
+    pub fn new() -> RustzxApp {
+        RustzxApp {
             emulator: None,
             snd: None,
+            video: None,
+            events: None,
+            tex_border: None,
+            tex_canvas: None,
+            settings: None,
             scale: 2,
         }
     }
@@ -114,13 +125,21 @@ impl RustZXApp {
                                 .value_name("VOLUME_VALUE")
                                 .help("Selects volume - value in range 0..200. Volume over 100 \
                                        can cause sound artifacts"))
+                      .arg(Arg::with_name("LATENCY")
+                                .long("latency")
+                                .short("l")
+                                .value_name("SAMPLES")
+                                .help("Selects audio latency. Default is 1024 samples. Set higher \
+                                       latency if emulator have sound glitches. Or if your \
+                                       machine can handle this - try to set it lower. Must be \
+                                       power of two."))
                       .arg(Arg::with_name("KEMPSTON")
                                 .short("k")
                                 .long("kempston")
                                 .help("Enables Kempston joystick. Controlls via arrow keys and \
                                        Alt buttons"))
                       .get_matches();
-        let mut settings = ZXSettings::new();
+        let mut settings = RustzxSettings::new();
         // select machine type
         if cmd.is_present("128K") {
             settings.machine(ZXMachine::Sinclair128K)
@@ -185,22 +204,39 @@ impl RustZXApp {
                 emulator.set_speed(EmulationSpeed::Definite(speed));
             }
         }
+        // sound latency
+        if let Some(latency_str) = cmd.value_of("LATENCY") {
+            if let Ok(latency) = latency_str.parse::<usize>() {
+                settings.latency(latency);
+            }
+        }
         // disable sound
         if cmd.is_present("NO_SOUND") {
             emulator.set_sound(false);
         } else {
             emulator.set_sound(true);
-            self.snd = Some(Box::new(SoundSdl::new()));
+            self.snd = Some(Box::new(SoundSdl::new(&settings)));
         }
         // find out scale factor
         if let Some(scale_str) = cmd.value_of("SCALE") {
-            if let Ok(scale) = scale_str.parse::<usize>() {
-                self.scale = scale;
+            if let Ok(mut scale) = scale_str.parse::<usize>() {
+                // place into bounds
+                if scale > 5 {
+                    scale = 2;
+                };
+                settings.screen(SCREEN_WIDTH * scale, SCREEN_HEIGHT * scale);
+                self.scale = scale as u32;
             } else {
                 println!("[Warning] Invalid scale factor");
-            }
+            };
         }
+        // assemble
+        let mut video = Box::new(VideoSdl::new(&settings));
+        self.tex_border =  Some(video.gen_texture(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+        self.tex_canvas =  Some(video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32));
+        self.video = Some(video);
         self.emulator = Some(emulator);
+        self.events = Some(Box::new(EventsSdl::new(&settings)));
         self
     }
 
@@ -208,139 +244,90 @@ impl RustZXApp {
     pub fn start(&mut self) {
         let mut debug = false;
         if let Some(ref mut emulator) = self.emulator {
-            // check scale boundaries
-            let scale = if self.scale > 0 && self.scale <= 10 {
-                self.scale
-            } else {
-                2
-            };
-            // build new glium window
-            let display = WindowBuilder::new()
-                              .with_dimensions((SCREEN_WIDTH * scale) as u32,
-                                               (SCREEN_HEIGHT * scale) as u32)
-                              .build_glium()
-                              .ok()
-                              .expect("[ERROR] Glium (OpenGL) initialization error");
-            display.get_window().unwrap().set_title(
-                &format!("RustZX v{}", env!("CARGO_PKG_VERSION")));
-            let mut renderer = ZXScreenRenderer::new(&display);
-            // this
-            'render_loop: loop {
-                let frame_target_dt_ns = frame_length_ns(FPS);
-                // absolute start time
-                let frame_start_ns = time::precise_time_ns();
-                // Emulate all requested frames
-                let cpu_dt_ns = emulator.emulate_frames(MAX_FRAME_TIME_NS);
-                // if sound enabled sound ganeration allowed then move samples to sound thread
-                if let Some(ref mut snd) = self.snd {
-                    // if can be turned off even on speed change, so check it everytime
-                    if emulator.have_sound() {
-                        loop {
-                            if let Some(sample) = emulator.controller.mixer.pop() {
-                                snd.send_sample(sample);
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                }
-                // render our baked textures
-                renderer.draw_screen(&display,
-                                     emulator.controller.border.texture(),
-                                     emulator.controller.canvas.texture());
-                // check all glium events
-                for event in display.poll_events() {
-                    match event {
-                        // just break all emulation on exit
-                        Event::Closed => {
-                            break 'render_loop;
-                        }
-                        // Key press check
-                        Event::KeyboardInput(state, _, Some(key_code)) => {
-                            let state = match state {
-                                KeyState::Pressed => {
-                                    true
-                                }
-                                KeyState::Released => {
-                                    false
-                                }
-                            };
-                            match key_code {
-                                // tape controll
-                                VKey::Insert => {
-                                    emulator.controller.tape.play();
-                                }
-                                VKey::Delete => {
-                                    emulator.controller.tape.stop();
-                                }
-                                // Kempston
-                                VKey::Left => {
-                                    if let Some(ref mut joy) = emulator.controller.kempston {
-                                        joy.key(KempstonKey::Left, state);
-                                    }
-                                }
-                                VKey::Right => {
-                                    if let Some(ref mut joy) = emulator.controller.kempston {
-                                        joy.key(KempstonKey::Right, state);
-                                    }
-                                }
-                                VKey::Up => {
-                                    if let Some(ref mut joy) = emulator.controller.kempston {
-                                        joy.key(KempstonKey::Up, state);
-                                    }
-                                }
-                                VKey::Down => {
-                                    if let Some(ref mut joy) = emulator.controller.kempston {
-                                        joy.key(KempstonKey::Down, state);
-                                    }
-                                }
-                                VKey::RAlt | VKey::LAlt => {
-                                    if let Some(ref mut joy) = emulator.controller.kempston {
-                                        joy.key(KempstonKey::Fire, state);
-                                    }
-                                }
-                                // 0x0000...0xFFFF memory dump
-                                VKey::F2 => {
-                                    let dump = emulator.controller.memory.dump();
-                                    let mut file =
-                                        File::create("rustzx_dump.bin").unwrap();
-                                    file.write(&dump).unwrap();
-                                }
-                                // Change emulation speed
-                                VKey::F3 => emulator.set_speed(EmulationSpeed::Definite(1)),
-                                VKey::F4 => emulator.set_speed(EmulationSpeed::Definite(2)),
-                                VKey::F5 => emulator.set_speed(EmulationSpeed::Max),
-                                // Debugging
-                                VKey::F6 => debug = true,
-                                // all other keys will be handled by external function
-                                // and passed to emulator
-                                _ => {
-                                    if let Some(key) = vkey_to_zxkey(key_code) {
-                                        emulator.controller.send_key(key, state)
-                                    }
+            if let Some(ref mut renderer) = self.video {
+                'emulator: loop {
+                    let frame_target_dt_ns = frame_length_ns(FPS);
+                    // absolute start time
+                    let frame_start_ns = time::precise_time_ns();
+                    // Emulate all requested frames
+                    let cpu_dt_ns = emulator.emulate_frames(MAX_FRAME_TIME_NS);
+                    // if sound enabled sound ganeration allowed then move samples to sound thread
+                    if let Some(ref mut snd) = self.snd {
+                        // if can be turned off even on speed change, so check it everytime
+                        if emulator.have_sound() {
+                            loop {
+                                if let Some(sample) = emulator.controller.mixer.pop() {
+                                    snd.send_sample(sample);
+                                } else {
+                                    break;
                                 }
                             }
                         }
-                        // make viewport correction
-                        Event::Resized(width, height) => {
-                            renderer.resize_viewport(width, height);
-                        }
-                        _ => {}
                     }
-                }
-                // how long emulation iteration was
-                let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
-                if emulation_dt_ns < frame_target_dt_ns  && !emulator.have_sound() {
-                    // sleep untill frame sync
-                    thread::sleep(Duration::new(
-                        0, ((frame_target_dt_ns - emulation_dt_ns) as f64) as u32));
-                };
-                // get exceed clocks and use them on next iteration
-                let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
-                // change window header
-                if debug {
-                    if let Some(wnd) = display.get_window() {
-                        wnd.set_title(&format!("CPU: {:7.3}ms; EMULATOR: {:7.3}ms; FRAME:{:7.3}ms",
+                    // load new textures to sdl
+                    renderer.update_texture(self.tex_border.unwrap(),
+                                            emulator.controller.border.texture());
+                    renderer.update_texture(self.tex_canvas.unwrap(),
+                                            emulator.controller.canvas.texture());
+                    // rendering block
+                    renderer.begin();
+                    renderer.draw_texture_2d(self.tex_border.unwrap(),
+                                             Some(Rect::new(0,
+                                                            0,
+                                                            SCREEN_WIDTH as u32 * self.scale,
+                                                            SCREEN_WIDTH as u32 * self.scale)));
+                    renderer.draw_texture_2d(self.tex_canvas.unwrap(),
+                                             Some(Rect::new(CANVAS_X as i32 * self.scale as i32,
+                                                            CANVAS_Y as i32 * self.scale as i32,
+                                                            CANVAS_WIDTH as u32 * self.scale,
+                                                            CANVAS_HEIGHT as u32 * self.scale)));
+                    renderer.end();
+                    // check all events
+                    if let Some(ref mut events) = self.events {
+                        if let Some(event) = events.pop_event() {
+                            match event {
+                                Event::Exit => {
+                                    break 'emulator;
+                                }
+                                Event::GameKey(key, state) => {
+                                    emulator.controller.send_key(key, state);
+                                }
+                                Event::SwitchDebug => {
+                                    debug = !debug;
+                                    if !debug {
+                                        renderer.set_title(&format!("RustZX v{}",
+                                                                    env!("CARGO_PKG_VERSION")));
+                                    }
+                                }
+                                Event::ChangeSpeed(speed) => {
+                                    emulator.set_speed(speed);
+                                }
+                                Event::Kempston(key, state) => {
+                                    if let Some(ref mut joy) = emulator.controller.kempston {
+                                        joy.key(key, state);
+                                    }
+                                }
+                                Event::InsertTape => {
+                                    emulator.controller.tape.play()
+                                }
+                                Event::StopTape => {
+                                    emulator.controller.tape.stop()
+                                }
+                            }
+                        }
+                    }
+                    // how long emulation iteration was
+                    let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
+                    if emulation_dt_ns < frame_target_dt_ns  && !emulator.have_sound() {
+                        // sleep untill frame sync
+                        thread::sleep(Duration::new(
+                            0, ((frame_target_dt_ns - emulation_dt_ns) as f64) as u32));
+                    };
+                    // get exceed clocks and use them on next iteration
+                    let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
+                    // change window header
+                    if debug {
+                        renderer.set_title(&format!("CPU: {:7.3}ms; EMULATOR: {:7.3}ms; FRAME:{:7.3}ms",
                         ns_to_ms(cpu_dt_ns),
                         ns_to_ms(emulation_dt_ns),
                         ns_to_ms(frame_dt_ns)));

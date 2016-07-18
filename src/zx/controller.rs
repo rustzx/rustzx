@@ -19,7 +19,7 @@ use zx::screen::colors::{ZXColor, ZXPalette};
 use zx::roms::*;
 use zx::constants::*;
 use zx::sound::mixer::ZXMixer;
-use zx::settings::ZXSettings;
+use settings::RustzxSettings;
 use zx::joy::kempston::*;
 
 /// ZX System controller
@@ -54,7 +54,7 @@ pub struct ZXController {
 
 impl ZXController {
     /// Returns new ZXController from settings
-    pub fn new(settings: &ZXSettings) -> ZXController {
+    pub fn new(settings: &RustzxSettings) -> ZXController {
         let (memory, paging, screen_bank);
         match settings.machine {
             ZXMachine::Sinclair48K => {

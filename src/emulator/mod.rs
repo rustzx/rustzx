@@ -4,7 +4,7 @@ use time;
 use utils::*;
 use z80::*;
 use zx::ZXController;
-use zx::settings::ZXSettings;
+use settings::RustzxSettings;
 
 mod loaders;
 
@@ -22,7 +22,7 @@ impl Emulator {
     /// Constructs new emulator
     /// # Arguments
     /// `settings` - emulator settings
-    pub fn new(settings: &ZXSettings) -> Emulator {
+    pub fn new(settings: &RustzxSettings) -> Emulator {
         Emulator {
             cpu: Z80::new(),
             controller: ZXController::new(&settings),
