@@ -22,17 +22,14 @@ Licensed under MIT License.
 - Correct contentons
 
 
-## Current status [v0.8.x]
-Preparing 0.8.x release
+## Current status [v0.9.x]
+Preparing 0.9.x release
 
 ## Download [v0.7.1]
 At the moment only `deb` package for amd64 available in releases section.
 ## Compiling
-Before compiling make shure that **libportaudio** is
-installed.  
-On Ubuntu/Mint, for example you must to install packages **libportaudio2** and
-**portaudio19-dev**  
-On Arch/Manjaro you must install **portaudio** package
+Before compiling make shure that **sdl2** is installed. For additional
+information about sdl2 click [here](https://github.com/AngryLawyer/rust-sdl2)
 
 Then just install it with cargo (`~/.cargo/bin` must be in your **PATH**)
 
@@ -56,9 +53,11 @@ case press `Insert` to insert tape. `Delete` can be used for ejecting tape from
 tape reader. `--128k` flag launches emulator in 128K mode. For loading tape just
 press `Enter`.
 
+If you have some audio troubles - use `--lattency` flag with bigger samples
+count.
+
 Use keys `F3 - F5` to set speed of emulation - this can be usefull when skipping some boring stuff.
-Use `F6` to display FPS in window title. You can press `F2` for 64K memory
-space dump.
+Use `F6` to display FPS in window title.
 
 ## Screenshots
 ![](screenshots/rain.png)

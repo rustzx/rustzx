@@ -1,4 +1,6 @@
-**[14.08.2016]** Kempston Joystick
+**[18.08.2016]** Moved sound, video, event to sdl lib.  
+**[15.08.2016]** Moving from **portaudio** to **cpal**  
+**[14.08.2016]** Kempston Joystick  
 **[14.08.2016]** AY implementation finished  
 **[12.08.2016]** AY implementation start  
 **[09.08.2016]** Refactoring  

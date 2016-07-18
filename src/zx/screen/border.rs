@@ -39,7 +39,7 @@ impl BeamInfo {
 pub struct ZXBorder {
     machine: ZXMachine,
     palette: ZXPalette,
-    buffer: [u8; PIXEL_COUNT * BYTES_PER_PIXEL],
+    buffer: Box<[u8; PIXEL_COUNT * BYTES_PER_PIXEL]>,
     beam_last: BeamInfo,
     border_changed: bool,
     beam_block: bool,
@@ -50,7 +50,7 @@ impl ZXBorder {
         ZXBorder {
             machine: machine,
             palette: palette,
-            buffer: [0; PIXEL_COUNT * BYTES_PER_PIXEL],
+            buffer: Box::new([0; PIXEL_COUNT * BYTES_PER_PIXEL]),
             beam_last: BeamInfo::first_pixel(ZXColor::White),
             border_changed: true,
             beam_block: false,
@@ -139,6 +139,6 @@ impl ZXBorder {
 
     /// Returns reference to texture
     pub fn texture(&self) -> &[u8] {
-        &self.buffer
+        &(*self.buffer)
     }
 }

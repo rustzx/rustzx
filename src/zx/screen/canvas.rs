@@ -78,8 +78,8 @@ impl BlocksCount {
 
 /// Represents Single memory bank of screen
 struct ScreenBank {
-    pub attributes: [ZXAttribute; ATTR_COLS * ATTR_ROWS],
-    pub bitmap: [u8; ATTR_COLS * CANVAS_HEIGHT],
+    pub attributes: Box<[ZXAttribute; ATTR_COLS * ATTR_ROWS]>,
+    pub bitmap: Box<[u8; ATTR_COLS * CANVAS_HEIGHT]>,
 }
 
 /// Represents ZXSpectrum emulated mid part of screen (canvas)
@@ -90,8 +90,8 @@ pub struct ZXCanvas {
     flash: bool,
     frame_counter: usize,
     // bitmap buffers
-    buffer: [u8; BUFFER_LENGTH],
-    back_buffer: [u8; BUFFER_LENGTH],
+    buffer: Box<[u8; BUFFER_LENGTH]>,
+    back_buffer: Box<[u8; BUFFER_LENGTH]>,
     // memory
     banks: [ScreenBank; 2],
     active_bank: usize,
@@ -107,16 +107,16 @@ impl ZXCanvas {
             last_blocks: BlocksCount::new(0, 0),
             flash: false,
             frame_counter: 0,
-            buffer: [0; BUFFER_LENGTH],
-            back_buffer: [0; BUFFER_LENGTH],
+            buffer: Box::new([0; BUFFER_LENGTH]),
+            back_buffer: Box::new([0; BUFFER_LENGTH]),
             banks: [
                 ScreenBank {
-                    attributes: [ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS],
-                    bitmap: [0; ATTR_COLS * CANVAS_HEIGHT],
+                    attributes: Box::new([ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS]),
+                    bitmap:  Box::new([0; ATTR_COLS * CANVAS_HEIGHT]),
                 },
                 ScreenBank {
-                    attributes: [ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS],
-                    bitmap: [0; ATTR_COLS * CANVAS_HEIGHT],
+                    attributes:  Box::new([ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS]),
+                    bitmap:  Box::new([0; ATTR_COLS * CANVAS_HEIGHT]),
                 }
             ],
             active_bank: 0,
@@ -182,7 +182,7 @@ impl ZXCanvas {
     /// starts new frame
     pub fn new_frame(&mut self) {
         // post finished bitmap to second buffer (all not-rendered part will be updated)
-        self.back_buffer.clone_from_slice(&self.buffer);
+        self.back_buffer.clone_from_slice(&(*self.buffer));
         self.last_blocks = BlocksCount::new(0, 0);
         if self.frame_counter % 16 == 0 {
             self.switch_flash();
@@ -215,6 +215,6 @@ impl ZXCanvas {
 
     /// Returns reference to canvas main texture
     pub fn texture(&self) -> &[u8] {
-        &self.buffer
+        &(*self.buffer)
     }
 }

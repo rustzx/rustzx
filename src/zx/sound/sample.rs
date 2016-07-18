@@ -3,6 +3,7 @@ use std::ops::{MulAssign, Mul, Add, Sub};
 /// Raw Sample can be only f64 or i16
 pub trait RawSample : Clone + Copy + MulAssign + Mul + Add + Sub {}
 impl RawSample for f64 {}
+impl RawSample for f32 {}
 impl RawSample for i16 {}
 
 const ERROR_SIZE: u16 = 100;
@@ -70,6 +71,13 @@ impl SoundSample<f64> {
         SoundSample {
             left: ((self.left * (u16::max_value() - ERROR_SIZE) as f64) as u16 ^ 0x8000) as i16,
             right: ((self.right * (u16::max_value() - ERROR_SIZE) as f64) as u16 ^ 0x8000) as i16,
+        }
+    }
+    /// transform into f32
+    pub fn into_f32(self) -> SoundSample<f32> {
+        SoundSample {
+            left: self.left as f32,
+            right: self.right as f32,
         }
     }
     /// Places float sample in range 0..1

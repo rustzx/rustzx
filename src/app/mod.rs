@@ -1,8 +1,7 @@
-//! This module provides main application class and modules `rustzx`, `video`, `keyboard`
-// module - parts
+//! This module provides main application class.
 mod rustzx;
 mod video;
-mod keyboard;
-mod sound_thread;
+mod sound;
+mod events;
 // main re-export
-pub use self::rustzx::RustZXApp;
+pub use self::rustzx::RustzxApp;

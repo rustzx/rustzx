@@ -26,9 +26,6 @@
 //! View full License text in file `LICENSE.md`
 #![allow(dead_code)]
 
-/// glium as graphics library
-#[macro_use]
-extern crate glium;
 /// time lib for frame timings
 extern crate time;
 /// Lazy static for macine specs
@@ -36,12 +33,8 @@ extern crate time;
 extern crate lazy_static;
 /// Command line parser
 extern crate clap;
-/// Library for sound rendering
-extern crate portaudio;
-/// library for vector/matrix math
-extern crate cgmath;
-/// for some numeric traits
-extern crate num;
+/// backend => sound, video, events
+extern crate sdl2;
 /// AY chip emulation library pacmancoder/rust-ayumi
 extern crate ayumi;
 
@@ -51,9 +44,11 @@ mod z80;
 mod zx;
 mod app;
 mod emulator;
+mod backends;
+mod settings;
 
-use app::RustZXApp;
+use app::RustzxApp;
 
 fn main() {
-    RustZXApp::new().init().start();
+    RustzxApp::new().init().start();
 }
