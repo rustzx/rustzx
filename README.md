@@ -6,7 +6,7 @@ I develop this project just for fun and for learning the basics of computer
 architecture.  
 Licensed under MIT License.
 
-**Watch [this](https://youtu.be/Xho3GWFyP2I.) video showcase!**
+**Watch [this](https://youtu.be/Xho3GWFyP2I) video showcase!**
 
 [![Build Status](https://travis-ci.org/pacmancoder/rustzx.svg?branch=master)](https://travis-ci.org/pacmancoder/rustzx)
 ## Features
