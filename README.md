@@ -53,7 +53,7 @@ case press `Insert` to insert tape. `Delete` can be used for ejecting tape from
 tape reader. `--128k` flag launches emulator in 128K mode. For loading tape just
 press `Enter`.
 
-If you have some audio troubles - use `--lattency` flag with bigger samples
+If you have some audio troubles - use `--latency` flag with bigger samples
 count.
 
 Use keys `F3 - F5` to set speed of emulation - this can be usefull when skipping some boring stuff.
@@ -69,7 +69,8 @@ Watch [LOG](LOG.md) for details and github issues
 for current plans and help requests.
 ## References
 Of course, I used many resources to find out, how to build my first
-emulator in life. So there is a list of useful references, from where I dig most information about Z80, ULA and other ZX Spectrum hardware parts:  
+emulator in life. So there is a list of useful references, from where I dig most
+information about Z80, ULA and other ZX Spectrum hardware parts:  
 - Of course [z80.info](http://www.z80.info/)
     - [Decoding Z80 opcodes](http://www.z80.info/decoding.htm)
     - [Opcodes list](http://www.z80.info/z80code.txt)

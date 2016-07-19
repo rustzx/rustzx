@@ -48,7 +48,8 @@ mod backends;
 mod settings;
 
 use app::RustzxApp;
-
+use settings::RustzxSettings;
 fn main() {
-    RustzxApp::new().init().start();
+    let settings = RustzxSettings::from_clap();
+    RustzxApp::from_config(settings).start();
 }

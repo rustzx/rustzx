@@ -23,13 +23,26 @@ impl Emulator {
     /// # Arguments
     /// `settings` - emulator settings
     pub fn new(settings: &RustzxSettings) -> Emulator {
-        Emulator {
-            cpu: Z80::new(),
-            controller: ZXController::new(&settings),
-            speed: EmulationSpeed::Definite(1),
-            fast_load: false,
-            sound_enabled: true,
+        let mut controller = ZXController::new(&settings);
+        if let Some(ref path) = settings.rom {
+            controller.load_rom(path);
+        } else {
+            controller.load_default_rom();
+        };
+        if let Some(ref path) = settings.tap {
+            controller.tape.insert(path);
         }
+        let mut out = Emulator {
+            cpu: Z80::new(),
+            controller: controller,
+            speed: settings.speed,
+            fast_load: settings.fastload,
+            sound_enabled: settings.sound_enabled,
+        };
+        if let Some(ref path) = settings.sna {
+            out.load_sna(path)
+        }
+        out
     }
 
     /// changes emulation speed

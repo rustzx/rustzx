@@ -1,3 +1,4 @@
+**[19.08.2016]** RustzxApp and RustzxSettings refactoring  
 **[18.08.2016]** Moved sound, video, event to sdl lib.  
 **[15.08.2016]** Moving from **portaudio** to **cpal**  
 **[14.08.2016]** Kempston Joystick  
