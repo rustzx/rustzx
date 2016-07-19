@@ -121,11 +121,9 @@ impl RustzxSettings {
                                        power of two."))
                       .get_matches();
         // machine type
-        out.machine = if cmd.is_present("128K") {
-            ZXMachine::Sinclair128K
-        } else {
-            ZXMachine::Sinclair48K
-        };
+        if cmd.is_present("128K") {
+            out.machine(ZXMachine::Sinclair128K);
+        }
         if let Some(speed_str) = cmd.value_of("SPEED") {
             if let Ok(speed) = speed_str.parse::<usize>() {
                 out.speed(EmulationSpeed::Definite(speed));

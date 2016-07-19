@@ -98,7 +98,7 @@ impl RustzxApp {
                                        Some(Rect::new(0,
                                                       0,
                                                       SCREEN_WIDTH as u32 * scale,
-                                                      SCREEN_WIDTH as u32 * scale)));
+                                                      SCREEN_HEIGHT as u32 * scale)));
             self.video.draw_texture_2d(self.tex_canvas,
                                        Some(Rect::new(CANVAS_X as i32 * scale as i32,
                                                       CANVAS_Y as i32 * scale as i32,
