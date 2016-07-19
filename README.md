@@ -6,6 +6,8 @@ I develop this project just for fun and for learning the basics of computer
 architecture.  
 Licensed under MIT License.
 
+**Watch [this](https://youtu.be/Xho3GWFyP2I.) video showcase!**
+
 [![Build Status](https://travis-ci.org/pacmancoder/rustzx.svg?branch=master)](https://travis-ci.org/pacmancoder/rustzx)
 ## Features
 - Written in pure rust  
@@ -21,15 +23,14 @@ Licensed under MIT License.
 - Kempston joystick emulation
 - Correct contentons
 
+## Download [v0.9.2]
+Packages are available in github releases.  
+**Note:** On linux platforms sdl2 library must be installed
 
-## Current status [v0.9.x]
-Preparing 0.9.x release
-
-## Download [v0.7.1]
-At the moment only `deb` package for amd64 available in releases section.
 ## Compiling
-Before compiling make shure that **sdl2** is installed. For additional
-information about sdl2 click [here](https://github.com/AngryLawyer/rust-sdl2)
+Before compiling make shure that **sdl2** and its dev libs are installed.  
+For additional information about sdl2 click
+[here](https://github.com/AngryLawyer/rust-sdl2)
 
 Then just install it with cargo (`~/.cargo/bin` must be in your **PATH**)
 
