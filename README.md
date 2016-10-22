@@ -91,8 +91,9 @@ information about Z80, ULA and other ZX Spectrum hardware parts:
 - [speccy.info](http://speccy.info)
 - [Harlequin](http://www.zxdesign.info/harlequin.shtml)
 - And many other great material, which helped me to make rustzx!
-- [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
-## ROM's
+- [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings  
+
+## ROM's  
 Emulator contains ROM's, created by by Sinclair Research Ltd (now owned by Amstrad plc),
 Amstrad was given permissions for distributing their ROM's with emulators, so they are
 included in source of emulator (mod zx::roms). More about this read [here](https://groups.google.com/forum/?hl=en#!msg/comp.sys.amstrad.8bit/HtpBU2Bzv_U/HhNDSU3MksAJ)
