@@ -1,14 +1,16 @@
 use super::{VideoDevice, TextureInfo, Rect};
 use sdl2::rect::Rect as SdlRect;
-use sdl2::render::{Renderer, Texture};
+use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::pixels::PixelFormatEnum as PixelFormat;
+use sdl2::video::{Window, WindowContext};
 use settings::RustzxSettings;
 use backends::SDL_CONTEXT;
 use std::collections::HashMap;
 
 /// Represents real SDL video backend
 pub struct VideoSdl {
-    renderer: Renderer<'static>,
+    renderer: Canvas<Window>,
+    texture_creator: TextureCreator<WindowContext>,
     texteres: HashMap<TextureInfo, Texture>,
     next_tex_id: usize,
 }
@@ -31,12 +33,14 @@ impl VideoSdl {
                               .opengl()
                               .build()
                               .expect("[ERROR] Sdl window buil fail");
-            let renderer = window.renderer()
+            let renderer = window.into_canvas()
                                  .present_vsync()
                                  .build()
-                                 .expect("[ERROR] Sdl Renderer build error");
+                                 .expect("[ERROR] Sdl Canvas build error");
+            let texture_creator = renderer.texture_creator();
             VideoSdl {
                 renderer: renderer,
+                texture_creator: texture_creator,
                 texteres: HashMap::new(),
                 next_tex_id: 0,
             }
@@ -50,8 +54,8 @@ impl VideoDevice for VideoSdl {
     fn gen_texture(&mut self, width: u32, height: u32) -> TextureInfo {
         let id = self.next_tex_id;
         // create texture in backend
-        let tex = self.renderer.create_texture_streaming(PixelFormat::ABGR8888, width, height)
-                               .expect("[ERROR] Sdl texture creation error");
+        let tex = self.texture_creator.create_texture_streaming(PixelFormat::ABGR8888, width, height)
+                                      .expect("[ERROR] Sdl texture creation error");
         let tex_info = TextureInfo {
             id: id,
             width: width,
@@ -64,7 +68,7 @@ impl VideoDevice for VideoSdl {
     }
 
     fn set_title(&mut self, title: &str) {
-        self.renderer.window_mut().unwrap().set_title(title).unwrap();
+        self.renderer.window_mut().set_title(title).unwrap();
     }
 
     fn update_texture(&mut self, tex: TextureInfo, buffer: &[u8]) {
@@ -97,7 +101,7 @@ impl VideoDevice for VideoSdl {
             None
         };
         // render
-        self.renderer.copy(tex, None, dest_rect);
+        self.renderer.copy(tex, None, dest_rect).expect("[ERROR] Can't draw texture");
     }
     fn end(&mut self) {
         // display buffer

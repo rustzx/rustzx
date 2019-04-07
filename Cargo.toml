@@ -11,8 +11,11 @@ license = "MIT"
 
 [dependencies]
 time = "0.1"
-sdl2 = "0.21"
 lazy_static = "0.2"
 clap = "2.9"
 
 ayumi = { git = "https://github.com/pacmancoder/rust-ayumi.git"}
+
+[dependencies.sdl2]
+version = "^0.32.2"
+features = ["unsafe_textures"]
