@@ -4,3 +4,4 @@ rust:
     - stable
 before_install:
   - sudo apt-get install -y libsdl2-dev
+cache: cargo
