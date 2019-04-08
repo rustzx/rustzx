@@ -3,8 +3,7 @@
 //! and command-line interface
 
 use std::thread;
-use std::time::Duration;
-use time;
+use std::time::{Duration, Instant};
 use app::sound::*;
 use app::video::*;
 use app::events::*;
@@ -71,9 +70,9 @@ impl RustzxApp {
         let mut debug = false;
         let scale = self.settings.scale as u32;
         'emulator: loop {
-            let frame_target_dt_ns = frame_length_ns(FPS);
+            let frame_target_dt_ns = Duration::from_nanos(frame_length_ns(FPS));
             // absolute start time
-            let frame_start_ns = time::precise_time_ns();
+            let frame_start_ns = Instant::now();
             // Emulate all requested frames
             let cpu_dt_ns = self.emulator.emulate_frames(MAX_FRAME_TIME_NS);
             // if sound enabled sound ganeration allowed then move samples to sound thread
@@ -138,24 +137,23 @@ impl RustzxApp {
                 }
             }
             // how long emulation iteration was
-            let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
+            let emulation_dt_ns = frame_start_ns.elapsed();
             if emulation_dt_ns < frame_target_dt_ns {
                 let wait_koef = if self.emulator.have_sound() {
-                    0.9
+                    9
                 } else {
-                    1.0
+                    10
                 };
                 // sleep untill frame sync
-                thread::sleep(Duration::new(
-                    0, ((frame_target_dt_ns - emulation_dt_ns) as f64 * wait_koef) as u32));
+                thread::sleep((frame_target_dt_ns - emulation_dt_ns) * wait_koef / 10);
             };
             // get exceed clocks and use them on next iteration
-            let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
+            let frame_dt_ns = frame_start_ns.elapsed();
             // change window header
             if debug {
                 self.video.set_title(&format!("CPU: {:7.3}ms; FRAME:{:7.3}ms",
                                                ns_to_ms(cpu_dt_ns),
-                                               ns_to_ms(frame_dt_ns)));
+                                               frame_dt_ns.subsec_millis()));
             }
         }
     }

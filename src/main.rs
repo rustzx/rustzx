@@ -26,8 +26,6 @@
 //! View full License text in file `LICENSE.md`
 #![allow(dead_code)]
 
-/// time lib for frame timings
-extern crate time;
 /// Lazy static for macine specs
 #[macro_use]
 extern crate lazy_static;
