@@ -138,7 +138,7 @@ impl ZXMemory {
         }
         let shift = page as usize * PAGE_SIZE;
         {
-            let mut slice = &mut self.rom[shift..shift + PAGE_SIZE];
+            let slice = &mut self.rom[shift..shift + PAGE_SIZE];
             slice[..data.len()].clone_from_slice(data);
         }
         self
@@ -154,7 +154,7 @@ impl ZXMemory {
         }
         let shift = page as usize * PAGE_SIZE;
         {
-            let mut slice = &mut self.ram[shift..shift + PAGE_SIZE];
+            let slice = &mut self.ram[shift..shift + PAGE_SIZE];
             slice[..data.len()].clone_from_slice(data);
         }
         self
