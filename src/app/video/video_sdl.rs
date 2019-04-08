@@ -69,7 +69,7 @@ impl VideoDevice for VideoSdl {
 
     fn update_texture(&mut self, tex: TextureInfo, buffer: &[u8]) {
         // find texture
-        let mut tex_sdl = self.texteres.get_mut(&tex).expect("[ERROR] Wrong texrure ID on update");
+        let tex_sdl = self.texteres.get_mut(&tex).expect("[ERROR] Wrong texrure ID on update");
         // send data
         tex_sdl.with_lock(None, |out, pitch| {
             for y in 0..tex.height {
