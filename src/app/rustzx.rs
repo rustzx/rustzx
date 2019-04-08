@@ -26,8 +26,8 @@ fn ms_to_ns(s: f64) -> u64 {
 }
 
 /// returns frame length from given `fps`
-fn frame_length_ns(fps: usize) -> u64 {
-    ms_to_ns(1000 as f64 / fps as f64)
+fn frame_length(fps: usize) -> Duration {
+    Duration::from_millis((1000 as f64 / fps as f64) as u64)
 }
 
 // TODO: FIX! MAKE BULDER
@@ -70,9 +70,9 @@ impl RustzxApp {
         let mut debug = false;
         let scale = self.settings.scale as u32;
         'emulator: loop {
-            let frame_target_dt_ns = Duration::from_nanos(frame_length_ns(FPS));
+            let frame_target_dt = frame_length(FPS);
             // absolute start time
-            let frame_start_ns = Instant::now();
+            let frame_start = Instant::now();
             // Emulate all requested frames
             let cpu_dt_ns = self.emulator.emulate_frames(MAX_FRAME_TIME_NS);
             // if sound enabled sound ganeration allowed then move samples to sound thread
@@ -137,23 +137,23 @@ impl RustzxApp {
                 }
             }
             // how long emulation iteration was
-            let emulation_dt_ns = frame_start_ns.elapsed();
-            if emulation_dt_ns < frame_target_dt_ns {
+            let emulation_dt = frame_start.elapsed();
+            if emulation_dt < frame_target_dt {
                 let wait_koef = if self.emulator.have_sound() {
                     9
                 } else {
                     10
                 };
                 // sleep untill frame sync
-                thread::sleep((frame_target_dt_ns - emulation_dt_ns) * wait_koef / 10);
+                thread::sleep((frame_target_dt - emulation_dt) * wait_koef / 10);
             };
             // get exceed clocks and use them on next iteration
-            let frame_dt_ns = frame_start_ns.elapsed();
+            let frame_dt = frame_start.elapsed();
             // change window header
             if debug {
                 self.video.set_title(&format!("CPU: {:7.3}ms; FRAME:{:7.3}ms",
                                                ns_to_ms(cpu_dt_ns),
-                                               frame_dt_ns.subsec_millis()));
+                                               frame_dt.subsec_millis()));
             }
         }
     }
