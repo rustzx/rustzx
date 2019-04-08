@@ -74,7 +74,7 @@ impl RustzxApp {
             // absolute start time
             let frame_start = Instant::now();
             // Emulate all requested frames
-            let cpu_dt_ns = self.emulator.emulate_frames(MAX_FRAME_TIME);
+            let cpu_dt = self.emulator.emulate_frames(MAX_FRAME_TIME);
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime
@@ -152,7 +152,7 @@ impl RustzxApp {
             // change window header
             if debug {
                 self.video.set_title(&format!("CPU: {:7.3}ms; FRAME:{:7.3}ms",
-                                               cpu_dt_ns.as_millis(),
+                                               cpu_dt.as_millis(),
                                                frame_dt.as_millis()));
             }
         }
