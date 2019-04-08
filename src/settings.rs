@@ -105,7 +105,8 @@ impl RustzxSettings {
                                 .value_name("AY_TYPE")
                                 .possible_values(&["none", "mono", "abc", "acb"])
                                 .help("Selects AY mode. Use none to disable. \
-                                       For stereo features use abc or acb, default is mono."))
+                                       For stereo features use abc or acb, default is mono for \
+                                       128k and none for 48k."))
                       .arg(Arg::with_name("VOLUME")
                                 .long("volume")
                                 .value_name("VOLUME_VALUE")
