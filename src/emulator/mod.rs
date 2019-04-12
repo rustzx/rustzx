@@ -1,6 +1,5 @@
 //! Platform-independent high-level Emulator interaction module
-use time;
-
+use std::time::{Instant, Duration};
 use utils::*;
 use z80::*;
 use zx::ZXController;
@@ -105,11 +104,11 @@ impl Emulator {
     /// Emulate frames, maximum in `max_time` time, returns emulation time in nanoseconds
     /// in most cases time is max 1/50 of second, even when using
     /// loader acceleration
-    pub fn emulate_frames(&mut self, max_time: u64) -> u64 {
-        let mut time = 0u64;
+    pub fn emulate_frames(&mut self, max_time: Duration) -> Duration {
+        let mut time = Duration::new(0, 0);
         'frame: loop {
             // start of current frame
-            let start_time = time::precise_time_ns();
+            let start_time = Instant::now();
             // reset controller internal frame counter
             self.controller.reset_frame_counter();
             'cpu: loop {
@@ -124,7 +123,7 @@ impl Emulator {
                     if self.controller.frames_count() >= multiplier {
                         // no more frames
                         self.controller.clear_events();
-                        return time::precise_time_ns() - start_time;
+                        return start_time.elapsed();
                     };
                     // if speed is maximal.
                 } else {
@@ -134,7 +133,7 @@ impl Emulator {
                     }
                 }
             }
-            time += time::precise_time_ns() - start_time;
+            time += start_time.elapsed();
             // if time is bigger than `max_time` then stop emulation cycle
             if time > max_time {
                 break 'frame;

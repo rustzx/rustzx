@@ -3,8 +3,7 @@
 //! and command-line interface
 
 use std::thread;
-use std::time::Duration;
-use time;
+use std::time::{Duration, Instant};
 use app::sound::*;
 use app::video::*;
 use app::events::*;
@@ -14,7 +13,7 @@ use emulator::*;
 
 
 /// max 100 ms interval in `max frames` speed mode
-const MAX_FRAME_TIME_NS: u64 = 100 * 1000000;
+const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
 
 /// converts nanoseconds  to miliseconds
 fn ns_to_ms(ns: u64) -> f64 {
@@ -27,8 +26,8 @@ fn ms_to_ns(s: f64) -> u64 {
 }
 
 /// returns frame length from given `fps`
-fn frame_length_ns(fps: usize) -> u64 {
-    ms_to_ns(1000 as f64 / fps as f64)
+fn frame_length(fps: usize) -> Duration {
+    Duration::from_millis((1000 as f64 / fps as f64) as u64)
 }
 
 // TODO: FIX! MAKE BULDER
@@ -71,11 +70,11 @@ impl RustzxApp {
         let mut debug = false;
         let scale = self.settings.scale as u32;
         'emulator: loop {
-            let frame_target_dt_ns = frame_length_ns(FPS);
+            let frame_target_dt = frame_length(FPS);
             // absolute start time
-            let frame_start_ns = time::precise_time_ns();
+            let frame_start = Instant::now();
             // Emulate all requested frames
-            let cpu_dt_ns = self.emulator.emulate_frames(MAX_FRAME_TIME_NS);
+            let cpu_dt = self.emulator.emulate_frames(MAX_FRAME_TIME);
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime
@@ -138,24 +137,23 @@ impl RustzxApp {
                 }
             }
             // how long emulation iteration was
-            let emulation_dt_ns = time::precise_time_ns() - frame_start_ns;
-            if emulation_dt_ns < frame_target_dt_ns {
+            let emulation_dt = frame_start.elapsed();
+            if emulation_dt < frame_target_dt {
                 let wait_koef = if self.emulator.have_sound() {
-                    0.9
+                    9
                 } else {
-                    1.0
+                    10
                 };
                 // sleep untill frame sync
-                thread::sleep(Duration::new(
-                    0, ((frame_target_dt_ns - emulation_dt_ns) as f64 * wait_koef) as u32));
+                thread::sleep((frame_target_dt - emulation_dt) * wait_koef / 10);
             };
             // get exceed clocks and use them on next iteration
-            let frame_dt_ns = time::precise_time_ns() - frame_start_ns;
+            let frame_dt = frame_start.elapsed();
             // change window header
             if debug {
                 self.video.set_title(&format!("CPU: {:7.3}ms; FRAME:{:7.3}ms",
-                                               ns_to_ms(cpu_dt_ns),
-                                               ns_to_ms(frame_dt_ns)));
+                                               cpu_dt.as_millis(),
+                                               frame_dt.as_millis()));
             }
         }
     }
