@@ -134,6 +134,9 @@ impl RustzxApp {
                     Event::StopTape => {
                         self.emulator.controller.tape.stop()
                     }
+                    Event::OpenFile(path) => {
+                        self.emulator.load_file_autodetect(&path);
+                    }
                 }
             }
             // how long emulation iteration was

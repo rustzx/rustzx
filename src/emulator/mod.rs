@@ -1,4 +1,5 @@
 //! Platform-independent high-level Emulator interaction module
+use std::path::Path;
 use std::time::{Instant, Duration};
 use utils::*;
 use z80::*;
@@ -76,6 +77,13 @@ impl Emulator {
     /// loads snapshot file
     pub fn load_sna(&mut self, file: &str) {
         loaders::load_sna(self, file)
+    }
+
+    /// Loads file, performing appropriate action depending on
+    /// auto-detected file type. For example, loading `.sna` restores
+    /// snapshot, loading `tap` inserts tape.
+    pub fn load_file_autodetect(&mut self, file: &Path) {
+        loaders::load_file_autodetect(self, file)
     }
 
     /// events processing function
