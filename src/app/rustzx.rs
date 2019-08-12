@@ -135,7 +135,7 @@ impl RustzxApp {
                         self.emulator.controller.tape.stop()
                     }
                     Event::OpenFile(path) => {
-                        self.emulator.load_file_autodetect(&path);
+                        self.emulator.load_file_autodetect(path);
                     }
                 }
             }

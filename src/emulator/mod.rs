@@ -82,7 +82,7 @@ impl Emulator {
     /// Loads file, performing appropriate action depending on
     /// auto-detected file type. For example, loading `.sna` restores
     /// snapshot, loading `tap` inserts tape.
-    pub fn load_file_autodetect(&mut self, file: &Path) {
+    pub fn load_file_autodetect(&mut self, file: impl AsRef<Path>) {
         loaders::load_file_autodetect(self, file)
     }
 
