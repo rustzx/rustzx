@@ -1,6 +1,7 @@
 // std
 use std::io::Read;
 use std::fs::File;
+use std::path::Path;
 // emulator
 use emulator::Emulator;
 use z80::opcodes::execute_pop_16;
@@ -9,7 +10,7 @@ use utils::{Clocks, make_word};
 use zx::colors::ZXColor;
 
 /// SNA snapshot loading function
-pub fn load_sna(emulator: &mut Emulator, file: &str) {
+pub fn load_sna(emulator: &mut Emulator, file: impl AsRef<Path>) {
     let mut data = Vec::new();
     File::open(file).unwrap().read_to_end(&mut data).unwrap();
     assert!(data.len() == 49179);

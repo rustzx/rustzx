@@ -4,6 +4,7 @@ mod tap;
 // reexport Tap Tape player
 pub use self::tap::Tap;
 
+use std::path::Path;
 use utils::Clocks;
 
 /// Result of tape insertion,
@@ -34,7 +35,7 @@ pub trait ZXTape {
     /// Makes procession of type in definite time
     fn process_clocks(&mut self, clocks: Clocks);
     /// insert new media
-    fn insert(&mut self, path: &str) -> InsertResult;
+    fn insert(&mut self, path: &Path) -> InsertResult;
     /// ejects tape
     fn eject(&mut self);
     /// stops tape
