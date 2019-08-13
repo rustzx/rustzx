@@ -164,7 +164,10 @@ impl EventDevice for EventsSdl {
                             None
                         }
                     }
-                }
+                },
+                SdlEvent::DropFile {filename, ..} => {
+                    Some(Event::OpenFile(filename.into()))
+                },
                 _ => None,
             }
         } else {
