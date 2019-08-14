@@ -1,6 +1,6 @@
 //! Module which contains Z80 registers implementation
-use utils::*;
 use std::fmt;
+use utils::*;
 use z80::Prefix;
 
 // Flag register bits
@@ -41,7 +41,6 @@ impl Flag {
         }
     }
 }
-
 
 /// Conditions
 #[derive(Clone, Copy)]
@@ -103,25 +102,19 @@ impl RegName8 {
     /// Modificates 8-bit register with prefix
     pub fn with_prefix(self, pref: Prefix) -> Self {
         match self {
-            reg @ RegName8::H | reg @ RegName8::L => {
-                match pref {
-                    Prefix::DD => {
-                        match reg {
-                            RegName8::H => RegName8::IXH,
-                            RegName8::L => RegName8::IXL,
-                            _ => reg,
-                        }
-                    }
-                    Prefix::FD => {
-                        match reg {
-                            RegName8::H => RegName8::IYH,
-                            RegName8::L => RegName8::IYL,
-                            _ => reg,
-                        }
-                    }
+            reg @ RegName8::H | reg @ RegName8::L => match pref {
+                Prefix::DD => match reg {
+                    RegName8::H => RegName8::IXH,
+                    RegName8::L => RegName8::IXL,
                     _ => reg,
-                }
-            }
+                },
+                Prefix::FD => match reg {
+                    RegName8::H => RegName8::IYH,
+                    RegName8::L => RegName8::IYL,
+                    _ => reg,
+                },
+                _ => reg,
+            },
             _ => self,
         }
     }
@@ -158,13 +151,11 @@ impl RegName16 {
     // Modificates 16-bit register with prefix
     pub fn with_prefix(self, pref: Prefix) -> Self {
         match self {
-            RegName16::HL => {
-                match pref {
-                    Prefix::DD => RegName16::IX,
-                    Prefix::FD => RegName16::IY,
-                    _ => self,
-                }
-            }
+            RegName16::HL => match pref {
+                Prefix::DD => RegName16::IX,
+                Prefix::FD => RegName16::IY,
+                _ => self,
+            },
             _ => self,
         }
     }

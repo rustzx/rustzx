@@ -1,7 +1,7 @@
 // emulator
 use emulator::Emulator;
+use utils::{make_word, Clocks};
 use z80::*;
-use utils::{Clocks, make_word};
 
 pub fn fast_load_tap(emulator: &mut Emulator) {
     // resetting tape pos to beginning.
@@ -56,7 +56,7 @@ pub fn fast_load_tap(emulator: &mut Emulator) {
             // LOAD
             if (f & FLAG_CARRY) != 0 {
                 emulator.controller.write_internal(dest, current_byte);
-                // VERIFY
+            // VERIFY
             } else {
                 // check for parity each byte, if this fails - set flags to error state
                 acc = emulator.controller.memory.read(dest) ^ current_byte;
@@ -77,16 +77,21 @@ pub fn fast_load_tap(emulator: &mut Emulator) {
     // set regs to new state
     emulator.cpu.regs.set_reg_16(RegName16::IX, dest);
     emulator.cpu.regs.set_reg_16(RegName16::DE, length);
-    emulator.cpu.regs.set_hl(make_word(parity_acc, current_byte));
+    emulator
+        .cpu
+        .regs
+        .set_hl(make_word(parity_acc, current_byte));
     emulator.cpu.regs.set_acc(acc);
     // set new flag, if something changed
     if let Some(new_flags) = result_flags {
         f = new_flags;
         // RET
-        opcodes::execute_pop_16(&mut emulator.cpu,
-                                &mut emulator.controller,
-                                RegName16::PC,
-                                Clocks(0));
+        opcodes::execute_pop_16(
+            &mut emulator.cpu,
+            &mut emulator.controller,
+            RegName16::PC,
+            Clocks(0),
+        );
     }
     emulator.cpu.regs.set_flags(f);
     // move to next block

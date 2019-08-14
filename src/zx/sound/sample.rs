@@ -1,7 +1,7 @@
 use std::i16;
-use std::ops::{MulAssign, Mul, Add, Sub};
+use std::ops::{Add, Mul, MulAssign, Sub};
 /// Raw Sample can be only f64 or i16
-pub trait RawSample : Clone + Copy + MulAssign + Mul + Add + Sub {}
+pub trait RawSample: Clone + Copy + MulAssign + Mul + Add + Sub {}
 impl RawSample for f64 {}
 impl RawSample for f32 {}
 impl RawSample for i16 {}
@@ -16,12 +16,18 @@ const ERROR_SIZE: u16 = 100;
 // - `normalize` - to fit sample in 0..1 range
 // - `into_i16` - to transform sa,ple to i16 sample
 #[derive(Clone, Copy)]
-pub struct SoundSample<T> where T: RawSample {
+pub struct SoundSample<T>
+where
+    T: RawSample,
+{
     pub left: T,
     pub right: T,
 }
 
-impl<T> SoundSample<T> where T: RawSample {
+impl<T> SoundSample<T>
+where
+    T: RawSample,
+{
     /// Returns new sample
     pub fn new(left: T, right: T) -> SoundSample<T> {
         SoundSample {
@@ -95,7 +101,10 @@ impl SoundSample<f64> {
 }
 
 /// Trait which signals that structure can generate SoundSamples
-pub trait SampleGenerator<T> where T: RawSample {
+pub trait SampleGenerator<T>
+where
+    T: RawSample,
+{
     /// Returns generated sound sample of `SoundSample<T>` type
     fn gen_sample(&mut self) -> SoundSample<T>;
 }

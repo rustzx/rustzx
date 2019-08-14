@@ -1,10 +1,10 @@
-use super::{VideoDevice, TextureInfo, Rect};
+use super::{Rect, TextureInfo, VideoDevice};
+use backends::SDL_CONTEXT;
+use sdl2::pixels::PixelFormatEnum as PixelFormat;
 use sdl2::rect::Rect as SdlRect;
 use sdl2::render::{Canvas, Texture, TextureCreator};
-use sdl2::pixels::PixelFormatEnum as PixelFormat;
 use sdl2::video::{Window, WindowContext};
 use settings::RustzxSettings;
-use backends::SDL_CONTEXT;
 use std::collections::HashMap;
 
 /// Represents real SDL video backend
@@ -27,16 +27,21 @@ impl VideoSdl {
             // construct window and renderer form it
             let (width, height) = settings.screen_size;
             // TODO: is opengl needed?
-            let window = video.window(&format!("RustZX v{}", env!("CARGO_PKG_VERSION")),
-                                      width as u32, height as u32)
-                              .position_centered()
-                              .opengl()
-                              .build()
-                              .expect("[ERROR] Sdl window buil fail");
-            let renderer = window.into_canvas()
-                                 .present_vsync()
-                                 .build()
-                                 .expect("[ERROR] Sdl Canvas build error");
+            let window = video
+                .window(
+                    &format!("RustZX v{}", env!("CARGO_PKG_VERSION")),
+                    width as u32,
+                    height as u32,
+                )
+                .position_centered()
+                .opengl()
+                .build()
+                .expect("[ERROR] Sdl window buil fail");
+            let renderer = window
+                .into_canvas()
+                .present_vsync()
+                .build()
+                .expect("[ERROR] Sdl Canvas build error");
             let texture_creator = renderer.texture_creator();
             VideoSdl {
                 renderer: renderer,
@@ -54,8 +59,10 @@ impl VideoDevice for VideoSdl {
     fn gen_texture(&mut self, width: u32, height: u32) -> TextureInfo {
         let id = self.next_tex_id;
         // create texture in backend
-        let tex = self.texture_creator.create_texture_streaming(PixelFormat::ABGR8888, width, height)
-                                      .expect("[ERROR] Sdl texture creation error");
+        let tex = self
+            .texture_creator
+            .create_texture_streaming(PixelFormat::ABGR8888, width, height)
+            .expect("[ERROR] Sdl texture creation error");
         let tex_info = TextureInfo {
             id: id,
             width: width,
@@ -73,19 +80,24 @@ impl VideoDevice for VideoSdl {
 
     fn update_texture(&mut self, tex: TextureInfo, buffer: &[u8]) {
         // find texture
-        let tex_sdl = self.texteres.get_mut(&tex).expect("[ERROR] Wrong texrure ID on update");
+        let tex_sdl = self
+            .texteres
+            .get_mut(&tex)
+            .expect("[ERROR] Wrong texrure ID on update");
         // send data
-        tex_sdl.with_lock(None, |out, pitch| {
-            for y in 0..tex.height {
-                for x in 0..tex.width {
-                    let offset_dest = (y * pitch as u32 + x * 4) as usize;
-                    let offset_src = (y * tex.width * 4 + x * 4) as usize;
-                    for n in 0..4 {
-                        out[offset_dest + n] = buffer[offset_src + n];
+        tex_sdl
+            .with_lock(None, |out, pitch| {
+                for y in 0..tex.height {
+                    for x in 0..tex.width {
+                        let offset_dest = (y * pitch as u32 + x * 4) as usize;
+                        let offset_src = (y * tex.width * 4 + x * 4) as usize;
+                        for n in 0..4 {
+                            out[offset_dest + n] = buffer[offset_src + n];
+                        }
                     }
                 }
-            }
-        }).expect("[ERROR] Texture update error");
+            })
+            .expect("[ERROR] Texture update error");
     }
     fn begin(&mut self) {
         // clear surface
@@ -93,7 +105,10 @@ impl VideoDevice for VideoSdl {
     }
     fn draw_texture_2d(&mut self, tex: TextureInfo, rect: Option<Rect>) {
         // find texture
-        let tex = self.texteres.get_mut(&tex).expect("[ERROR] Wrong texrure ID on draw");
+        let tex = self
+            .texteres
+            .get_mut(&tex)
+            .expect("[ERROR] Wrong texrure ID on draw");
         // construct sdl rect
         let dest_rect = if let Some(rect) = rect {
             Some(SdlRect::new(rect.x, rect.y, rect.w, rect.h))
@@ -101,7 +116,9 @@ impl VideoDevice for VideoSdl {
             None
         };
         // render
-        self.renderer.copy(tex, None, dest_rect).expect("[ERROR] Can't draw texture");
+        self.renderer
+            .copy(tex, None, dest_rect)
+            .expect("[ERROR] Can't draw texture");
     }
     fn end(&mut self) {
         // display buffer

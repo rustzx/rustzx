@@ -1,9 +1,9 @@
 //! Module implemets zx spectrum audio devices mixer
 use std::collections::VecDeque;
-use zx::sound::{SAMPLES, samples_from_time};
-use zx::sound::sample::{SoundSample, SampleGenerator};
+use zx::sound::ay::{ZXAYMode, ZXAyChip};
 use zx::sound::beeper::ZXBeeper;
-use zx::sound::ay::{ZXAyChip, ZXAYMode};
+use zx::sound::sample::{SampleGenerator, SoundSample};
+use zx::sound::{samples_from_time, SAMPLES};
 
 /// Main sound mixer.
 pub struct ZXMixer {
@@ -85,7 +85,7 @@ impl ZXMixer {
     fn gen_sample(&mut self) -> SoundSample<f32> {
         let mut master_float = if self.use_beeper {
             self.beeper.gen_sample()
-        }  else {
+        } else {
             SoundSample::new(0.0, 0.0)
         };
         // prevent AY sound generation if disabled [it is pretty long process]

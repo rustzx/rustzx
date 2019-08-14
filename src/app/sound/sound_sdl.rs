@@ -1,14 +1,14 @@
 //! Real Audio SDL backend
 use super::{SoundDevice, ZXSample};
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
-use sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
-use zx::sound::{CHANNELS, SAMPLE_RATE};
 use backends::SDL_CONTEXT;
+use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 use settings::RustzxSettings;
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use zx::sound::{CHANNELS, SAMPLE_RATE};
 
 /// Struct which used in SDL audio callback
 struct SdlCallback {
-    samples: Receiver<ZXSample>
+    samples: Receiver<ZXSample>,
 }
 
 impl AudioCallback for SdlCallback {
@@ -47,11 +47,9 @@ impl SoundSdl {
                 samples: Some(settings.latency as u16),
             };
             let (tx, rx) = sync_channel(settings.latency as usize);
-            let device_handle = audio.open_playback(None, &desired_spec, |_| {
-                SdlCallback {
-                    samples: rx,
-                }
-            }).expect("[ERROR Sdl audio device error, try --nosound]");
+            let device_handle = audio
+                .open_playback(None, &desired_spec, |_| SdlCallback { samples: rx })
+                .expect("[ERROR Sdl audio device error, try --nosound]");
             // run
             device_handle.resume();
             // save device and cahnnel handles

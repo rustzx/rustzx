@@ -1,6 +1,6 @@
 //! Module implements emulation of sound chip AY, Spectrum Beeper and Mixer
-pub mod beeper;
 pub mod ay;
+pub mod beeper;
 pub mod mixer;
 pub mod sample;
 

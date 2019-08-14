@@ -1,12 +1,12 @@
 // std
-use std::io::Read;
 use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 // emulator
 use emulator::Emulator;
+use utils::{make_word, Clocks};
 use z80::opcodes::execute_pop_16;
 use z80::RegName16;
-use utils::{Clocks, make_word};
 use zx::colors::ZXColor;
 
 /// SNA snapshot loading function
@@ -43,15 +43,20 @@ pub fn load_sna(emulator: &mut Emulator, file: impl AsRef<Path>) {
     // interrupt mode
     emulator.cpu.set_im(data[25]);
     // set border
-    emulator.controller.border.set_border(Clocks(0), ZXColor::from_bits(data[26]));
+    emulator
+        .controller
+        .border
+        .set_border(Clocks(0), ZXColor::from_bits(data[26]));
     // ram pages
     emulator.controller.memory.load_ram(0, &data[27..16411]);
     // validate screen, it has been changed
     emulator.controller.memory.load_ram(1, &data[16411..32795]);
     emulator.controller.memory.load_ram(2, &data[32795..49179]);
     // RET
-    execute_pop_16(&mut emulator.cpu,
-                   &mut emulator.controller,
-                   RegName16::PC,
-                   Clocks(0));
+    execute_pop_16(
+        &mut emulator.cpu,
+        &mut emulator.controller,
+        RegName16::PC,
+        Clocks(0),
+    );
 }

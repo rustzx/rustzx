@@ -1,7 +1,7 @@
-use utils::*;
 use super::*;
-use z80::*;
+use utils::*;
 use z80::tables::*;
+use z80::*;
 
 /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)
 /// returns result (can be useful with DDCB/FDCB instructions)

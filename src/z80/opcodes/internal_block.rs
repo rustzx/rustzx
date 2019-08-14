@@ -1,7 +1,7 @@
 use super::*;
-use z80::*;
-use z80::tables::*;
 use utils::*;
+use z80::tables::*;
+use z80::*;
 
 /// ldi or ldd instruction
 pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {

@@ -54,31 +54,30 @@ const PARITY_BIT: [u8; 256] = [
 	1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
 ];
 
-
 // Generated table of parity flag setting
-lazy_static!{
+lazy_static! {
     pub static ref PARITY_TABLE: [u8; 256] = {
         let mut arr = [0u8; 256];
         for (n, x) in arr.iter_mut().enumerate() {
             *x = PARITY_BIT[n] * FLAG_PV;
-        };
+        }
         arr
     };
 }
 
 // Generated table of F3 and F5 flags
-lazy_static!{
+lazy_static! {
     pub static ref F3F5_TABLE: [u8; 256] = {
         let mut arr = [0u8; 256];
         for (n, x) in arr.iter_mut().enumerate() {
             *x = (n as u8) & (FLAG_F3 | FLAG_F5);
-        };
+        }
         arr
     };
 }
 
 // Generated table of F3,F5,Z,S flags
-lazy_static!{
+lazy_static! {
     pub static ref SZF3F5_TABLE: [u8; 256] = {
         let mut arr = [0u8; 256];
         for (n, x) in arr.iter_mut().enumerate() {
@@ -86,13 +85,13 @@ lazy_static!{
             if n == 0 {
                 *x |= FLAG_ZERO;
             };
-        };
+        }
         arr
     };
 }
 
 // Generated table of F3,F5,Z,S flags
-lazy_static!{
+lazy_static! {
     pub static ref SZPF3F5_TABLE: [u8; 256] = {
         let mut arr = [0u8; 256];
         for (n, x) in arr.iter_mut().enumerate() {
@@ -101,7 +100,7 @@ lazy_static!{
             if n == 0 {
                 *x |= FLAG_ZERO;
             };
-        };
+        }
         arr
     };
 }

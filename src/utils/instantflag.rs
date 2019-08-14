@@ -8,7 +8,9 @@ pub struct InstantFlag {
 impl InstantFlag {
     /// constructs self from initial value
     pub fn new(value: bool) -> InstantFlag {
-        InstantFlag { f: Cell::new(value) }
+        InstantFlag {
+            f: Cell::new(value),
+        }
     }
 
     /// immutable read with reset

@@ -1,7 +1,7 @@
+use ayumi::{Ayumi, ChipType, ToneChannel};
 use utils::make_word;
+use zx::sound::sample::{SampleGenerator, SoundSample};
 use zx::sound::SAMPLE_RATE;
-use zx::sound::sample::{SoundSample, SampleGenerator};
-use ayumi::{Ayumi, ToneChannel, ChipType};
 
 /// AY chip runs on the same frequency on 128K, 2+, 3+
 const AY_FREQ: f64 = 1773400.0;
@@ -37,15 +37,9 @@ impl ZXAyChip {
     /// Changes AY mode
     pub fn mode(&mut self, mode: ZXAYMode) {
         let (a, b, c) = match mode {
-            ZXAYMode::Mono => {
-                (0.5, 0.5, 0.5)
-            }
-            ZXAYMode::ABC => {
-                (0.0, 0.5, 1.0)
-            }
-            ZXAYMode::ACB => {
-                (0.0, 1.0, 0.5)
-            }
+            ZXAYMode::Mono => (0.5, 0.5, 0.5),
+            ZXAYMode::ABC => (0.0, 0.5, 1.0),
+            ZXAYMode::ACB => (0.0, 1.0, 0.5),
         };
         self.ay.tone(ToneChannel::A).pan(a, true);
         self.ay.tone(ToneChannel::B).pan(b, true);
@@ -63,17 +57,17 @@ impl ZXAyChip {
         self.regs[reg] = data;
         match self.current_reg {
             // Channel A tone period
-            0 ... 1 => {
+            0...1 => {
                 let word = make_word(self.regs[1] & 0x0F, self.regs[0]);
                 self.ay.tone(ToneChannel::A).period(word as i32);
             }
             // Channel B tone period
-            2 ... 3 => {
+            2...3 => {
                 let word = make_word(self.regs[3] & 0x0F, self.regs[2]);
                 self.ay.tone(ToneChannel::B).period(word as i32);
             }
             // Channel C tone period
-            4 ... 5 => {
+            4...5 => {
                 let word = make_word(self.regs[5] & 0x0F, self.regs[4]);
                 self.ay.tone(ToneChannel::C).period(word as i32);
             }
@@ -82,30 +76,30 @@ impl ZXAyChip {
                 self.ay.noise().period((self.regs[6] & 0x1F) as i32);
             }
             // Mixer Controls
-            7 ... 10 => {
-                self.ay.tone(ToneChannel::A)
-                       .mixer((self.regs[7] & 0x01) != 0,
-                              (self.regs[7] & 0x08) != 0,
-                              (self.regs[8] & 0x10) != 0);
-                self.ay.tone(ToneChannel::B)
-                       .mixer((self.regs[7] & 0x02) != 0,
-                              (self.regs[7] & 0x10) != 0,
-                              (self.regs[9] & 0x10) != 0);
-                self.ay.tone(ToneChannel::C)
-                       .mixer((self.regs[7] & 0x04) != 0,
-                              (self.regs[7] & 0x20) != 0,
-                              (self.regs[10] & 0x10) != 0);
+            7...10 => {
+                self.ay.tone(ToneChannel::A).mixer(
+                    (self.regs[7] & 0x01) != 0,
+                    (self.regs[7] & 0x08) != 0,
+                    (self.regs[8] & 0x10) != 0,
+                );
+                self.ay.tone(ToneChannel::B).mixer(
+                    (self.regs[7] & 0x02) != 0,
+                    (self.regs[7] & 0x10) != 0,
+                    (self.regs[9] & 0x10) != 0,
+                );
+                self.ay.tone(ToneChannel::C).mixer(
+                    (self.regs[7] & 0x04) != 0,
+                    (self.regs[7] & 0x20) != 0,
+                    (self.regs[10] & 0x10) != 0,
+                );
                 if self.current_reg > 7 {
-                    self.ay.tone(ToneChannel::A)
-                           .volume(self.regs[8] & 0x0F);
-                    self.ay.tone(ToneChannel::B)
-                           .volume(self.regs[9] & 0x0F);
-                    self.ay.tone(ToneChannel::C)
-                           .volume(self.regs[10] & 0x0F);
+                    self.ay.tone(ToneChannel::A).volume(self.regs[8] & 0x0F);
+                    self.ay.tone(ToneChannel::B).volume(self.regs[9] & 0x0F);
+                    self.ay.tone(ToneChannel::C).volume(self.regs[10] & 0x0F);
                 }
             }
             // Envelope period
-            11 ... 12 => {
+            11...12 => {
                 let word = make_word(self.regs[12] & 0x0F, self.regs[11]);
                 self.ay.envelope().period(word as i32);
             }

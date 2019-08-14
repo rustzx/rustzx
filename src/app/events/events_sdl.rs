@@ -1,13 +1,13 @@
 //! Real events SDL backend
-use super::{EventDevice, Event};
+use super::{Event, EventDevice};
 use backends::SDL_CONTEXT;
 use sdl2::event::Event as SdlEvent;
-use sdl2::EventPump;
 use sdl2::keyboard::Scancode;
+use sdl2::EventPump;
 use settings::RustzxSettings;
 use utils::EmulationSpeed;
-use zx::keys::*;
 use zx::joy::kempston::KempstonKey;
+use zx::keys::*;
 
 /// Represents SDL Envets bakend
 pub struct EventsSdl {
@@ -24,9 +24,7 @@ impl EventsSdl {
             pump = sdl.borrow_mut().event_pump().ok();
         });
         if let Some(pump) = pump {
-            EventsSdl {
-                event_pump: pump,
-            }
+            EventsSdl { event_pump: pump }
         } else {
             panic!("[ERROR] Sdl event pump init error");
         }
@@ -114,13 +112,13 @@ impl EventDevice for EventsSdl {
             // if event found
             match event {
                 // exot requested
-                SdlEvent::Quit {..} => Some(Event::Exit),
+                SdlEvent::Quit { .. } => Some(Event::Exit),
                 // if any key pressed
-                action @ SdlEvent::KeyDown {..} | action @ SdlEvent::KeyUp {..} => {
+                action @ SdlEvent::KeyDown { .. } | action @ SdlEvent::KeyUp { .. } => {
                     // assemble tuple from scancode and its state
                     let (scancode, state) = match action {
-                        SdlEvent::KeyDown {scancode: code, ..} => (code, true),
-                        SdlEvent::KeyUp {scancode: code, ..} => (code, false),
+                        SdlEvent::KeyDown { scancode: code, .. } => (code, true),
+                        SdlEvent::KeyUp { scancode: code, .. } => (code, false),
                         _ => unreachable!(),
                     };
                     if let Some(key) = self.scancode_to_zxkey(scancode) {
@@ -141,21 +139,13 @@ impl EventDevice for EventsSdl {
                                     Scancode::F4 => {
                                         Some(Event::ChangeSpeed(EmulationSpeed::Definite(2)))
                                     }
-                                    Scancode::F5 => {
-                                        Some(Event::ChangeSpeed(EmulationSpeed::Max))
-                                    }
+                                    Scancode::F5 => Some(Event::ChangeSpeed(EmulationSpeed::Max)),
                                     // debug info control
-                                    Scancode::F6 => {
-                                        Some(Event::SwitchDebug)
-                                    }
+                                    Scancode::F6 => Some(Event::SwitchDebug),
                                     // tape control
-                                    Scancode::Insert => {
-                                        Some(Event::InsertTape)
-                                    }
-                                    Scancode::Delete => {
-                                        Some(Event::StopTape)
-                                    }
-                                    _ => None
+                                    Scancode::Insert => Some(Event::InsertTape),
+                                    Scancode::Delete => Some(Event::StopTape),
+                                    _ => None,
                                 }
                             } else {
                                 None
@@ -164,10 +154,8 @@ impl EventDevice for EventsSdl {
                             None
                         }
                     }
-                },
-                SdlEvent::DropFile {filename, ..} => {
-                    Some(Event::OpenFile(filename.into()))
-                },
+                }
+                SdlEvent::DropFile { filename, .. } => Some(Event::OpenFile(filename.into())),
                 _ => None,
             }
         } else {
