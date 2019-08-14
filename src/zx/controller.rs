@@ -1,6 +1,7 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
 use std::fs::File;
 use std::io::Read;
+use std::path::{Path, PathBuf};
 
 // use almost everything :D
 use utils::{split_word, Clocks};
@@ -110,7 +111,7 @@ impl ZXController {
     /// loads rom from file
     /// for 128-K machines path must contain ".0" in the tail
     /// and second rom bank will be loaded automatically
-    pub fn load_rom(&mut self, path: &str) {
+    pub fn load_rom(&mut self, path: impl AsRef<Path>) {
         match self.machine {
             // Single ROM file
             ZXMachine::Sinclair48K => {
@@ -123,13 +124,15 @@ impl ZXController {
             ZXMachine::Sinclair128K => {
                 let mut rom0 = Vec::new();
                 let mut rom1 = Vec::new();
-                File::open(path).ok().expect("[ERROR] ROM0 not found").read_to_end(&mut rom0)
-                                                                      .unwrap();
-                let mut second_path = path.to_owned();
-                second_path.pop();
-                second_path.push('1');
+                if !path.as_ref().extension().map_or(false, |e| e == "0") {
+                    println!("[Warning] ROM0 filename should end with .0");
+                }
+                File::open(path.as_ref()).ok().expect("[ERROR] ROM0 not found").read_to_end(&mut rom0)
+                    .unwrap();
+                let mut second_path: PathBuf = path.as_ref().to_path_buf();
+                second_path.set_extension("1");
                 File::open(second_path).ok().expect("[ERROR] ROM1 not found").read_to_end(&mut rom1)
-                                                                      .unwrap();
+                    .unwrap();
                 self.memory.load_rom(0, &rom0)
                            .load_rom(1, &rom1);
                 println!("ROM's Loaded");

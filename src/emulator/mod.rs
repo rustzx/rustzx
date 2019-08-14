@@ -75,7 +75,7 @@ impl Emulator {
     }
 
     /// loads snapshot file
-    pub fn load_sna(&mut self, file: &str) {
+    pub fn load_sna(&mut self, file: impl AsRef<Path>) {
         loaders::load_sna(self, file)
     }
 

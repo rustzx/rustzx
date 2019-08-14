@@ -129,7 +129,7 @@ impl ZXTape for Tap {
     }
 
     /// updates internal structure according new tape file
-    fn insert(&mut self, path: &str) -> InsertResult {
+    fn insert(&mut self, path: &Path) -> InsertResult {
         if let Ok(mut file) = File::open(path) {
             if let Err(_) = file.read_to_end(&mut self.data) {
                 return InsertResult::Err("TAP file read error");

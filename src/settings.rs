@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use clap::{Arg, App, AppSettings};
 use zx::machine::ZXMachine;
 use zx::sound::ay::ZXAYMode;
@@ -20,9 +20,9 @@ pub struct RustzxSettings {
     pub sound_enabled: bool,
     pub volume: usize,
     pub latency: usize,
-    pub rom: Option<String>,
-    pub tap: Option<String>,
-    pub sna: Option<String>,
+    pub rom: Option<PathBuf>,
+    pub tap: Option<PathBuf>,
+    pub sna: Option<PathBuf>,
 }
 
 impl RustzxSettings {
@@ -141,26 +141,26 @@ impl RustzxSettings {
            .beeper(!cmd.is_present("NOBEEPER"))
            .sound(!cmd.is_present("NOSOUND"))
            .kempston(cmd.is_present("KEMPSTON"));
-        if let Some(path) = cmd.value_of("ROM") {
+        if let Some(path) = cmd.value_of_os("ROM") {
             if Path::new(path).is_file() {
                 out.rom(path);
             } else {
-                println!("[Warning] ROM file \"{}\" not found", path);
+                println!("[Warning] ROM file \"{}\" not found", path.to_string_lossy());
             }
         }
-        if let Some(path) = cmd.value_of("TAP") {
+        if let Some(path) = cmd.value_of_os("TAP") {
             if Path::new(path).is_file() {
                 out.tap(path);
             } else {
-                println!("[Warning] Tape file \"{}\" not found", path);
+                println!("[Warning] Tape file \"{}\" not found", path.to_string_lossy());
             }
         }
-        if let Some(path) = cmd.value_of("SNA") {
+        if let Some(path) = cmd.value_of_os("SNA") {
             if out.machine == ZXMachine::Sinclair48K {
                 if Path::new(path).is_file() {
                     out.sna(path);
                 } else {
-                    println!("[Warning] Snapshot file \"{}\" not found", path);
+                    println!("[Warning] Snapshot file \"{}\" not found", path.to_string_lossy());
                 }
             } else {
                 println!("[Warning] 128K SNA is not supported!");
@@ -256,18 +256,18 @@ impl RustzxSettings {
         self
     }
     /// changes TAP path
-    pub fn tap(&mut self, value: &str) -> &mut Self {
-        self.tap = Some(value.to_owned());
+    pub fn tap(&mut self, value: impl AsRef<Path>) -> &mut Self {
+        self.tap = Some(value.as_ref().into());
         self
     }
     /// changes SNA path
-    pub fn sna(&mut self, value: &str) -> &mut Self {
-        self.sna = Some(value.to_owned());
+    pub fn sna(&mut self, value: impl AsRef<Path>) -> &mut Self {
+        self.sna = Some(value.as_ref().into());
         self
     }
     /// changes ROM path
-    pub fn rom(&mut self, value: &str) -> &mut Self {
-        self.rom = Some(value.to_owned());
+    pub fn rom(&mut self, value: impl AsRef<Path>) -> &mut Self {
+        self.rom = Some(value.as_ref().into());
         self
     }
     /// changes emulation speed

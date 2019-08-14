@@ -19,20 +19,10 @@ pub fn load_file_autodetect(emulator: &mut Emulator, file: impl AsRef<Path>) {
         .map(|s| s.to_lowercase());
     match extension {
         Some(ref s) if s == "sna" => {
-            // TODO: load_sna should take Path for filename
-            match file.as_ref().to_str() {
-                Some(file_str) => load_sna(emulator, file_str),
-                None => (),
-            }
+            load_sna(emulator, file)
         }
         Some(ref s) if s == "tap" => {
-            // TODO: insert should take Path for filename
-            match file.as_ref().to_str() {
-                Some(file_str) => {
-                    emulator.controller.tape.insert(file_str);
-                }
-                None => (),
-            }
+            emulator.controller.tape.insert(file.as_ref());
         }
         _ => (),
     }
