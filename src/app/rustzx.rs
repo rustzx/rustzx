@@ -2,15 +2,14 @@
 //! Handles all platform-related, hardware-related stuff
 //! and command-line interface
 
-use std::thread;
-use std::time::{Duration, Instant};
+use app::events::*;
 use app::sound::*;
 use app::video::*;
-use app::events::*;
-use zx::constants::*;
-use settings::RustzxSettings;
 use emulator::*;
-
+use settings::RustzxSettings;
+use std::thread;
+use std::time::{Duration, Instant};
+use zx::constants::*;
 
 /// max 100 ms interval in `max frames` speed mode
 const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
@@ -89,20 +88,30 @@ impl RustzxApp {
                 }
             }
             // load new textures to sdl
-            self.video.update_texture(self.tex_border, self.emulator.controller.border.texture());
-            self.video.update_texture(self.tex_canvas, self.emulator.controller.canvas.texture());
+            self.video
+                .update_texture(self.tex_border, self.emulator.controller.border.texture());
+            self.video
+                .update_texture(self.tex_canvas, self.emulator.controller.canvas.texture());
             // rendering block
             self.video.begin();
-            self.video.draw_texture_2d(self.tex_border,
-                                       Some(Rect::new(0,
-                                                      0,
-                                                      SCREEN_WIDTH as u32 * scale,
-                                                      SCREEN_HEIGHT as u32 * scale)));
-            self.video.draw_texture_2d(self.tex_canvas,
-                                       Some(Rect::new(CANVAS_X as i32 * scale as i32,
-                                                      CANVAS_Y as i32 * scale as i32,
-                                                      CANVAS_WIDTH as u32 * scale,
-                                                      CANVAS_HEIGHT as u32 * scale)));
+            self.video.draw_texture_2d(
+                self.tex_border,
+                Some(Rect::new(
+                    0,
+                    0,
+                    SCREEN_WIDTH as u32 * scale,
+                    SCREEN_HEIGHT as u32 * scale,
+                )),
+            );
+            self.video.draw_texture_2d(
+                self.tex_canvas,
+                Some(Rect::new(
+                    CANVAS_X as i32 * scale as i32,
+                    CANVAS_Y as i32 * scale as i32,
+                    CANVAS_WIDTH as u32 * scale,
+                    CANVAS_HEIGHT as u32 * scale,
+                )),
+            );
             self.video.end();
             // check all events
             if let Some(event) = self.events.pop_event() {
@@ -116,8 +125,8 @@ impl RustzxApp {
                     Event::SwitchDebug => {
                         debug = !debug;
                         if !debug {
-                            self.video.set_title(&format!("RustZX v{}",
-                                                        env!("CARGO_PKG_VERSION")));
+                            self.video
+                                .set_title(&format!("RustZX v{}", env!("CARGO_PKG_VERSION")));
                         }
                     }
                     Event::ChangeSpeed(speed) => {
@@ -128,12 +137,8 @@ impl RustzxApp {
                             joy.key(key, state);
                         }
                     }
-                    Event::InsertTape => {
-                        self.emulator.controller.tape.play()
-                    }
-                    Event::StopTape => {
-                        self.emulator.controller.tape.stop()
-                    }
+                    Event::InsertTape => self.emulator.controller.tape.play(),
+                    Event::StopTape => self.emulator.controller.tape.stop(),
                     Event::OpenFile(path) => {
                         self.emulator.load_file_autodetect(path);
                     }
@@ -142,11 +147,7 @@ impl RustzxApp {
             // how long emulation iteration was
             let emulation_dt = frame_start.elapsed();
             if emulation_dt < frame_target_dt {
-                let wait_koef = if self.emulator.have_sound() {
-                    9
-                } else {
-                    10
-                };
+                let wait_koef = if self.emulator.have_sound() { 9 } else { 10 };
                 // sleep untill frame sync
                 thread::sleep((frame_target_dt - emulation_dt) * wait_koef / 10);
             };
@@ -154,9 +155,11 @@ impl RustzxApp {
             let frame_dt = frame_start.elapsed();
             // change window header
             if debug {
-                self.video.set_title(&format!("CPU: {:7.3}ms; FRAME:{:7.3}ms",
-                                               cpu_dt.as_millis(),
-                                               frame_dt.as_millis()));
+                self.video.set_title(&format!(
+                    "CPU: {:7.3}ms; FRAME:{:7.3}ms",
+                    cpu_dt.as_millis(),
+                    frame_dt.as_millis()
+                ));
             }
         }
     }

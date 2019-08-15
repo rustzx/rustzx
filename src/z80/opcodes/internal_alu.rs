@@ -1,6 +1,6 @@
-use z80::*;
 use utils::*;
 use z80::tables::*;
+use z80::*;
 
 /// 8-bit ALU operations
 pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
@@ -25,8 +25,8 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
         // ADC A, Operand
         U3::N1 => {
             let temp: u16 = (acc as u16)
-                                .wrapping_add(operand as u16)
-                                .wrapping_add(prev_carry as u16);
+                .wrapping_add(operand as u16)
+                .wrapping_add(prev_carry as u16);
             result = temp as u8;
             let lookup = lookup8_r12(acc, operand, temp as u8);
             flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
@@ -46,8 +46,8 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
         // SBC A, Operand; CP A, Operand
         U3::N3 => {
             let temp: u16 = (acc as u16)
-                                .wrapping_sub(operand as u16)
-                                .wrapping_sub(prev_carry as u16);
+                .wrapping_sub(operand as u16)
+                .wrapping_sub(prev_carry as u16);
             result = temp as u8;
             let lookup = lookup8_r12(acc, operand, temp as u8);
             flags |= OVERFLOW_SUB_TABLE[(lookup >> 4) as usize];

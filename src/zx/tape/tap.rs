@@ -158,7 +158,6 @@ impl ZXTape for Tap {
         } else {
             return InsertResult::Err("Can't open TAP file");
         }
-
     }
 
     /// makes internal state change based on clocks count

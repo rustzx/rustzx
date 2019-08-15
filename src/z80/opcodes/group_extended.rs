@@ -1,7 +1,7 @@
 use super::*;
-use z80::*;
 use utils::*;
 use z80::tables::*;
+use z80::*;
 
 /// Extended instruction group (ED-prefixed)
 /// Operations are assorted.
@@ -55,8 +55,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         // SBC HL, rp[p]
                         U1::N0 => {
                             result = (hl as u32)
-                                         .wrapping_sub(operand as u32)
-                                         .wrapping_sub(prev_carry as u32);
+                                .wrapping_sub(operand as u32)
+                                .wrapping_sub(prev_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
                             flags |= OVERFLOW_SUB_TABLE[(lookup >> 4) as usize];
                             flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
@@ -65,8 +65,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
                         // ADC HL, rp[p]
                         U1::N1 => {
                             result = (hl as u32)
-                                         .wrapping_add(operand as u32)
-                                         .wrapping_add(prev_carry as u32);
+                                .wrapping_add(operand as u32)
+                                .wrapping_add(prev_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
                             flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
                             flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];

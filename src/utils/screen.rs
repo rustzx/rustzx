@@ -1,6 +1,5 @@
-use zx::constants::*;
 use super::split_word;
-
+use zx::constants::*;
 
 /// Encode line number to read memory address
 pub fn bitmap_line_addr(line: usize) -> u16 {

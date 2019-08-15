@@ -1,10 +1,10 @@
 //! Platform-independent high-level Emulator interaction module
+use settings::RustzxSettings;
 use std::path::Path;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 use utils::*;
 use z80::*;
 use zx::ZXController;
-use settings::RustzxSettings;
 
 mod loaders;
 
@@ -133,7 +133,7 @@ impl Emulator {
                         self.controller.clear_events();
                         return start_time.elapsed();
                     };
-                    // if speed is maximal.
+                // if speed is maximal.
                 } else {
                     // if any frame passed then break cpu loop, but try to start new frame
                     if self.controller.frames_count() != 0 {

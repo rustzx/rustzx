@@ -1,10 +1,10 @@
 //! Module describes ZX Spectrum screen
 //! *block* - is 8x1 pxels stripe.
-use utils::*;
 use utils::screen::*;
+use utils::*;
 use zx::constants::*;
-use zx::screen::colors::*;
 use zx::machine::ZXMachine;
+use zx::screen::colors::*;
 
 // size of screen buffer in bytes
 const BUFFER_LENGTH: usize = CANVAS_HEIGHT * CANVAS_WIDTH * BYTES_PER_PIXEL;
@@ -65,8 +65,8 @@ impl BlocksCount {
     pub fn passed_from(&self, prev: &BlocksCount) -> usize {
         if self.lines < prev.lines {
             ATTR_COLS - prev.columns
-            //self.lines * ATTR_COLS + self.columns
-        } else  if self.lines == prev.lines {
+        //self.lines * ATTR_COLS + self.columns
+        } else if self.lines == prev.lines {
             // if positions on the same line => just use difference in columns.
             self.columns - prev.columns
         } else {
@@ -112,12 +112,12 @@ impl ZXCanvas {
             banks: [
                 ScreenBank {
                     attributes: Box::new([ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS]),
-                    bitmap:  Box::new([0; ATTR_COLS * CANVAS_HEIGHT]),
+                    bitmap: Box::new([0; ATTR_COLS * CANVAS_HEIGHT]),
                 },
                 ScreenBank {
-                    attributes:  Box::new([ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS]),
-                    bitmap:  Box::new([0; ATTR_COLS * CANVAS_HEIGHT]),
-                }
+                    attributes: Box::new([ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS]),
+                    bitmap: Box::new([0; ATTR_COLS * CANVAS_HEIGHT]),
+                },
             ],
             active_bank: 0,
             next_bank: 0,
@@ -168,8 +168,9 @@ impl ZXCanvas {
                 for pixel in 0..8 {
                     // from most significant bit
                     let state = ((bitmap << pixel) & 0x80) != 0;
-                    let color = self.palette.get_rgba(attr.active_color(state, self.flash),
-                                                      attr.brightness);
+                    let color = self
+                        .palette
+                        .get_rgba(attr.active_color(state, self.flash), attr.brightness);
                     let index = (block * 8 + pixel) * BYTES_PER_PIXEL;
                     self.buffer[index..index + BYTES_PER_PIXEL].clone_from_slice(color);
                 }

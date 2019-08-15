@@ -1,14 +1,14 @@
 //! Module which contains all CPU-specific structures, functions, constants
 
-pub mod tables;
-mod common_types;
-mod registers;
 mod bus;
+mod common_types;
 mod cpu;
 pub mod opcodes;
+mod registers;
+pub mod tables;
 
 // Bring nested types and functions to current scope
-pub use self::common_types::*;
-pub use self::registers::*;
 pub use self::bus::*;
+pub use self::common_types::*;
 pub use self::cpu::*;
+pub use self::registers::*;

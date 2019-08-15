@@ -1,9 +1,9 @@
+use clap::{App, AppSettings, Arg};
 use std::path::{Path, PathBuf};
-use clap::{Arg, App, AppSettings};
+use utils::EmulationSpeed;
+use zx::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use zx::machine::ZXMachine;
 use zx::sound::ay::ZXAYMode;
-use zx::constants::{SCREEN_WIDTH, SCREEN_HEIGHT};
-use utils::EmulationSpeed;
 // TODO: move comand line parsing here
 
 /// Structure to handle all emulator runtime settings
@@ -51,76 +51,105 @@ impl RustzxSettings {
         let mut out = Self::new();
         // parse cli
         let cmd = App::new("rustzx")
-                      .setting(AppSettings::ColoredHelp)
-                      .version(env!("CARGO_PKG_VERSION"))
-                      .author("Vladislav Nikonov <pacmancoder@gmail.com>")
-                      .about("ZX Spectrum emulator written in pure Rust")
-                      // machine settings
-                      .arg(Arg::with_name("128K")
-                               .long("128k")
-                               .help("Enables ZX Spectrum 128K mode"))
-                      .arg(Arg::with_name("FASTLOAD")
-                               .short("f")
-                               .long("fastload")
-                               .help("Accelerates standard tape loaders"))
-                      // media files
-                      .arg(Arg::with_name("ROM")
-                               .long("rom")
-                               .value_name("ROM_PATH")
-                               .help("Selects path to rom, otherwise default will be used"))
-                      .arg(Arg::with_name("TAP")
-                               .long("tap")
-                               .value_name("TAP_PATH")
-                               .help("Selects path to *.tap file"))
-                      .arg(Arg::with_name("SNA")
-                               .long("sna")
-                               .value_name("SNA_PATH")
-                               .help("Selects path to *.sna snapshot file"))
-                      // devices
-                      .arg(Arg::with_name("KEMPSTON")
-                                .short("k")
-                                .long("kempston")
-                                .help("Enables Kempston joystick. Controlls via arrow keys and \
-                                       Alt buttons"))
-                      // emulator settings
-                      .arg(Arg::with_name("SPEED")
-                               .long("speed")
-                               .value_name("SPEED_VALUE")
-                               .help("Selects speed for emulator in integer multiplier form"))
-                      .arg(Arg::with_name("SCALE")
-                               .long("scale")
-                               .value_name("SCALE_VALUE")
-                               .help("Selects default screen size. possible values are positive \
-                                      integers. Default value is 2"))
-                      // sound
-                      .arg(Arg::with_name("NOSOUND")
-                               .long("nosound")
-                               .help("Disables sound. Use it when you have problems with audio \
-                                      playback"))
-                      .arg(Arg::with_name("NOBEEPER")
-                               .long("nobeeper")
-                               .help("Disables beeper"))
-                      .arg(Arg::with_name("AY")
-                                .long("ay")
-                                .value_name("AY_TYPE")
-                                .possible_values(&["none", "mono", "abc", "acb"])
-                                .help("Selects AY mode. Use none to disable. \
-                                       For stereo features use abc or acb, default is mono for \
-                                       128k and none for 48k."))
-                      .arg(Arg::with_name("VOLUME")
-                                .long("volume")
-                                .value_name("VOLUME_VALUE")
-                                .help("Selects volume - value in range 0..200. Volume over 100 \
-                                       can cause sound artifacts"))
-                      .arg(Arg::with_name("LATENCY")
-                                .long("latency")
-                                .short("l")
-                                .value_name("SAMPLES")
-                                .help("Selects audio latency. Default is 1024 samples. Set higher \
-                                       latency if emulator have sound glitches. Or if your \
-                                       machine can handle this - try to set it lower. Must be \
-                                       power of two."))
-                      .get_matches();
+            .setting(AppSettings::ColoredHelp)
+            .version(env!("CARGO_PKG_VERSION"))
+            .author("Vladislav Nikonov <pacmancoder@gmail.com>")
+            .about("ZX Spectrum emulator written in pure Rust")
+            // machine settings
+            .arg(
+                Arg::with_name("128K")
+                    .long("128k")
+                    .help("Enables ZX Spectrum 128K mode"),
+            )
+            .arg(
+                Arg::with_name("FASTLOAD")
+                    .short("f")
+                    .long("fastload")
+                    .help("Accelerates standard tape loaders"),
+            )
+            // media files
+            .arg(
+                Arg::with_name("ROM")
+                    .long("rom")
+                    .value_name("ROM_PATH")
+                    .help("Selects path to rom, otherwise default will be used"),
+            )
+            .arg(
+                Arg::with_name("TAP")
+                    .long("tap")
+                    .value_name("TAP_PATH")
+                    .help("Selects path to *.tap file"),
+            )
+            .arg(
+                Arg::with_name("SNA")
+                    .long("sna")
+                    .value_name("SNA_PATH")
+                    .help("Selects path to *.sna snapshot file"),
+            )
+            // devices
+            .arg(Arg::with_name("KEMPSTON").short("k").long("kempston").help(
+                "Enables Kempston joystick. Controlls via arrow keys and \
+                 Alt buttons",
+            ))
+            // emulator settings
+            .arg(
+                Arg::with_name("SPEED")
+                    .long("speed")
+                    .value_name("SPEED_VALUE")
+                    .help("Selects speed for emulator in integer multiplier form"),
+            )
+            .arg(
+                Arg::with_name("SCALE")
+                    .long("scale")
+                    .value_name("SCALE_VALUE")
+                    .help(
+                        "Selects default screen size. possible values are positive \
+                         integers. Default value is 2",
+                    ),
+            )
+            // sound
+            .arg(Arg::with_name("NOSOUND").long("nosound").help(
+                "Disables sound. Use it when you have problems with audio \
+                 playback",
+            ))
+            .arg(
+                Arg::with_name("NOBEEPER")
+                    .long("nobeeper")
+                    .help("Disables beeper"),
+            )
+            .arg(
+                Arg::with_name("AY")
+                    .long("ay")
+                    .value_name("AY_TYPE")
+                    .possible_values(&["none", "mono", "abc", "acb"])
+                    .help(
+                        "Selects AY mode. Use none to disable. \
+                         For stereo features use abc or acb, default is mono for \
+                         128k and none for 48k.",
+                    ),
+            )
+            .arg(
+                Arg::with_name("VOLUME")
+                    .long("volume")
+                    .value_name("VOLUME_VALUE")
+                    .help(
+                        "Selects volume - value in range 0..200. Volume over 100 \
+                         can cause sound artifacts",
+                    ),
+            )
+            .arg(
+                Arg::with_name("LATENCY")
+                    .long("latency")
+                    .short("l")
+                    .value_name("SAMPLES")
+                    .help(
+                        "Selects audio latency. Default is 1024 samples. Set higher \
+                         latency if emulator have sound glitches. Or if your \
+                         machine can handle this - try to set it lower. Must be \
+                         power of two.",
+                    ),
+            )
+            .get_matches();
         // machine type
         if cmd.is_present("128K") {
             out.machine(ZXMachine::Sinclair128K);
@@ -138,21 +167,27 @@ impl RustzxSettings {
             };
         }
         out.fastload(cmd.is_present("FASTLOAD"))
-           .beeper(!cmd.is_present("NOBEEPER"))
-           .sound(!cmd.is_present("NOSOUND"))
-           .kempston(cmd.is_present("KEMPSTON"));
+            .beeper(!cmd.is_present("NOBEEPER"))
+            .sound(!cmd.is_present("NOSOUND"))
+            .kempston(cmd.is_present("KEMPSTON"));
         if let Some(path) = cmd.value_of_os("ROM") {
             if Path::new(path).is_file() {
                 out.rom(path);
             } else {
-                println!("[Warning] ROM file \"{}\" not found", path.to_string_lossy());
+                println!(
+                    "[Warning] ROM file \"{}\" not found",
+                    path.to_string_lossy()
+                );
             }
         }
         if let Some(path) = cmd.value_of_os("TAP") {
             if Path::new(path).is_file() {
                 out.tap(path);
             } else {
-                println!("[Warning] Tape file \"{}\" not found", path.to_string_lossy());
+                println!(
+                    "[Warning] Tape file \"{}\" not found",
+                    path.to_string_lossy()
+                );
             }
         }
         if let Some(path) = cmd.value_of_os("SNA") {
@@ -160,20 +195,23 @@ impl RustzxSettings {
                 if Path::new(path).is_file() {
                     out.sna(path);
                 } else {
-                    println!("[Warning] Snapshot file \"{}\" not found", path.to_string_lossy());
+                    println!(
+                        "[Warning] Snapshot file \"{}\" not found",
+                        path.to_string_lossy()
+                    );
                 }
             } else {
                 println!("[Warning] 128K SNA is not supported!");
             }
         }
         if let Some(value) = cmd.value_of("AY") {
-           match value {
-               "none" => { out.ay(false) },
-               "mono" => { out.ay_mode(ZXAYMode::Mono) },
-               "abc" => { out.ay_mode(ZXAYMode::ABC) },
-               "acb" => { out.ay_mode(ZXAYMode::ACB) },
-               _ => unreachable!(),
-           };
+            match value {
+                "none" => out.ay(false),
+                "mono" => out.ay_mode(ZXAYMode::Mono),
+                "abc" => out.ay_mode(ZXAYMode::ABC),
+                "acb" => out.ay_mode(ZXAYMode::ACB),
+                _ => unreachable!(),
+            };
         };
         if let Some(value) = cmd.value_of("VOLUME") {
             if let Ok(value) = value.parse::<usize>() {
@@ -243,11 +281,7 @@ impl RustzxSettings {
 
     /// Changes volume
     pub fn volume(&mut self, val: usize) -> &mut Self {
-        self.volume = if val > 200 {
-            200
-        } else {
-            val
-        };
+        self.volume = if val > 200 { 200 } else { val };
         self
     }
     /// cahnges kempston joy connection

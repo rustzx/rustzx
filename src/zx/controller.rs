@@ -4,24 +4,24 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 // use almost everything :D
-use utils::{split_word, Clocks};
-use utils::screen::*;
+use settings::RustzxSettings;
 use utils::events::*;
+use utils::screen::*;
 use utils::InstantFlag;
+use utils::{split_word, Clocks};
 use z80::Z80Bus;
-use zx::{ZXMemory, RomType, RamType};
-use zx::memory::{Page, PAGE_SIZE};
+use zx::constants::*;
+use zx::joy::kempston::*;
 use zx::machine::ZXMachine;
+use zx::memory::{Page, PAGE_SIZE};
+use zx::roms::*;
+use zx::screen::border::ZXBorder;
+use zx::screen::canvas::ZXCanvas;
+use zx::screen::colors::{ZXColor, ZXPalette};
+use zx::sound::mixer::ZXMixer;
 use zx::tape::*;
 use zx::ZXKey;
-use zx::screen::canvas::ZXCanvas;
-use zx::screen::border::ZXBorder;
-use zx::screen::colors::{ZXColor, ZXPalette};
-use zx::roms::*;
-use zx::constants::*;
-use zx::sound::mixer::ZXMixer;
-use settings::RustzxSettings;
-use zx::joy::kempston::*;
+use zx::{RamType, RomType, ZXMemory};
 
 /// ZX System controller
 pub struct ZXController {
@@ -116,8 +116,11 @@ impl ZXController {
             // Single ROM file
             ZXMachine::Sinclair48K => {
                 let mut rom = Vec::new();
-                File::open(path).ok().expect("[ERROR] ROM not found").read_to_end(&mut rom)
-                                                                     .unwrap();
+                File::open(path)
+                    .ok()
+                    .expect("[ERROR] ROM not found")
+                    .read_to_end(&mut rom)
+                    .unwrap();
                 self.memory.load_rom(0, &rom);
             }
             // Two ROM's
@@ -127,14 +130,19 @@ impl ZXController {
                 if !path.as_ref().extension().map_or(false, |e| e == "0") {
                     println!("[Warning] ROM0 filename should end with .0");
                 }
-                File::open(path.as_ref()).ok().expect("[ERROR] ROM0 not found").read_to_end(&mut rom0)
+                File::open(path.as_ref())
+                    .ok()
+                    .expect("[ERROR] ROM0 not found")
+                    .read_to_end(&mut rom0)
                     .unwrap();
                 let mut second_path: PathBuf = path.as_ref().to_path_buf();
                 second_path.set_extension("1");
-                File::open(second_path).ok().expect("[ERROR] ROM1 not found").read_to_end(&mut rom1)
+                File::open(second_path)
+                    .ok()
+                    .expect("[ERROR] ROM1 not found")
+                    .read_to_end(&mut rom1)
                     .unwrap();
-                self.memory.load_rom(0, &rom0)
-                           .load_rom(1, &rom1);
+                self.memory.load_rom(0, &rom0).load_rom(1, &rom1);
                 println!("ROM's Loaded");
             }
         }
@@ -146,8 +154,7 @@ impl ZXController {
                 self.memory.load_rom(0, ROM_48K);
             }
             ZXMachine::Sinclair128K => {
-                self.memory.load_rom(0, ROM_128K_0)
-                           .load_rom(1, ROM_128K_1);
+                self.memory.load_rom(0, ROM_128K_0).load_rom(1, ROM_128K_1);
             }
         }
     }
@@ -190,8 +197,10 @@ impl ZXController {
         let row = clocks / specs.clocks_line;
         let clocks = clocks % specs.clocks_line;
         let col = (clocks / 8) * 2 + (clocks % 8) / 2;
-        if row < CANVAS_HEIGHT && clocks < specs.clocks_screen_row - CLOCKS_PER_COL
-            && ((clocks & 0x04) == 0) {
+        if row < CANVAS_HEIGHT
+            && clocks < specs.clocks_screen_row - CLOCKS_PER_COL
+            && ((clocks & 0x04) == 0)
+        {
             if clocks % 2 == 0 {
                 return self.memory.read(bitmap_line_addr(row) + col as u16);
             } else {
@@ -220,7 +229,7 @@ impl ZXController {
             self.machine.bank_is_contended(bank as usize)
         } else {
             false
-        }
+        };
     }
 
     /// Returns early IO contention clocks
@@ -291,11 +300,7 @@ impl ZXController {
         self.memory.remap(3, Page::Ram(val & 0x07));
         // third block is not pageable
         // second block is screen buffer, not pageable. but we need to change active buffer
-        let new_screen_bank = if val & 0x08 == 0 {
-            5
-        } else {
-            7
-        };
+        let new_screen_bank = if val & 0x08 == 0 { 5 } else { 7 };
         self.canvas.switch_bank(new_screen_bank as usize);
         self.screen_bank = new_screen_bank;
         // remap ROM
@@ -322,7 +327,8 @@ impl Z80Bus for ZXController {
             if addr == ADDR_LD_BREAK {
                 // Add event (Fast tape loading request) it must be executed
                 // by emulator immediately
-                self.events.send_event(Event::new(EventKind::FastTapeLoad, self.frame_clocks));
+                self.events
+                    .send_event(Event::new(EventKind::FastTapeLoad, self.frame_clocks));
                 self.instant_event.set();
             }
         }
@@ -338,7 +344,8 @@ impl Z80Bus for ZXController {
         self.memory.write(addr, data);
         // if ram then compare bank to screen bank
         if let Page::Ram(bank) = self.memory.get_page(addr) {
-            self.canvas.update(addr % PAGE_SIZE as u16, bank as usize, data);
+            self.canvas
+                .update(addr % PAGE_SIZE as u16, bank as usize, data);
         }
     }
 
@@ -361,7 +368,7 @@ impl Z80Bus for ZXController {
     // wait with memory request pin active
     fn wait_mreq(&mut self, addr: u16, clk: Clocks) {
         match self.machine {
-            ZXMachine::Sinclair48K | ZXMachine::Sinclair128K=> {
+            ZXMachine::Sinclair48K | ZXMachine::Sinclair128K => {
                 // contention in low 16k RAM
                 if self.addr_is_contended(addr) {
                     self.do_contention();
@@ -399,7 +406,7 @@ impl Z80Bus for ZXController {
             }
             // 5 and 7 unused
             tmp
-        } else  if port & 0xC002 == 0xC000 {
+        } else if port & 0xC002 == 0xC000 {
             // AY regs
             self.mixer.ay.read()
         } else if self.kempston.is_some() && (port & 0x0020 == 0) {
@@ -427,7 +434,8 @@ impl Z80Bus for ZXController {
             self.mixer.ay.write(data);
         } else if port & 0x0001 == 0 {
             self.border_color = data & 0x07;
-            self.border.set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
+            self.border
+                .set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
             self.mic = data & 0x08 != 0;
             self.ear = data & 0x10 != 0;
             self.mixer.beeper.change_bit(self.mic | self.ear);
@@ -447,8 +455,8 @@ impl Z80Bus for ZXController {
 
     /// checks system maskable interrupt pin state
     fn int_active(&self) -> bool {
-        self.frame_clocks.count() % self.machine.specs().clocks_frame <
-        self.machine.specs().interrupt_length
+        self.frame_clocks.count() % self.machine.specs().clocks_frame
+            < self.machine.specs().interrupt_length
     }
 
     /// checks non-maskable interrupt pin state

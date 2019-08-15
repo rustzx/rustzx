@@ -5,8 +5,8 @@ pub use self::events_sdl::EventsSdl;
 
 use std::path::PathBuf;
 use utils::EmulationSpeed;
-use zx::keys::*;
 use zx::joy::kempston::KempstonKey;
+use zx::keys::*;
 
 // Event type
 pub enum Event {

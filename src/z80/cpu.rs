@@ -1,8 +1,8 @@
 //! Z80 CPU module
 
 use utils::*;
-use z80::*;
 use z80::opcodes::*;
+use z80::*;
 
 /// Z80 Processor struct
 pub struct Z80 {
@@ -90,7 +90,7 @@ impl Z80 {
                 execute_push_16(self, bus, RegName16::PC, Clocks(3));
                 self.regs.set_pc(0x0066);
                 self.regs.inc_r(1);
-                // 5 + 3 + 3 = 11 clocks
+            // 5 + 3 + 3 = 11 clocks
             } else if bus.int_active() && self.regs.get_iff1() {
                 // send to bus halt end message
                 if self.halted {
@@ -121,8 +121,8 @@ impl Z80 {
                     IntMode::IM2 => {
                         execute_push_16(self, bus, RegName16::PC, Clocks(3));
                         // build interrupt vector
-                        let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00) |
-                                   (((bus.read_interrupt() as u16)) & 0x00FF);
+                        let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00)
+                            | ((bus.read_interrupt() as u16) & 0x00FF);
                         let addr = bus.read_word(addr, Clocks(3));
                         self.regs.set_pc(addr);
                         bus.wait_internal(Clocks(7));
@@ -195,10 +195,6 @@ impl Z80 {
         // next cpu step
         bus.pc_callback(self.regs.get_pc());
         // return true if events happened
-        return if bus.instant_event() {
-            true
-        } else {
-            false
-        };
+        return if bus.instant_event() { true } else { false };
     }
 }

@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use utils::{EmulationSpeed, Clocks};
+use utils::{Clocks, EmulationSpeed};
 
 /// Type of happened event
 pub enum EventKind {
@@ -32,7 +32,9 @@ pub struct EventQueue {
 impl EventQueue {
     /// cnstructs new EventQueue
     pub fn new() -> EventQueue {
-        EventQueue { deque: VecDeque::new() }
+        EventQueue {
+            deque: VecDeque::new(),
+        }
     }
     /// addd new event
     pub fn send_event(&mut self, e: Event) {

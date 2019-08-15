@@ -76,12 +76,14 @@ impl ZXSpecsBuilder {
     }
     /// Builds new ZXSpecs
     pub fn build(mut self) -> ZXSpecs {
-        self.specs.clocks_frame = (self.specs.lines_all + self.specs.lines_vsync) *
-                                  self.specs.clocks_line;
+        self.specs.clocks_frame =
+            (self.specs.lines_all + self.specs.lines_vsync) * self.specs.clocks_line;
         // 4*4 is 4 border columns * 4 clocks per column
-        self.specs.clocks_line_base.push(self.specs.clocks_first_pixel -
-                                         self.specs.lines_top_border * self.specs.clocks_line -
-                                         BORDER_COLS * 4);
+        self.specs.clocks_line_base.push(
+            self.specs.clocks_first_pixel
+                - self.specs.lines_top_border * self.specs.clocks_line
+                - BORDER_COLS * 4,
+        );
         // + 1 because TStates in calculations may be > frame length (CHECK)
         let lines_count = self.specs.lines_all + 1;
         for _ in 1..lines_count {
@@ -89,10 +91,10 @@ impl ZXSpecsBuilder {
             let line_clocks = self.specs.clocks_line;
             self.specs.clocks_line_base.push(last + line_clocks);
         }
-        self.specs.clocks_ula_read_origin = self.specs.clocks_first_pixel +
-                                            self.specs.clocks_ula_read_shift;
-        self.specs.clocks_ula_contention_origin = self.specs.clocks_first_pixel -
-                                                  self.specs.contention_offset;
+        self.specs.clocks_ula_read_origin =
+            self.specs.clocks_first_pixel + self.specs.clocks_ula_read_shift;
+        self.specs.clocks_ula_contention_origin =
+            self.specs.clocks_first_pixel - self.specs.contention_offset;
         self.specs
     }
     /// Changes CPU frequency
@@ -101,12 +103,13 @@ impl ZXSpecsBuilder {
         self
     }
     /// Changes Clocks per left border, screen render, left border and retrace
-    pub fn clocks_row(mut self,
-                      lborder: usize,
-                      screen: usize,
-                      rborder: usize,
-                      retrace: usize)
-                      -> Self {
+    pub fn clocks_row(
+        mut self,
+        lborder: usize,
+        screen: usize,
+        rborder: usize,
+        retrace: usize,
+    ) -> Self {
         self.specs.clocks_left_border = lborder;
         self.specs.clocks_screen_row = screen;
         self.specs.clocks_right_border = rborder;
