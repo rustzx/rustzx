@@ -47,7 +47,7 @@ impl ZXAyChip {
     }
     /// Selects active AY register to write
     pub fn select_reg(&mut self, reg: u8) {
-        // AY chip have only 16 regs [0...15]
+        // AY chip have only 16 regs [0..=15]
         self.current_reg = (reg & 0x0F) as usize;
     }
 
@@ -57,17 +57,17 @@ impl ZXAyChip {
         self.regs[reg] = data;
         match self.current_reg {
             // Channel A tone period
-            0...1 => {
+            0..=1 => {
                 let word = make_word(self.regs[1] & 0x0F, self.regs[0]);
                 self.ay.tone(ToneChannel::A).period(word as i32);
             }
             // Channel B tone period
-            2...3 => {
+            2..=3 => {
                 let word = make_word(self.regs[3] & 0x0F, self.regs[2]);
                 self.ay.tone(ToneChannel::B).period(word as i32);
             }
             // Channel C tone period
-            4...5 => {
+            4..=5 => {
                 let word = make_word(self.regs[5] & 0x0F, self.regs[4]);
                 self.ay.tone(ToneChannel::C).period(word as i32);
             }
@@ -76,7 +76,7 @@ impl ZXAyChip {
                 self.ay.noise().period((self.regs[6] & 0x1F) as i32);
             }
             // Mixer Controls
-            7...10 => {
+            7..=10 => {
                 self.ay.tone(ToneChannel::A).mixer(
                     (self.regs[7] & 0x01) != 0,
                     (self.regs[7] & 0x08) != 0,
@@ -99,7 +99,7 @@ impl ZXAyChip {
                 }
             }
             // Envelope period
-            11...12 => {
+            11..=12 => {
                 let word = make_word(self.regs[12] & 0x0F, self.regs[11]);
                 self.ay.envelope().period(word as i32);
             }
