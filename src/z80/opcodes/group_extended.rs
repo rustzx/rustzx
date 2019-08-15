@@ -5,7 +5,7 @@ use z80::*;
 
 /// Extended instruction group (ED-prefixed)
 /// Operations are assorted.
-pub fn execute_extended(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode) {
+pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
     match opcode.x {
         U2::N0 | U2::N3 => {
             // Nothing. Just nothung. Invalid opcodes.

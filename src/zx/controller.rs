@@ -29,7 +29,7 @@ pub struct ZXController {
     pub machine: ZXMachine,
     pub memory: ZXMemory,
     pub canvas: ZXCanvas,
-    pub tape: Box<ZXTape>,
+    pub tape: Box<dyn ZXTape>,
     pub border: ZXBorder,
     pub kempston: Option<KempstonJoy>,
     //pub beeper: ZXBeeper,

@@ -4,7 +4,7 @@ use z80::tables::*;
 use z80::*;
 
 /// ldi or ldd instruction
-pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
+pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     // read (HL)
     let src = bus.read(cpu.regs.get_hl(), Clocks(3));
     let bc = cpu.regs.dec_reg_16(RegName16::BC, 1);
@@ -37,7 +37,7 @@ pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
 }
 
 /// cpi or cpd instruction
-pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) -> bool {
+pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) -> bool {
     // read (HL)
     let src = bus.read(cpu.regs.get_hl(), Clocks(3));
     bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
@@ -73,7 +73,7 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) -> bool {
 }
 
 /// ini or ind instruction
-pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
+pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
     // get from port and write to memory
     let src = bus.read_io(cpu.regs.get_bc());
@@ -104,7 +104,7 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
 }
 
 /// outi or outd instruction
-pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut Z80Bus, dir: BlockDir) {
+pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
     // get input data
     let src = bus.read(cpu.regs.get_hl(), Clocks(3));
