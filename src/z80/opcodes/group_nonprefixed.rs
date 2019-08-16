@@ -11,7 +11,7 @@ use z80::*;
 ///
 /// DAA algorithm
 /// [link](http://www.worldofspectrum.org/faq/reference/z80reference.htm#DAA)
-pub fn execute_normal(cpu: &mut Z80, bus: &mut Z80Bus, opcode: Opcode, prefix: Prefix) {
+pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefix: Prefix) {
     // 2 first bits of opcode
     match opcode.x {
         // ---------------------------------

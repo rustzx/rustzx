@@ -196,13 +196,13 @@ impl ZXCanvas {
         if let Some(bank) = self.local_bank(bank) {
             match rel_addr {
                 // change bitmap
-                0...BITMAP_MAX_REL => {
+                0..=BITMAP_MAX_REL => {
                     let line = bitmap_line_rel(rel_addr);
                     let col = bitmap_col_rel(rel_addr);
                     self.banks[bank].bitmap[line * ATTR_COLS + col] = data;
                 }
                 // change attribute
-                ATTR_BASE_REL...ATTR_MAX_REL => {
+                ATTR_BASE_REL..=ATTR_MAX_REL => {
                     let row = attr_row_rel(rel_addr);
                     let col = attr_col_rel(rel_addr);
                     self.banks[bank].attributes[row * ATTR_COLS + col] =

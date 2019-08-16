@@ -35,9 +35,9 @@ pub struct RustzxApp {
     /// main emulator object
     emulator: Emulator,
     /// Sound rendering in a separate thread
-    snd: Option<Box<SoundDevice>>,
-    video: Box<VideoDevice>,
-    events: Box<EventDevice>,
+    snd: Option<Box<dyn SoundDevice>>,
+    video: Box<dyn VideoDevice>,
+    events: Box<dyn EventDevice>,
     tex_border: TextureInfo,
     tex_canvas: TextureInfo,
     settings: RustzxSettings,
@@ -46,7 +46,7 @@ pub struct RustzxApp {
 impl RustzxApp {
     /// Starts application itself
     pub fn from_config(settings: RustzxSettings) -> RustzxApp {
-        let snd: Option<Box<SoundDevice>> = if settings.sound_enabled {
+        let snd: Option<Box<dyn SoundDevice>> = if settings.sound_enabled {
             Some(Box::new(SoundSdl::new(&settings)))
         } else {
             None

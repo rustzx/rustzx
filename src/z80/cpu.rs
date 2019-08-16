@@ -31,7 +31,7 @@ impl Z80 {
 
     /// Reads byte from memory and increments PC
     #[inline]
-    pub fn fetch_byte(&mut self, bus: &mut Z80Bus, clk: Clocks) -> u8 {
+    pub fn fetch_byte(&mut self, bus: &mut dyn Z80Bus, clk: Clocks) -> u8 {
         let addr = self.regs.get_pc();
         self.regs.inc_pc(1);
         bus.read(addr, clk)
@@ -39,7 +39,7 @@ impl Z80 {
 
     /// Reads word from memory and increments PC twice
     #[inline]
-    pub fn fetch_word(&mut self, bus: &mut Z80Bus, clk: Clocks) -> u16 {
+    pub fn fetch_word(&mut self, bus: &mut dyn Z80Bus, clk: Clocks) -> u16 {
         let (hi_addr, lo_addr);
         lo_addr = self.regs.get_pc();
         let lo = bus.read(lo_addr, clk);
@@ -71,7 +71,7 @@ impl Z80 {
     /// Main emulation step function
     /// return `false` if execution can be continued or true if last event must be executed
     /// instantly
-    pub fn emulate(&mut self, bus: &mut Z80Bus) -> bool {
+    pub fn emulate(&mut self, bus: &mut dyn Z80Bus) -> bool {
         // check interrupts
         if !self.skip_interrupt {
             // at first check nmi

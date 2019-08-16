@@ -7,7 +7,7 @@ use z80::*;
 /// Includes rotations, setting, reseting, testing.
 /// covers CB, DDCB and FDCB execution group
 /// `prefix` param stands for first byte in double-prefixed instructions
-pub fn execute_bits(cpu: &mut Z80, bus: &mut Z80Bus, prefix: Prefix) {
+pub fn execute_bits(cpu: &mut Z80, bus: &mut dyn Z80Bus, prefix: Prefix) {
     let (opcode, operand) = if prefix == Prefix::None {
         // normal opcode fetch
         let tmp_opcode = Opcode::from_byte(cpu.fetch_byte(bus, Clocks(4)));

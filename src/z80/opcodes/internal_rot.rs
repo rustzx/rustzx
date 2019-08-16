@@ -5,7 +5,7 @@ use z80::*;
 
 /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)
 /// returns result (can be useful with DDCB/FDCB instructions)
-pub fn execute_rot(cpu: &mut Z80, bus: &mut Z80Bus, rot_code: U3, operand: BitOperand8) -> u8 {
+pub fn execute_rot(cpu: &mut Z80, bus: &mut dyn Z80Bus, rot_code: U3, operand: BitOperand8) -> u8 {
     // get byte which will be rotated
     let mut data = match operand {
         BitOperand8::Indirect(addr) => {
