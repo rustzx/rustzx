@@ -1,10 +1,9 @@
 //! Platform-independent high-level Emulator interaction module
-use crate::settings::RustzxSettings;
-use std::path::Path;
-use std::time::{Duration, Instant};
-use crate::utils::*;
-use crate::z80::*;
-use crate::zx::ZXController;
+use crate::{settings::RustzxSettings, utils::*, z80::*, zx::ZXController};
+use std::{
+    path::Path,
+    time::{Duration, Instant},
+};
 
 mod loaders;
 
@@ -34,7 +33,7 @@ impl Emulator {
         }
         let mut out = Emulator {
             cpu: Z80::new(),
-            controller: controller,
+            controller,
             speed: settings.speed,
             fast_load: settings.fastload,
             sound_enabled: settings.sound_enabled,

@@ -1,13 +1,12 @@
 //! Real events SDL backend
 use super::{Event, EventDevice};
-use crate::backends::SDL_CONTEXT;
-use sdl2::event::Event as SdlEvent;
-use sdl2::keyboard::Scancode;
-use sdl2::EventPump;
-use crate::settings::RustzxSettings;
-use crate::utils::EmulationSpeed;
-use crate::zx::joy::kempston::KempstonKey;
-use crate::zx::keys::*;
+use crate::{
+    backends::SDL_CONTEXT,
+    settings::RustzxSettings,
+    utils::EmulationSpeed,
+    zx::{joy::kempston::KempstonKey, keys::*},
+};
+use sdl2::{event::Event as SdlEvent, keyboard::Scancode, EventPump};
 
 /// Represents SDL Envets bakend
 pub struct EventsSdl {
@@ -88,6 +87,7 @@ impl EventsSdl {
             _ => None,
         }
     }
+
     /// returns kempston key form scancode of None if not found
     fn scancode_to_joy(&self, scancode: Option<Scancode>) -> Option<KempstonKey> {
         if scancode.is_none() {

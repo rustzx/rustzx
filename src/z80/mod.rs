@@ -8,7 +8,4 @@ mod registers;
 pub mod tables;
 
 // Bring nested types and functions to current scope
-pub use self::bus::*;
-pub use self::common_types::*;
-pub use self::cpu::*;
-pub use self::registers::*;
+pub use self::{bus::*, common_types::*, cpu::*, registers::*};

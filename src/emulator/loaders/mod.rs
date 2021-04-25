@@ -2,11 +2,9 @@
 
 mod sna;
 mod tap;
-pub use self::sna::*;
-pub use self::tap::*;
+pub use self::{sna::*, tap::*};
 use crate::emulator::Emulator;
-use std::convert::AsRef;
-use std::path::Path;
+use std::{convert::AsRef, path::Path};
 
 /// Loads file into emulator instance, auto-detecting file type and
 /// executing appropriate action depending on type. For example, for

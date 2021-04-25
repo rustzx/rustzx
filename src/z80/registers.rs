@@ -1,7 +1,6 @@
 //! Module which contains Z80 registers implementation
+use crate::{utils::*, z80::Prefix};
 use std::fmt;
-use crate::utils::*;
-use crate::z80::Prefix;
 
 // Flag register bits
 
@@ -99,6 +98,7 @@ impl RegName8 {
             U3::N7 => Some(RegName8::A),
         }
     }
+
     /// Modificates 8-bit register with prefix
     pub fn with_prefix(self, pref: Prefix) -> Self {
         match self {
@@ -139,6 +139,7 @@ impl RegName16 {
             U2::N3 => RegName16::AF,
         }
     }
+
     /// Returns 16 bit general purpose register name from code. featuring SP
     pub fn from_u2_sp(byte: U2) -> RegName16 {
         match byte {
@@ -148,6 +149,7 @@ impl RegName16 {
             U2::N3 => RegName16::SP,
         }
     }
+
     // Modificates 16-bit register with prefix
     pub fn with_prefix(self, pref: Prefix) -> Self {
         match self {
@@ -314,16 +316,19 @@ impl Regs {
         let data = self.get_reg_8(reg).wrapping_add(value);
         self.set_reg_8(reg, data)
     }
+
     /// Increments register 16 bit
     pub fn inc_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
         let data = self.get_reg_16(reg).wrapping_add(value);
         self.set_reg_16(reg, data)
     }
+
     /// Decrements register 8 bit
     pub fn dec_reg_8(&mut self, reg: RegName8, value: u8) -> u8 {
         let data = self.get_reg_8(reg).wrapping_sub(value);
         self.set_reg_8(reg, data)
     }
+
     /// Decrements register 16 bit
     pub fn dec_reg_16(&mut self, reg: RegName16, value: u16) -> u16 {
         let data = self.get_reg_16(reg).wrapping_sub(value);
@@ -539,21 +544,25 @@ impl Regs {
     pub fn get_l(&self) -> u8 {
         self.l
     }
+
     // flip-flops --------------------------------------------------------------------------------
 
     /// Returns iff1
     pub fn get_iff1(&self) -> bool {
         self.iff1
     }
+
     /// Returns iff2
     pub fn get_iff2(&self) -> bool {
         self.iff2
     }
+
     /// Changes iff1
     pub fn set_iff1(&mut self, value: bool) -> bool {
         self.iff1 = value;
         value
     }
+
     /// Changes iff2
     pub fn set_iff2(&mut self, value: bool) -> bool {
         self.iff2 = value;

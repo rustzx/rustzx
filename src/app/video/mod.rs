@@ -22,12 +22,7 @@ pub struct Rect {
 impl Rect {
     /// Constructs new rect
     pub fn new(x: i32, y: i32, w: u32, h: u32) -> Rect {
-        Rect {
-            x: x,
-            y: y,
-            w: w,
-            h: h,
-        }
+        Rect { x, y, w, h }
     }
 }
 

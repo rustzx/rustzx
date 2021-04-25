@@ -5,10 +5,7 @@ pub mod events;
 pub mod instantflag;
 pub mod screen;
 pub mod smallnum;
-pub use self::clocks::*;
-pub use self::events::*;
-pub use self::instantflag::*;
-pub use self::smallnum::*;
+pub use self::{clocks::*, events::*, instantflag::*, smallnum::*};
 
 #[derive(Copy, Clone)]
 pub enum EmulationSpeed {

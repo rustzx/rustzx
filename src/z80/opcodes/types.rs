@@ -1,5 +1,4 @@
-use crate::utils::*;
-use crate::z80::*;
+use crate::{utils::*, z80::*};
 
 /// Operand for 8-bit LD instructions
 pub enum LoadOperand8 {

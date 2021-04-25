@@ -10,11 +10,13 @@ mod internal_stack;
 mod types;
 
 // re-export all functions
-pub use self::group_bits::*;
-pub use self::group_extended::*;
-pub use self::group_nonprefixed::*;
-pub use self::internal_alu::*;
-pub use self::internal_block::*;
-pub use self::internal_rot::*;
-pub use self::internal_stack::*;
-pub use self::types::*;
+pub use self::{
+    group_bits::*,
+    group_extended::*,
+    group_nonprefixed::*,
+    internal_alu::*,
+    internal_block::*,
+    internal_rot::*,
+    internal_stack::*,
+    types::*,
+};

@@ -15,6 +15,7 @@ impl U1 {
             _ => U1::N1,
         }
     }
+
     /// Transforms self back to byte
     pub fn as_byte(self) -> u8 {
         match self {
@@ -42,6 +43,7 @@ impl U2 {
             _ => U2::N3,
         }
     }
+
     /// Transforms self back to byte
     pub fn as_byte(self) -> u8 {
         match self {
@@ -75,6 +77,7 @@ impl U3 {
             _ => U3::N7,
         }
     }
+
     /// Transforms self back to byte
     pub fn as_byte(self) -> u8 {
         match self {

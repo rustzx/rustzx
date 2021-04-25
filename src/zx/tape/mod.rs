@@ -4,8 +4,8 @@ mod tap;
 // reexport Tap Tape player
 pub use self::tap::Tap;
 
-use std::path::Path;
 use crate::utils::Clocks;
+use std::path::Path;
 
 /// Result of tape insertion,
 /// `Err` contains string, which describes

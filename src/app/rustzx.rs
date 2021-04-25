@@ -2,14 +2,16 @@
 //! Handles all platform-related, hardware-related stuff
 //! and command-line interface
 
-use crate::app::events::*;
-use crate::app::sound::*;
-use crate::app::video::*;
-use crate::emulator::*;
-use crate::settings::RustzxSettings;
-use std::thread;
-use std::time::{Duration, Instant};
-use crate::zx::constants::*;
+use crate::{
+    app::{events::*, sound::*, video::*},
+    emulator::*,
+    settings::RustzxSettings,
+    zx::constants::*,
+};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 /// max 100 ms interval in `max frames` speed mode
 const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
@@ -56,12 +58,12 @@ impl RustzxApp {
         let tex_canvas = video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32);
         RustzxApp {
             emulator: Emulator::new(&settings),
-            snd: snd,
-            video: video,
+            snd,
+            video,
             events: Box::new(EventsSdl::new(&settings)),
-            tex_border: tex_border,
-            tex_canvas: tex_canvas,
-            settings: settings,
+            tex_border,
+            tex_canvas,
+            settings,
         }
     }
 

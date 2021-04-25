@@ -1,5 +1,7 @@
-use crate::utils::{make_word, split_word, Clocks};
-use crate::z80::*;
+use crate::{
+    utils::{make_word, split_word, Clocks},
+    z80::*,
+};
 
 /// Pushes 16 bit value to the stack. Clocks count using for each byte write
 pub fn execute_push_16(cpu: &mut Z80, bus: &mut dyn Z80Bus, reg: RegName16, clk: Clocks) {

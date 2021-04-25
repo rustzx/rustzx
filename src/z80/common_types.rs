@@ -20,6 +20,7 @@ impl Prefix {
             _ => Prefix::None,
         }
     }
+
     /// Transforms prefix back to byte
     pub fn to_byte(self) -> Option<u8> {
         match self {

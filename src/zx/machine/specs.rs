@@ -74,6 +74,7 @@ impl ZXSpecsBuilder {
             },
         }
     }
+
     /// Builds new ZXSpecs
     pub fn build(mut self) -> ZXSpecs {
         self.specs.clocks_frame =
@@ -97,11 +98,13 @@ impl ZXSpecsBuilder {
             self.specs.clocks_first_pixel - self.specs.contention_offset;
         self.specs
     }
+
     /// Changes CPU frequency
     pub fn freq_cpu(mut self, value: usize) -> Self {
         self.specs.freq_cpu = value;
         self
     }
+
     /// Changes Clocks per left border, screen render, left border and retrace
     pub fn clocks_row(
         mut self,
@@ -117,21 +120,25 @@ impl ZXSpecsBuilder {
         self.specs.clocks_line = lborder + screen + rborder + retrace;
         self
     }
+
     /// Changes first pixel clocks
     pub fn clocks_first_pixel(mut self, value: usize) -> Self {
         self.specs.clocks_first_pixel = value;
         self
     }
+
     /// Changes shift of time, when ula reads data from memory
     pub fn clocks_ula_read_shift(mut self, value: usize) -> Self {
         self.specs.clocks_ula_read_shift = value;
         self
     }
+
     /// Changes shift of electron beam pixel rendering
     pub fn clocks_ula_beam_shift(mut self, value: usize) -> Self {
         self.specs.clocks_ula_beam_shift = value;
         self
     }
+
     /// Changes lines per top border, screen, bottom border and vsync
     pub fn lines(mut self, tborder: usize, screen: usize, bborder: usize, vsync: usize) -> Self {
         self.specs.lines_vsync = vsync;
@@ -141,12 +148,14 @@ impl ZXSpecsBuilder {
         self.specs.lines_all = tborder + screen + bborder;
         self
     }
+
     /// Changes contention pattern
     pub fn contention(mut self, pattern: [usize; 8], offset: usize) -> Self {
         self.specs.contention_pattern = pattern;
         self.specs.contention_offset = offset;
         self
     }
+
     /// changes interrupt length
     pub fn interrupt_length(mut self, value: usize) -> Self {
         self.specs.interrupt_length = value;

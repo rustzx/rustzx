@@ -1,5 +1,7 @@
-use std::i16;
-use std::ops::{Add, Mul, MulAssign, Sub};
+use std::{
+    i16,
+    ops::{Add, Mul, MulAssign, Sub},
+};
 /// Raw Sample can be only f64 or i16
 pub trait RawSample: Clone + Copy + MulAssign + Mul + Add + Sub {}
 impl RawSample for f64 {}
@@ -30,17 +32,16 @@ where
 {
     /// Returns new sample
     pub fn new(left: T, right: T) -> SoundSample<T> {
-        SoundSample {
-            left: left,
-            right: right,
-        }
+        SoundSample { left, right }
     }
+
     /// multiplies self 2 channels by `val`
     pub fn mul_eq(&mut self, val: T) -> &mut Self {
         self.left *= val;
         self.right *= val;
         self
     }
+
     /// multiplies self channels separatly
     pub fn mul(&mut self, val_left: T, val_right: T) -> &mut Self {
         self.left *= val_left;
@@ -56,6 +57,7 @@ impl SoundSample<f64> {
         self.right = self.right + sample.right - self.right * sample.right;
         self
     }
+
     /// Transforms normalized float sample to i16 sample
     pub fn into_i16(self) -> SoundSample<i16> {
         // here is some thick hack :D
@@ -79,6 +81,7 @@ impl SoundSample<f64> {
             right: ((self.right * (u16::max_value() - ERROR_SIZE) as f64) as u16 ^ 0x8000) as i16,
         }
     }
+
     /// transform into f32
     pub fn into_f32(self) -> SoundSample<f32> {
         SoundSample {
@@ -86,6 +89,7 @@ impl SoundSample<f64> {
             right: self.right as f32,
         }
     }
+
     /// Places float sample in range 0..1
     /// # Arguments
     /// - `min` - minimal original value

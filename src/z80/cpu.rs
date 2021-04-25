@@ -1,8 +1,9 @@
 //! Z80 CPU module
 
-use crate::utils::*;
-use crate::z80::opcodes::*;
-use crate::z80::*;
+use crate::{
+    utils::*,
+    z80::{opcodes::*, *},
+};
 
 /// Z80 Processor struct
 pub struct Z80 {
@@ -48,10 +49,12 @@ impl Z80 {
         self.regs.inc_pc(1);
         make_word(hi, lo)
     }
+
     /// Checks is cpu halted
     pub fn is_halted(&self) -> bool {
         self.halted
     }
+
     /// Returns current interrupt mode
     pub fn get_im(&self) -> IntMode {
         self.int_mode

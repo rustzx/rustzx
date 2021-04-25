@@ -1,10 +1,12 @@
 //! Real Audio SDL backend
 use super::{SoundDevice, ZXSample};
-use crate::backends::SDL_CONTEXT;
+use crate::{
+    backends::SDL_CONTEXT,
+    settings::RustzxSettings,
+    zx::sound::{CHANNELS, SAMPLE_RATE},
+};
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
-use crate::settings::RustzxSettings;
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
-use crate::zx::sound::{CHANNELS, SAMPLE_RATE};
 
 /// Struct which used in SDL audio callback
 struct SdlCallback {
@@ -13,6 +15,7 @@ struct SdlCallback {
 
 impl AudioCallback for SdlCallback {
     type Channel = f32;
+
     /// main callback function
     fn callback(&mut self, out: &mut [f32]) {
         for chunk in out.chunks_mut(CHANNELS) {

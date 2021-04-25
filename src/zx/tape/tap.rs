@@ -1,9 +1,8 @@
 //! TAP file tape player
 
 use super::*;
-use std::fs::File;
-use std::io::Read;
 use crate::utils::{make_word, Clocks};
+use std::{fs::File, io::Read};
 
 // main constants
 const PILOT_LENGTH: usize = 2168;
@@ -76,6 +75,7 @@ impl Tap {
             acc_clocks: Clocks(0),
         }
     }
+
     /// resets internal tape state
     fn reset_state(&mut self) {
         self.state = TapeState::Stop;
