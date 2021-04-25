@@ -1,9 +1,9 @@
 use clap::{App, AppSettings, Arg};
 use std::path::{Path, PathBuf};
-use utils::EmulationSpeed;
-use zx::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
-use zx::machine::ZXMachine;
-use zx::sound::ay::ZXAYMode;
+use crate::utils::EmulationSpeed;
+use crate::zx::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::zx::machine::ZXMachine;
+use crate::zx::sound::ay::ZXAYMode;
 // TODO: move comand line parsing here
 
 /// Structure to handle all emulator runtime settings

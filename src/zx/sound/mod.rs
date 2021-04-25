@@ -4,7 +4,7 @@ pub mod beeper;
 pub mod mixer;
 pub mod sample;
 
-use zx::constants::FPS;
+use crate::zx::constants::FPS;
 
 pub const SAMPLE_RATE: usize = 44100;
 /// samples per frame

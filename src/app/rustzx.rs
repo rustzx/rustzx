@@ -2,14 +2,14 @@
 //! Handles all platform-related, hardware-related stuff
 //! and command-line interface
 
-use app::events::*;
-use app::sound::*;
-use app::video::*;
-use emulator::*;
-use settings::RustzxSettings;
+use crate::app::events::*;
+use crate::app::sound::*;
+use crate::app::video::*;
+use crate::emulator::*;
+use crate::settings::RustzxSettings;
 use std::thread;
 use std::time::{Duration, Instant};
-use zx::constants::*;
+use crate::zx::constants::*;
 
 /// max 100 ms interval in `max frames` speed mode
 const MAX_FRAME_TIME: Duration = Duration::from_millis(100);

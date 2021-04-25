@@ -4,7 +4,7 @@ mod sna;
 mod tap;
 pub use self::sna::*;
 pub use self::tap::*;
-use emulator::Emulator;
+use crate::emulator::Emulator;
 use std::convert::AsRef;
 use std::path::Path;
 
@@ -29,7 +29,7 @@ pub fn load_file_autodetect(emulator: &mut Emulator, file: impl AsRef<Path>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use settings::RustzxSettings;
+    use crate::settings::RustzxSettings;
     use std::path::PathBuf;
 
     #[test]

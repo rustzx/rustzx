@@ -4,24 +4,24 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 // use almost everything :D
-use settings::RustzxSettings;
-use utils::events::*;
-use utils::screen::*;
-use utils::InstantFlag;
-use utils::{split_word, Clocks};
-use z80::Z80Bus;
-use zx::constants::*;
-use zx::joy::kempston::*;
-use zx::machine::ZXMachine;
-use zx::memory::{Page, PAGE_SIZE};
-use zx::roms::*;
-use zx::screen::border::ZXBorder;
-use zx::screen::canvas::ZXCanvas;
-use zx::screen::colors::{ZXColor, ZXPalette};
-use zx::sound::mixer::ZXMixer;
-use zx::tape::*;
-use zx::ZXKey;
-use zx::{RamType, RomType, ZXMemory};
+use crate::settings::RustzxSettings;
+use crate::utils::events::*;
+use crate::utils::screen::*;
+use crate::utils::InstantFlag;
+use crate::utils::{split_word, Clocks};
+use crate::z80::Z80Bus;
+use crate::zx::constants::*;
+use crate::zx::joy::kempston::*;
+use crate::zx::machine::ZXMachine;
+use crate::zx::memory::{Page, PAGE_SIZE};
+use crate::zx::roms::*;
+use crate::zx::screen::border::ZXBorder;
+use crate::zx::screen::canvas::ZXCanvas;
+use crate::zx::screen::colors::{ZXColor, ZXPalette};
+use crate::zx::sound::mixer::ZXMixer;
+use crate::zx::tape::*;
+use crate::zx::ZXKey;
+use crate::zx::{RamType, RomType, ZXMemory};
 
 /// ZX System controller
 pub struct ZXController {

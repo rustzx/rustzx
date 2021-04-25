@@ -1,9 +1,9 @@
 //! Module implemets zx spectrum audio devices mixer
 use std::collections::VecDeque;
-use zx::sound::ay::{ZXAYMode, ZXAyChip};
-use zx::sound::beeper::ZXBeeper;
-use zx::sound::sample::{SampleGenerator, SoundSample};
-use zx::sound::{samples_from_time, SAMPLES};
+use crate::zx::sound::ay::{ZXAYMode, ZXAyChip};
+use crate::zx::sound::beeper::ZXBeeper;
+use crate::zx::sound::sample::{SampleGenerator, SoundSample};
+use crate::zx::sound::{samples_from_time, SAMPLES};
 
 /// Main sound mixer.
 pub struct ZXMixer {

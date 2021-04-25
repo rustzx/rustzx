@@ -1,13 +1,13 @@
 //! Real events SDL backend
 use super::{Event, EventDevice};
-use backends::SDL_CONTEXT;
+use crate::backends::SDL_CONTEXT;
 use sdl2::event::Event as SdlEvent;
 use sdl2::keyboard::Scancode;
 use sdl2::EventPump;
-use settings::RustzxSettings;
-use utils::EmulationSpeed;
-use zx::joy::kempston::KempstonKey;
-use zx::keys::*;
+use crate::settings::RustzxSettings;
+use crate::utils::EmulationSpeed;
+use crate::zx::joy::kempston::KempstonKey;
+use crate::zx::keys::*;
 
 /// Represents SDL Envets bakend
 pub struct EventsSdl {

@@ -4,9 +4,9 @@ mod events_sdl;
 pub use self::events_sdl::EventsSdl;
 
 use std::path::PathBuf;
-use utils::EmulationSpeed;
-use zx::joy::kempston::KempstonKey;
-use zx::keys::*;
+use crate::utils::EmulationSpeed;
+use crate::zx::joy::kempston::KempstonKey;
+use crate::zx::keys::*;
 
 // Event type
 pub enum Event {

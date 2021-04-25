@@ -1,5 +1,5 @@
 //! Contains Color generation related types
-use zx::constants::BYTES_PER_PIXEL;
+use crate::zx::constants::BYTES_PER_PIXEL;
 
 /// struct represents single pixel color as array of bytes
 pub type ColorArray = [u8; BYTES_PER_PIXEL];

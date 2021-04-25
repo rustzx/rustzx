@@ -1,7 +1,7 @@
 use ayumi::{Ayumi, ChipType, ToneChannel};
-use utils::make_word;
-use zx::sound::sample::{SampleGenerator, SoundSample};
-use zx::sound::SAMPLE_RATE;
+use crate::utils::make_word;
+use crate::zx::sound::sample::{SampleGenerator, SoundSample};
+use crate::zx::sound::SAMPLE_RATE;
 
 /// AY chip runs on the same frequency on 128K, 2+, 3+
 const AY_FREQ: f64 = 1773400.0;

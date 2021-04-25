@@ -3,11 +3,11 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 // emulator
-use emulator::Emulator;
-use utils::{make_word, Clocks};
-use z80::opcodes::execute_pop_16;
-use z80::RegName16;
-use zx::colors::ZXColor;
+use crate::emulator::Emulator;
+use crate::utils::{make_word, Clocks};
+use crate::z80::opcodes::execute_pop_16;
+use crate::z80::RegName16;
+use crate::zx::colors::ZXColor;
 
 /// SNA snapshot loading function
 pub fn load_sna(emulator: &mut Emulator, file: impl AsRef<Path>) {
