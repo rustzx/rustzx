@@ -12,7 +12,7 @@ pub mod sound;
 pub mod tape;
 
 // re-export most of things
-// TODO: in-deep rewiew re-exports recursively
+// TODO(#48): Reorganize imports
 pub use self::{
     controller::ZXController,
     keys::*,

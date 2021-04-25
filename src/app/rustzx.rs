@@ -31,7 +31,6 @@ fn frame_length(fps: usize) -> Duration {
     Duration::from_millis((1000 as f64 / fps as f64) as u64)
 }
 
-// TODO: FIX! MAKE BULDER
 /// Application instance type
 pub struct RustzxApp {
     /// main emulator object
