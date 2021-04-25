@@ -1,0 +1,10 @@
+imports_granularity = "Crate"
+normalize_comments = true
+condense_wildcard_suffixes = true
+format_strings = true
+imports_layout = "HorizontalVertical"
+reorder_impl_items = true
+report_fixme = "Unnumbered"
+report_todo = "Unnumbered"
+use_field_init_shorthand = true
+use_try_shorthand = true
