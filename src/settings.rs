@@ -8,7 +8,6 @@ use crate::{
 };
 use clap::{App, AppSettings, Arg};
 use std::path::{Path, PathBuf};
-// TODO: move comand line parsing here
 
 /// Structure to handle all emulator runtime settings
 pub struct RustzxSettings {

@@ -169,7 +169,7 @@ impl ZXController {
 
     /// Changes key state in controller
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
-        // TODO: Move row detection to ZXKey type
+        // TODO(#49): Move row detection to ZXKey type
         let rownum = match key.half_port {
             0xFE => Some(0),
             0xFD => Some(1),

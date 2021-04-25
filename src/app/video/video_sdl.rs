@@ -27,7 +27,6 @@ impl VideoSdl {
         if let Some(video) = video_subsystem {
             // construct window and renderer form it
             let (width, height) = settings.screen_size;
-            // TODO: is opengl needed?
             let window = video
                 .window(
                     &format!("RustZX v{}", env!("CARGO_PKG_VERSION")),
