@@ -1,7 +1,5 @@
-dist: xenial
+dist: bionic
 language: rust
 rust:
     - stable
-before_install:
-  - sudo apt-get install -y libsdl2-dev
 cache: cargo
