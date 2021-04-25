@@ -8,6 +8,7 @@ repository = "https://github.com/pacmancoder/rustzx"
 readme = "README.md"
 keywords = ["emulator", "game", "z80"]
 license = "MIT"
+edition = "2018"
 
 [dependencies]
 lazy_static = "1.4"

@@ -1,10 +1,10 @@
 //! Real Audio SDL backend
 use super::{SoundDevice, ZXSample};
-use backends::SDL_CONTEXT;
+use crate::backends::SDL_CONTEXT;
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
-use settings::RustzxSettings;
+use crate::settings::RustzxSettings;
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
-use zx::sound::{CHANNELS, SAMPLE_RATE};
+use crate::zx::sound::{CHANNELS, SAMPLE_RATE};
 
 /// Struct which used in SDL audio callback
 struct SdlCallback {

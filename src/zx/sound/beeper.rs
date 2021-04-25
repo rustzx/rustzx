@@ -1,4 +1,4 @@
-use zx::sound::sample::{SampleGenerator, SoundSample};
+use crate::zx::sound::sample::{SampleGenerator, SoundSample};
 
 /// Simple beeper implementation
 pub struct ZXBeeper {

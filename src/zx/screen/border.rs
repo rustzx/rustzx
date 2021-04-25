@@ -1,8 +1,8 @@
 //! Contains ZXSpectrum border implementation
 use super::colors::*;
-use utils::Clocks;
-use zx::constants::*;
-use zx::machine::*;
+use crate::utils::Clocks;
+use crate::zx::constants::*;
+use crate::zx::machine::*;
 
 /// Internal struct, which contains information about beam position and color
 #[derive(Clone, Copy)]

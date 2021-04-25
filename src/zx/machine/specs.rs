@@ -1,4 +1,4 @@
-use zx::constants::BORDER_COLS;
+use crate::zx::constants::BORDER_COLS;
 
 /// Immutable type (Builder is not public in outer module)
 pub struct ZXSpecs {

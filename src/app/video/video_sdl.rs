@@ -1,10 +1,10 @@
 use super::{Rect, TextureInfo, VideoDevice};
-use backends::SDL_CONTEXT;
+use crate::backends::SDL_CONTEXT;
 use sdl2::pixels::PixelFormatEnum as PixelFormat;
 use sdl2::rect::Rect as SdlRect;
 use sdl2::render::{Canvas, Texture, TextureCreator};
 use sdl2::video::{Window, WindowContext};
-use settings::RustzxSettings;
+use crate::settings::RustzxSettings;
 use std::collections::HashMap;
 
 /// Represents real SDL video backend

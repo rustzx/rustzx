@@ -26,16 +26,6 @@
 //! View full License text in file `LICENSE.md`
 #![allow(dead_code)]
 
-/// Lazy static for macine specs
-#[macro_use]
-extern crate lazy_static;
-/// AY chip emulation library pacmancoder/rust-ayumi
-extern crate ayumi;
-/// Command line parser
-extern crate clap;
-/// backend => sound, video, events
-extern crate sdl2;
-
 // crate consists of theese modules
 mod app;
 mod backends;
@@ -45,8 +35,8 @@ mod utils;
 mod z80;
 mod zx;
 
-use app::RustzxApp;
-use settings::RustzxSettings;
+use crate::app::RustzxApp;
+use crate::settings::RustzxSettings;
 fn main() {
     let settings = RustzxSettings::from_clap();
     RustzxApp::from_config(settings).start();

@@ -3,7 +3,7 @@
 use super::*;
 use std::fs::File;
 use std::io::Read;
-use utils::{make_word, Clocks};
+use crate::utils::{make_word, Clocks};
 
 // main constants
 const PILOT_LENGTH: usize = 2168;

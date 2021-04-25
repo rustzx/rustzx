@@ -5,7 +5,7 @@ mod tap;
 pub use self::tap::Tap;
 
 use std::path::Path;
-use utils::Clocks;
+use crate::utils::Clocks;
 
 /// Result of tape insertion,
 /// `Err` contains string, which describes

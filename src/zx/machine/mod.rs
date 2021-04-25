@@ -4,7 +4,8 @@
 mod specs;
 pub use self::specs::ZXSpecs;
 use self::specs::ZXSpecsBuilder;
-use utils::Clocks;
+use crate::utils::Clocks;
+use lazy_static::lazy_static;
 
 lazy_static! {
     /// ZX Spectrum 48K Specs

@@ -1,7 +1,7 @@
 use super::*;
-use utils::*;
-use z80::tables::*;
-use z80::*;
+use crate::utils::*;
+use crate::z80::tables::*;
+use crate::z80::*;
 
 /// Instruction group which operatis with bits
 /// Includes rotations, setting, reseting, testing.

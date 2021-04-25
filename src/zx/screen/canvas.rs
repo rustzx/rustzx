@@ -1,10 +1,10 @@
 //! Module describes ZX Spectrum screen
 //! *block* - is 8x1 pxels stripe.
-use utils::screen::*;
-use utils::*;
-use zx::constants::*;
-use zx::machine::ZXMachine;
-use zx::screen::colors::*;
+use crate::utils::screen::*;
+use crate::utils::*;
+use crate::zx::constants::*;
+use crate::zx::machine::ZXMachine;
+use crate::zx::screen::colors::*;
 
 // size of screen buffer in bytes
 const BUFFER_LENGTH: usize = CANVAS_HEIGHT * CANVAS_WIDTH * BYTES_PER_PIXEL;

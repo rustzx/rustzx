@@ -1,6 +1,7 @@
 //! Contains internal emulator tables
 
-use z80::registers::*;
+use crate::z80::registers::*;
+use lazy_static::lazy_static;
 
 // TABLES FORM FUSE ZX SPECTRUM EMULATOR:
 

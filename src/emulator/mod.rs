@@ -1,10 +1,10 @@
 //! Platform-independent high-level Emulator interaction module
-use settings::RustzxSettings;
+use crate::settings::RustzxSettings;
 use std::path::Path;
 use std::time::{Duration, Instant};
-use utils::*;
-use z80::*;
-use zx::ZXController;
+use crate::utils::*;
+use crate::z80::*;
+use crate::zx::ZXController;
 
 mod loaders;
 

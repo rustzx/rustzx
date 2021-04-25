@@ -1,8 +1,8 @@
 //! Z80 CPU module
 
-use utils::*;
-use z80::opcodes::*;
-use z80::*;
+use crate::utils::*;
+use crate::z80::opcodes::*;
+use crate::z80::*;
 
 /// Z80 Processor struct
 pub struct Z80 {
