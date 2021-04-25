@@ -57,92 +57,92 @@ impl RustzxSettings {
             .about("ZX Spectrum emulator written in pure Rust")
             // machine settings
             .arg(
-                Arg::with_name("128K")
+                Arg::new("128K")
                     .long("128k")
-                    .help("Enables ZX Spectrum 128K mode"),
+                    .about("Enables ZX Spectrum 128K mode"),
             )
             .arg(
-                Arg::with_name("FASTLOAD")
-                    .short("f")
+                Arg::new("FASTLOAD")
+                    .short('f')
                     .long("fastload")
-                    .help("Accelerates standard tape loaders"),
+                    .about("Accelerates standard tape loaders"),
             )
             // media files
             .arg(
-                Arg::with_name("ROM")
+                Arg::new("ROM")
                     .long("rom")
                     .value_name("ROM_PATH")
-                    .help("Selects path to rom, otherwise default will be used"),
+                    .about("Selects path to rom, otherwise default will be used"),
             )
             .arg(
-                Arg::with_name("TAP")
+                Arg::new("TAP")
                     .long("tap")
                     .value_name("TAP_PATH")
-                    .help("Selects path to *.tap file"),
+                    .about("Selects path to *.tap file"),
             )
             .arg(
-                Arg::with_name("SNA")
+                Arg::new("SNA")
                     .long("sna")
                     .value_name("SNA_PATH")
-                    .help("Selects path to *.sna snapshot file"),
+                    .about("Selects path to *.sna snapshot file"),
             )
             // devices
-            .arg(Arg::with_name("KEMPSTON").short("k").long("kempston").help(
+            .arg(Arg::new("KEMPSTON").short('k').long("kempston").about(
                 "Enables Kempston joystick. Controlls via arrow keys and \
                  Alt buttons",
             ))
             // emulator settings
             .arg(
-                Arg::with_name("SPEED")
+                Arg::new("SPEED")
                     .long("speed")
                     .value_name("SPEED_VALUE")
-                    .help("Selects speed for emulator in integer multiplier form"),
+                    .about("Selects speed for emulator in integer multiplier form"),
             )
             .arg(
-                Arg::with_name("SCALE")
+                Arg::new("SCALE")
                     .long("scale")
                     .value_name("SCALE_VALUE")
-                    .help(
+                    .about(
                         "Selects default screen size. possible values are positive \
                          integers. Default value is 2",
                     ),
             )
             // sound
-            .arg(Arg::with_name("NOSOUND").long("nosound").help(
+            .arg(Arg::new("NOSOUND").long("nosound").about(
                 "Disables sound. Use it when you have problems with audio \
                  playback",
             ))
             .arg(
-                Arg::with_name("NOBEEPER")
+                Arg::new("NOBEEPER")
                     .long("nobeeper")
-                    .help("Disables beeper"),
+                    .about("Disables beeper"),
             )
             .arg(
-                Arg::with_name("AY")
+                Arg::new("AY")
                     .long("ay")
                     .value_name("AY_TYPE")
                     .possible_values(&["none", "mono", "abc", "acb"])
-                    .help(
+                    .about(
                         "Selects AY mode. Use none to disable. \
                          For stereo features use abc or acb, default is mono for \
                          128k and none for 48k.",
                     ),
             )
             .arg(
-                Arg::with_name("VOLUME")
+                Arg::new("VOLUME")
                     .long("volume")
                     .value_name("VOLUME_VALUE")
-                    .help(
+                    .about(
                         "Selects volume - value in range 0..200. Volume over 100 \
                          can cause sound artifacts",
                     ),
             )
             .arg(
-                Arg::with_name("LATENCY")
+                Arg::new("LATENCY")
                     .long("latency")
-                    .short("l")
+                    .short('l')
                     .value_name("SAMPLES")
-                    .help(
+                    .about(
                         "Selects audio latency. Default is 1024 samples. Set higher \
                          latency if emulator have sound glitches. Or if your \
                          machine can handle this - try to set it lower. Must be \
