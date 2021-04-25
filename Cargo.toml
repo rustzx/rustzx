@@ -1,7 +1,7 @@
 [package]
 name = "rustzx"
-version = "0.9.3"
-authors = ["Vladislav Nikonov <pacmancoder@gmail.com>"]
+version = "0.10.0"
+authors = ["Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 publish = false
 description = "ZX Spectum emulator"
 repository = "https://github.com/pacmancoder/rustzx"
@@ -10,11 +10,7 @@ keywords = ["emulator", "game", "z80"]
 license = "MIT"
 
 [dependencies]
-lazy_static = "0.2"
-clap = "2.9"
-
-ayumi = { git = "https://github.com/pacmancoder/rust-ayumi.git"}
-
-[dependencies.sdl2]
-version = "^0.32.2"
-features = ["unsafe_textures"]
+lazy_static = "1.4"
+clap = "3.0.0-beta.2"
+sdl2 = { version = "0.34", features = ["unsafe_textures", "bundled", "static-link"] }
+ayumi = { git = "https://github.com/pacmancoder/rust-ayumi.git", rev = "9e57902" }

@@ -1,16 +1,16 @@
 # rustzx
-![logo](assets/logo_small.png)  
+![logo](assets/logo_small.png)
 
 ZX Spectrum emulator which I writing in rust.
 I develop this project just for fun and for learning the basics of computer
-architecture.  
+architecture.
 Licensed under MIT License.
 
 **Watch [this](https://youtu.be/Xho3GWFyP2I) video showcase!**
 
 [![Build Status](https://travis-ci.org/pacmancoder/rustzx.svg?branch=master)](https://travis-ci.org/pacmancoder/rustzx)
 ## Features
-- Written in pure rust  
+- Written in pure rust
 - Cross-platform
 - Documented source
 - Full ZX Spectrum 48K and 128K emulation
@@ -24,20 +24,19 @@ Licensed under MIT License.
 - Correct contentons
 
 ## Download [v0.9.2]
-Packages are available in github releases.  
+Packages are available in github releases.
 **Note:** On linux platforms sdl2 library must be installed
 
 ## Compiling
-Before compiling make shure that **sdl2** and its dev libs are installed.  
-For additional information about sdl2 click
-[here](https://github.com/AngryLawyer/rust-sdl2)
+Before compiling make shure that you have C compiller and CMate to
+build bundled `sdl2`
 
-Then just install it with cargo (`~/.cargo/bin` must be in your **PATH**)
+Then just install it with cargo
 
 ```bash
 cargo install
 ```
-For advenced info use `--help` flag
+For advanced info use `--help` flag
 
 ## How to use
 Here some examples of usage:
@@ -62,7 +61,7 @@ Use `F6` to display FPS in window title.
 
 ## Screenshots
 ![](screenshots/rain.png)
-![](screenshots/q.png)   
+![](screenshots/q.png)
 ![](screenshots/arkanoid.png)
 ![](screenshots/sentinel.png)
 ## Log
@@ -71,7 +70,7 @@ for current plans and help requests.
 ## References
 Of course, I used many resources to find out, how to build my first
 emulator in life. So there is a list of useful references, from where I dig most
-information about Z80, ULA and other ZX Spectrum hardware parts:  
+information about Z80, ULA and other ZX Spectrum hardware parts:
 - Of course [z80.info](http://www.z80.info/)
     - [Decoding Z80 opcodes](http://www.z80.info/decoding.htm)
     - [Opcodes list](http://www.z80.info/z80code.txt)
@@ -91,9 +90,9 @@ information about Z80, ULA and other ZX Spectrum hardware parts:
 - [speccy.info](http://speccy.info)
 - [Harlequin](http://www.zxdesign.info/harlequin.shtml)
 - And many other great material, which helped me to make rustzx!
-- [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings  
+- [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
 
-## ROM's  
+## ROM's
 Emulator contains ROM's, created by by Sinclair Research Ltd (now owned by Amstrad plc),
 Amstrad was given permissions for distributing their ROM's with emulators, so they are
 included in source of emulator (mod zx::roms). More about this read [here](https://groups.google.com/forum/?hl=en#!msg/comp.sys.amstrad.8bit/HtpBU2Bzv_U/HhNDSU3MksAJ)
