@@ -1,6 +1,7 @@
-use crate::utils::*;
-use crate::z80::tables::*;
-use crate::z80::*;
+use crate::{
+    utils::*,
+    z80::{tables::*, *},
+};
 
 /// 8-bit ALU operations
 pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {

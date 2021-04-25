@@ -1,7 +1,11 @@
+use crate::{
+    utils::make_word,
+    zx::sound::{
+        sample::{SampleGenerator, SoundSample},
+        SAMPLE_RATE,
+    },
+};
 use ayumi::{Ayumi, ChipType, ToneChannel};
-use crate::utils::make_word;
-use crate::zx::sound::sample::{SampleGenerator, SoundSample};
-use crate::zx::sound::SAMPLE_RATE;
 
 /// AY chip runs on the same frequency on 128K, 2+, 3+
 const AY_FREQ: f64 = 1773400.0;
@@ -45,6 +49,7 @@ impl ZXAyChip {
         self.ay.tone(ToneChannel::B).pan(b, true);
         self.ay.tone(ToneChannel::C).pan(c, true);
     }
+
     /// Selects active AY register to write
     pub fn select_reg(&mut self, reg: u8) {
         // AY chip have only 16 regs [0..=15]

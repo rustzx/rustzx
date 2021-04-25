@@ -35,8 +35,7 @@ mod utils;
 mod z80;
 mod zx;
 
-use crate::app::RustzxApp;
-use crate::settings::RustzxSettings;
+use crate::{app::RustzxApp, settings::RustzxSettings};
 fn main() {
     let settings = RustzxSettings::from_clap();
     RustzxApp::from_config(settings).start();

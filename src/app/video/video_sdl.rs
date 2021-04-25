@@ -1,10 +1,11 @@
 use super::{Rect, TextureInfo, VideoDevice};
-use crate::backends::SDL_CONTEXT;
-use sdl2::pixels::PixelFormatEnum as PixelFormat;
-use sdl2::rect::Rect as SdlRect;
-use sdl2::render::{Canvas, Texture, TextureCreator};
-use sdl2::video::{Window, WindowContext};
-use crate::settings::RustzxSettings;
+use crate::{backends::SDL_CONTEXT, settings::RustzxSettings};
+use sdl2::{
+    pixels::PixelFormatEnum as PixelFormat,
+    rect::Rect as SdlRect,
+    render::{Canvas, Texture, TextureCreator},
+    video::{Window, WindowContext},
+};
 use std::collections::HashMap;
 
 /// Represents real SDL video backend
@@ -44,8 +45,8 @@ impl VideoSdl {
                 .expect("[ERROR] Sdl Canvas build error");
             let texture_creator = renderer.texture_creator();
             VideoSdl {
-                renderer: renderer,
-                texture_creator: texture_creator,
+                renderer,
+                texture_creator,
                 texteres: HashMap::new(),
                 next_tex_id: 0,
             }
@@ -63,11 +64,7 @@ impl VideoDevice for VideoSdl {
             .texture_creator
             .create_texture_streaming(PixelFormat::ABGR8888, width, height)
             .expect("[ERROR] Sdl texture creation error");
-        let tex_info = TextureInfo {
-            id: id,
-            width: width,
-            height: height,
-        };
+        let tex_info = TextureInfo { id, width, height };
         // bind id in map
         self.texteres.insert(tex_info, tex);
         self.next_tex_id += 1;
@@ -99,10 +96,12 @@ impl VideoDevice for VideoSdl {
             })
             .expect("[ERROR] Texture update error");
     }
+
     fn begin(&mut self) {
         // clear surface
         self.renderer.clear();
     }
+
     fn draw_texture_2d(&mut self, tex: TextureInfo, rect: Option<Rect>) {
         // find texture
         let tex = self
@@ -120,6 +119,7 @@ impl VideoDevice for VideoSdl {
             .copy(tex, None, dest_rect)
             .expect("[ERROR] Can't draw texture");
     }
+
     fn end(&mut self) {
         // display buffer
         self.renderer.present();

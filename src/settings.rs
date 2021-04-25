@@ -1,9 +1,13 @@
+use crate::{
+    utils::EmulationSpeed,
+    zx::{
+        constants::{SCREEN_HEIGHT, SCREEN_WIDTH},
+        machine::ZXMachine,
+        sound::ay::ZXAYMode,
+    },
+};
 use clap::{App, AppSettings, Arg};
 use std::path::{Path, PathBuf};
-use crate::utils::EmulationSpeed;
-use crate::zx::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
-use crate::zx::machine::ZXMachine;
-use crate::zx::sound::ay::ZXAYMode;
 // TODO: move comand line parsing here
 
 /// Structure to handle all emulator runtime settings
@@ -46,6 +50,7 @@ impl RustzxSettings {
             sna: None,
         }
     }
+
     pub fn from_clap() -> RustzxSettings {
         // get defaults
         let mut out = Self::new();
@@ -227,6 +232,7 @@ impl RustzxSettings {
         };
         out
     }
+
     /// Changes machine type
     pub fn machine(&mut self, machine: ZXMachine) -> &mut Self {
         self.machine = machine;
@@ -236,6 +242,7 @@ impl RustzxSettings {
         }
         self
     }
+
     /// changes screen scale
     pub fn scale(&mut self, scale: usize) -> &mut Self {
         // place into bounds
@@ -247,32 +254,38 @@ impl RustzxSettings {
         self.screen_size = (SCREEN_WIDTH * self.scale, SCREEN_HEIGHT * self.scale);
         self
     }
+
     /// changes fastload flag
     pub fn fastload(&mut self, value: bool) -> &mut Self {
         self.fastload = value;
         self
     }
+
     /// changes lound latency
     pub fn latency(&mut self, latency: usize) -> &mut Self {
         self.latency = latency;
         self
     }
+
     /// Changes AY chip mode
     pub fn ay_mode(&mut self, mode: ZXAYMode) -> &mut Self {
         self.ay_enabled = true;
         self.ay_mode = mode;
         self
     }
+
     /// Changes ay state (on/off)
     pub fn ay(&mut self, state: bool) -> &mut Self {
         self.ay_enabled = state;
         self
     }
+
     /// Changes beeper state (on/off)
     pub fn beeper(&mut self, state: bool) -> &mut Self {
         self.beeper_enabled = state;
         self
     }
+
     /// changes sound flag
     pub fn sound(&mut self, state: bool) -> &mut Self {
         self.sound_enabled = state;
@@ -284,26 +297,31 @@ impl RustzxSettings {
         self.volume = if val > 200 { 200 } else { val };
         self
     }
+
     /// cahnges kempston joy connection
     pub fn kempston(&mut self, value: bool) -> &mut Self {
         self.kempston = value;
         self
     }
+
     /// changes TAP path
     pub fn tap(&mut self, value: impl AsRef<Path>) -> &mut Self {
         self.tap = Some(value.as_ref().into());
         self
     }
+
     /// changes SNA path
     pub fn sna(&mut self, value: impl AsRef<Path>) -> &mut Self {
         self.sna = Some(value.as_ref().into());
         self
     }
+
     /// changes ROM path
     pub fn rom(&mut self, value: impl AsRef<Path>) -> &mut Self {
         self.rom = Some(value.as_ref().into());
         self
     }
+
     /// changes emulation speed
     pub fn speed(&mut self, value: EmulationSpeed) -> &mut Self {
         self.speed = value;

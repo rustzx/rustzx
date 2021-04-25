@@ -6,6 +6,7 @@ pub struct Clocks(pub usize);
 
 impl Add for Clocks {
     type Output = Self;
+
     fn add(self, rhs: Self) -> Self {
         Clocks(self.0 + rhs.0)
     }
@@ -13,6 +14,7 @@ impl Add for Clocks {
 
 impl Add<usize> for Clocks {
     type Output = Self;
+
     fn add(self, rhs: usize) -> Self {
         Clocks(self.0 + rhs)
     }
@@ -32,6 +34,7 @@ impl AddAssign<usize> for Clocks {
 
 impl Sub for Clocks {
     type Output = Self;
+
     fn sub(self, rhs: Self) -> Self {
         Clocks(self.0 - rhs.0)
     }
@@ -39,6 +42,7 @@ impl Sub for Clocks {
 
 impl Sub<usize> for Clocks {
     type Output = Self;
+
     fn sub(self, rhs: usize) -> Self {
         Clocks(self.0 - rhs)
     }

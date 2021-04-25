@@ -1,10 +1,9 @@
 //! Module describes ZX Spectrum screen
 //! *block* - is 8x1 pxels stripe.
-use crate::utils::screen::*;
-use crate::utils::*;
-use crate::zx::constants::*;
-use crate::zx::machine::ZXMachine;
-use crate::zx::screen::colors::*;
+use crate::{
+    utils::{screen::*, *},
+    zx::{constants::*, machine::ZXMachine, screen::colors::*},
+};
 
 // size of screen buffer in bytes
 const BUFFER_LENGTH: usize = CANVAS_HEIGHT * CANVAS_WIDTH * BYTES_PER_PIXEL;
@@ -19,10 +18,7 @@ pub struct BlocksCount {
 impl BlocksCount {
     /// Constructs new `BlocksCount`
     pub fn new(lines: usize, columns: usize) -> BlocksCount {
-        BlocksCount {
-            lines: lines,
-            columns: columns,
-        }
+        BlocksCount { lines, columns }
     }
 
     /// Constructs self from clocks count, taking into account machine type
@@ -53,10 +49,7 @@ impl BlocksCount {
                 columns = 0;
             }
         };
-        BlocksCount {
-            lines: lines,
-            columns: columns,
-        }
+        BlocksCount { lines, columns }
     }
 
     /// Returns count of blocks between positions
@@ -65,7 +58,7 @@ impl BlocksCount {
     pub fn passed_from(&self, prev: &BlocksCount) -> usize {
         if self.lines < prev.lines {
             ATTR_COLS - prev.columns
-        //self.lines * ATTR_COLS + self.columns
+        // self.lines * ATTR_COLS + self.columns
         } else if self.lines == prev.lines {
             // if positions on the same line => just use difference in columns.
             self.columns - prev.columns
@@ -102,7 +95,7 @@ impl ZXCanvas {
     /// Constructs new canvas of `machine`
     pub fn new(machine: ZXMachine) -> ZXCanvas {
         ZXCanvas {
-            machine: machine,
+            machine,
             palette: ZXPalette::default(),
             last_blocks: BlocksCount::new(0, 0),
             flash: false,

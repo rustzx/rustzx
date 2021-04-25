@@ -1,7 +1,8 @@
 use super::*;
-use crate::utils::*;
-use crate::z80::tables::*;
-use crate::z80::*;
+use crate::{
+    utils::*,
+    z80::{tables::*, *},
+};
 
 /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)
 /// returns result (can be useful with DDCB/FDCB instructions)

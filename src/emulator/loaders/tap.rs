@@ -1,7 +1,9 @@
 // emulator
-use crate::emulator::Emulator;
-use crate::utils::{make_word, Clocks};
-use crate::z80::*;
+use crate::{
+    emulator::Emulator,
+    utils::{make_word, Clocks},
+    z80::*,
+};
 
 pub fn fast_load_tap(emulator: &mut Emulator) {
     // resetting tape pos to beginning.

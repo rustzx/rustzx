@@ -14,6 +14,7 @@ impl ZXBeeper {
             next_bit: false,
         }
     }
+
     /// Changes next beeper bit
     pub fn change_bit(&mut self, value: bool) {
         self.curr_bit = self.next_bit;

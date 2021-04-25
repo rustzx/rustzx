@@ -1,8 +1,9 @@
 //! Contains ZXSpectrum border implementation
 use super::colors::*;
-use crate::utils::Clocks;
-use crate::zx::constants::*;
-use crate::zx::machine::*;
+use crate::{
+    utils::Clocks,
+    zx::{constants::*, machine::*},
+};
 
 /// Internal struct, which contains information about beam position and color
 #[derive(Clone, Copy)]
@@ -16,18 +17,17 @@ impl BeamInfo {
     fn first_pixel(color: ZXColor) -> BeamInfo {
         BeamInfo::new(0, 0, color)
     }
+
     /// constructs self at given pos with given color
     fn new(line: usize, pixel: usize, color: ZXColor) -> BeamInfo {
-        BeamInfo {
-            line: line,
-            pixel: pixel,
-            color: color,
-        }
+        BeamInfo { line, pixel, color }
     }
+
     /// checks if beam is on first pixel
     fn is_first_pixel(&self) -> bool {
         (self.line == 0) && (self.pixel == 0)
     }
+
     /// resets position
     fn reset(&mut self) {
         self.line = 0;
@@ -48,8 +48,8 @@ impl ZXBorder {
     /// Returns new instance of border device
     pub fn new(machine: ZXMachine, palette: ZXPalette) -> ZXBorder {
         ZXBorder {
-            machine: machine,
-            palette: palette,
+            machine,
+            palette,
             buffer: Box::new([0; PIXEL_COUNT * BYTES_PER_PIXEL]),
             beam_last: BeamInfo::first_pixel(ZXColor::White),
             border_changed: true,

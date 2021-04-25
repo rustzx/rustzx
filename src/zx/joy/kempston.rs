@@ -17,6 +17,7 @@ impl KempstonJoy {
     pub fn new() -> Self {
         KempstonJoy { state: 0x00 }
     }
+
     /// Simulates key press/release
     pub fn key(&mut self, key: KempstonKey, state: bool) {
         if state {
@@ -25,6 +26,7 @@ impl KempstonJoy {
             self.state &= !(key as u8);
         }
     }
+
     /// Reads joy value
     pub fn read(&self) -> u8 {
         self.state

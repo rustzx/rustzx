@@ -141,6 +141,7 @@ impl ZXPalette {
             }
         }
     }
+
     /// Returns rgba pixel from screen data
     pub fn get_rgba(&self, color: ZXColor, brightness: ZXBrightness) -> &ColorArray {
         // select palette

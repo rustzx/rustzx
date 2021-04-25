@@ -1,27 +1,34 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
-use std::fs::File;
-use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 // use almost everything :D
-use crate::settings::RustzxSettings;
-use crate::utils::events::*;
-use crate::utils::screen::*;
-use crate::utils::InstantFlag;
-use crate::utils::{split_word, Clocks};
-use crate::z80::Z80Bus;
-use crate::zx::constants::*;
-use crate::zx::joy::kempston::*;
-use crate::zx::machine::ZXMachine;
-use crate::zx::memory::{Page, PAGE_SIZE};
-use crate::zx::roms::*;
-use crate::zx::screen::border::ZXBorder;
-use crate::zx::screen::canvas::ZXCanvas;
-use crate::zx::screen::colors::{ZXColor, ZXPalette};
-use crate::zx::sound::mixer::ZXMixer;
-use crate::zx::tape::*;
-use crate::zx::ZXKey;
-use crate::zx::{RamType, RomType, ZXMemory};
+use crate::{
+    settings::RustzxSettings,
+    utils::{events::*, screen::*, split_word, Clocks, InstantFlag},
+    z80::Z80Bus,
+    zx::{
+        constants::*,
+        joy::kempston::*,
+        machine::ZXMachine,
+        memory::{Page, PAGE_SIZE},
+        roms::*,
+        screen::{
+            border::ZXBorder,
+            canvas::ZXCanvas,
+            colors::{ZXColor, ZXPalette},
+        },
+        sound::mixer::ZXMixer,
+        tape::*,
+        RamType,
+        RomType,
+        ZXKey,
+        ZXMemory,
+    },
+};
 
 /// ZX System controller
 pub struct ZXController {
@@ -32,7 +39,7 @@ pub struct ZXController {
     pub tape: Box<dyn ZXTape>,
     pub border: ZXBorder,
     pub kempston: Option<KempstonJoy>,
-    //pub beeper: ZXBeeper,
+    // pub beeper: ZXBeeper,
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
     // current border color
@@ -76,10 +83,10 @@ impl ZXController {
         };
         let mut out = ZXController {
             machine: settings.machine,
-            memory: memory,
+            memory,
             canvas: ZXCanvas::new(settings.machine),
             border: ZXBorder::new(settings.machine, ZXPalette::default()),
-            kempston: kempston,
+            kempston,
             mixer: ZXMixer::new(settings.beeper_enabled, settings.ay_enabled),
             keyboard: [0xFF; 8],
             border_color: 0x00,
@@ -91,7 +98,7 @@ impl ZXController {
             mic: false,
             ear: false,
             paging_enabled: paging,
-            screen_bank: screen_bank,
+            screen_bank,
         };
         out.mixer.ay.mode(settings.ay_mode);
         out.mixer.volume(settings.volume as f64 / 200.0);
@@ -147,6 +154,7 @@ impl ZXController {
             }
         }
     }
+
     /// loads builted-in ROM
     pub fn load_default_rom(&mut self) {
         match self.machine {
@@ -217,7 +225,7 @@ impl ZXController {
         self.wait_internal(contention);
     }
 
-    ///make contention + wait some clocks
+    /// make contention + wait some clocks
     fn do_contention_and_wait(&mut self, wait_time: Clocks) {
         let contention = self.machine.contention_clocks(self.frame_clocks);
         self.wait_internal(contention + wait_time);

@@ -1,9 +1,12 @@
 //! Module implemets zx spectrum audio devices mixer
+use crate::zx::sound::{
+    ay::{ZXAYMode, ZXAyChip},
+    beeper::ZXBeeper,
+    sample::{SampleGenerator, SoundSample},
+    samples_from_time,
+    SAMPLES,
+};
 use std::collections::VecDeque;
-use crate::zx::sound::ay::{ZXAYMode, ZXAyChip};
-use crate::zx::sound::beeper::ZXBeeper;
-use crate::zx::sound::sample::{SampleGenerator, SoundSample};
-use crate::zx::sound::{samples_from_time, SAMPLES};
 
 /// Main sound mixer.
 pub struct ZXMixer {
@@ -36,10 +39,11 @@ impl ZXMixer {
             master_volume: 0.5,
             beeper_volume: 1.0,
             ay_volume: 1.0,
-            use_ay: use_ay,
-            use_beeper: use_beeper,
+            use_ay,
+            use_beeper,
         }
     }
+
     /// changes volume
     /// # Arguments
     /// - `volume` - value in range 0..1

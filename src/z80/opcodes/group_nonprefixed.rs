@@ -1,7 +1,8 @@
 use super::*;
-use crate::utils::*;
-use crate::z80::tables::*;
-use crate::z80::*;
+use crate::{
+    utils::*,
+    z80::{tables::*, *},
+};
 
 /// normal execution group, can be modified with prefixes DD, FD, providing
 /// DD OPCODE [NN], FD OPCODE [NN] instruction group
