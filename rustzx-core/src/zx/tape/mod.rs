@@ -5,6 +5,7 @@ mod tap;
 pub use self::tap::Tap;
 
 use crate::utils::Clocks;
+#[cfg(feature = "std")]
 use std::path::Path;
 
 /// Result of tape insertion,
@@ -35,6 +36,7 @@ pub trait ZXTape {
     /// Makes procession of type in definite time
     fn process_clocks(&mut self, clocks: Clocks);
     /// insert new media
+    #[cfg(feature = "std")]
     fn insert(&mut self, path: &Path) -> InsertResult;
     /// ejects tape
     fn eject(&mut self);

@@ -1,7 +1,9 @@
 //! TAP file tape player
 
 use super::*;
-use crate::utils::{make_word, Clocks};
+use crate::utils::Clocks;
+use alloc::vec::Vec;
+#[cfg(feature = "std")]
 use std::{fs::File, io::Read};
 
 // main constants
@@ -129,7 +131,10 @@ impl ZXTape for Tap {
     }
 
     /// updates internal structure according new tape file
+    #[cfg(feature = "std")]
     fn insert(&mut self, path: &Path) -> InsertResult {
+        use crate::utils::make_word;
+
         if let Ok(mut file) = File::open(path) {
             if let Err(_) = file.read_to_end(&mut self.data) {
                 return InsertResult::Err("TAP file read error");

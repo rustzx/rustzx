@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Sub, SubAssign};
 /// Clocks count
 /// It also have different Trait implementations
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd)]

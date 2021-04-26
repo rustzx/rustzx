@@ -1,4 +1,4 @@
-use std::{
+use core::{
     i16,
     ops::{Add, Mul, MulAssign, Sub},
 };

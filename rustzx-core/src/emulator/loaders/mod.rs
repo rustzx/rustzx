@@ -24,7 +24,7 @@ pub fn load_file_autodetect(emulator: &mut Emulator, file: impl AsRef<Path>) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
     use crate::settings::RustzxSettings;

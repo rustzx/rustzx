@@ -1,5 +1,5 @@
 use crate::utils::{Clocks, EmulationSpeed};
-use std::collections::VecDeque;
+use alloc::collections::VecDeque;
 
 /// Type of happened event
 pub enum EventKind {
