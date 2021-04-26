@@ -4,6 +4,8 @@
 
 use crate::{
     app::{events::*, sound::*, video::*},
+};
+use rustzx_core::{
     emulator::*,
     settings::RustzxSettings,
     zx::constants::*,
