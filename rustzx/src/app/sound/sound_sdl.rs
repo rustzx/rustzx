@@ -1,7 +1,7 @@
 //! Real Audio SDL backend
 use super::{SoundDevice, ZXSample};
-use crate::{
-    backends::SDL_CONTEXT,
+use crate::backends::SDL_CONTEXT;
+use rustzx_core::{
     settings::RustzxSettings,
     zx::sound::{CHANNELS, SAMPLE_RATE},
 };

@@ -1,7 +1,8 @@
 //! platform-independent traits. Submodules with backends will be selectable
 //! via cargo features in future
 mod video_sdl;
-pub use self::video_sdl::VideoSdl;
+
+pub use video_sdl::VideoSdl;
 
 /// Texture id binging
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]

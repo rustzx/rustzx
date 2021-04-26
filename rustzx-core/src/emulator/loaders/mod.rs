@@ -32,7 +32,7 @@ mod tests {
 
     #[test]
     fn load_file_autodetect_load_tap() {
-        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "test", "tapes", "simple.tap"]
+        let path: PathBuf = ["test", "tapes", "simple.tap"]
             .iter()
             .collect();
         let settings = RustzxSettings::new();

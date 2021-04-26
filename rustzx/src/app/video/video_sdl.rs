@@ -1,5 +1,6 @@
 use super::{Rect, TextureInfo, VideoDevice};
-use crate::{backends::SDL_CONTEXT, settings::RustzxSettings};
+use crate::backends::SDL_CONTEXT;
+use rustzx_core::settings::RustzxSettings;
 use sdl2::{
     pixels::PixelFormatEnum as PixelFormat,
     rect::Rect as SdlRect,

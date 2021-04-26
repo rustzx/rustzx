@@ -1,13 +1,14 @@
 //! platform-independent traits. Submodules with backends will be selectable
 //! via cargo features in future
 mod events_sdl;
-pub use self::events_sdl::EventsSdl;
 
-use crate::{
-    utils::EmulationSpeed,
+use rustzx_core::{
     zx::{joy::kempston::KempstonKey, keys::*},
+    utils::EmulationSpeed,
 };
 use std::path::PathBuf;
+
+pub use events_sdl::EventsSdl;
 
 // Event type
 pub enum Event {

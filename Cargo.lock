@@ -299,12 +299,19 @@ checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 
 [[package]]
 name = "rustzx"
+version = "0.1.0"
+dependencies = [
+ "rustzx-core",
+ "sdl2",
+]
+
+[[package]]
+name = "rustzx-core"
 version = "0.10.0"
 dependencies = [
  "ayumi",
  "clap",
  "lazy_static",
- "sdl2",
 ]
 
 [[package]]
