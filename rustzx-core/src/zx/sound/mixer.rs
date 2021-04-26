@@ -6,7 +6,7 @@ use crate::zx::sound::{
     samples_from_time,
     SAMPLES,
 };
-use std::collections::VecDeque;
+use alloc::collections::VecDeque;
 
 /// Main sound mixer.
 pub struct ZXMixer {

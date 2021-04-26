@@ -18,6 +18,26 @@ use std::{
 /// max 100 ms interval in `max frames` speed mode
 const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
 
+struct InstantStopwatch {
+    timestamp: Instant,
+}
+
+impl Default for InstantStopwatch {
+    fn default() -> Self {
+        InstantStopwatch { timestamp: Instant::now() }
+    }
+}
+
+impl Stopwatch for InstantStopwatch {
+    fn reset(&mut self) {
+        self.timestamp = Instant::now();
+    }
+
+    fn measure(&self) -> Duration {
+        self.timestamp.elapsed()
+    }
+}
+
 /// converts nanoseconds  to miliseconds
 fn ns_to_ms(ns: u64) -> f64 {
     ns as f64 / 1_000_000f64
@@ -71,12 +91,13 @@ impl RustzxApp {
     pub fn start(&mut self) {
         let mut debug = false;
         let scale = self.settings.scale as u32;
+        let mut stopwatch = InstantStopwatch::default();
         'emulator: loop {
             let frame_target_dt = frame_length(FPS);
             // absolute start time
             let frame_start = Instant::now();
             // Emulate all requested frames
-            let cpu_dt = self.emulator.emulate_frames(MAX_FRAME_TIME);
+            let cpu_dt = self.emulator.emulate_frames(MAX_FRAME_TIME, &mut stopwatch);
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime

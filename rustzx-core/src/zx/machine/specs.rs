@@ -1,4 +1,5 @@
 use crate::zx::constants::BORDER_COLS;
+use alloc::{ vec::Vec, vec };
 
 /// Immutable type (Builder is not public in outer module)
 pub struct ZXSpecs {

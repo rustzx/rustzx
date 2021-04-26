@@ -1,10 +1,11 @@
 //! Platform-independent high-level Emulator interaction module
 use crate::{settings::RustzxSettings, utils::*, z80::*, zx::ZXController};
-use std::{
-    path::Path,
-    time::{Duration, Instant},
-};
+#[cfg(feature = "std")]
+use std::path::Path;
 
+use core::time::Duration;
+
+#[cfg(feature = "std")]
 mod loaders;
 
 /// Represents main Emulator structure
@@ -17,12 +18,19 @@ pub struct Emulator {
     sound_enabled: bool,
 }
 
+pub trait Stopwatch {
+    fn reset(&mut self);
+    fn measure(&self) -> Duration;
+}
+
 impl Emulator {
     /// Constructs new emulator
     /// # Arguments
     /// `settings` - emulator settings
+    #[cfg(feature = "std")]
     pub fn new(settings: &RustzxSettings) -> Emulator {
         let mut controller = ZXController::new(&settings);
+        // TODO: move out tape/rom/sna loading via "std" types out of `Emulator`
         if let Some(ref path) = settings.rom {
             controller.load_rom(path);
         } else {
@@ -42,6 +50,23 @@ impl Emulator {
             out.load_sna(path)
         }
         out
+    }
+
+    /// Constructs new emulator
+    /// # Arguments
+    /// `settings` - emulator settings
+    #[cfg(not(feature = "std"))]
+    pub fn new(settings: &RustzxSettings) -> Emulator {
+        let mut controller = ZXController::new(&settings);
+        controller.load_default_rom();
+
+        Emulator {
+            cpu: Z80::new(),
+            controller,
+            speed: settings.speed,
+            fast_load: settings.fastload,
+            sound_enabled: settings.sound_enabled,
+        }
     }
 
     /// changes emulation speed
@@ -74,6 +99,7 @@ impl Emulator {
     }
 
     /// loads snapshot file
+    #[cfg(feature = "std")]
     pub fn load_sna(&mut self, file: impl AsRef<Path>) {
         loaders::load_sna(self, file)
     }
@@ -81,11 +107,13 @@ impl Emulator {
     /// Loads file, performing appropriate action depending on
     /// auto-detected file type. For example, loading `.sna` restores
     /// snapshot, loading `tap` inserts tape.
+    #[cfg(feature = "std")]
     pub fn load_file_autodetect(&mut self, file: impl AsRef<Path>) {
         loaders::load_file_autodetect(self, file)
     }
 
     /// events processing function
+    #[cfg(feature = "std")]
     fn process_event(&mut self, event: Event) {
         let Event { kind: e, time: _ } = event;
         match e {
@@ -96,6 +124,10 @@ impl Emulator {
             _ => {}
         }
     }
+
+    /// events processing function
+    #[cfg(not(feature = "std"))]
+    fn process_event(&mut self, _event: Event) {}
 
     // processes all events, happened at frame emulation cycle
     fn process_all_events(&mut self) {
@@ -111,11 +143,13 @@ impl Emulator {
     /// Emulate frames, maximum in `max_time` time, returns emulation time in nanoseconds
     /// in most cases time is max 1/50 of second, even when using
     /// loader acceleration
-    pub fn emulate_frames(&mut self, max_time: Duration) -> Duration {
+    pub fn emulate_frames<S>(&mut self, max_time: Duration, stopwatch: &mut S) -> Duration
+        where S: Stopwatch
+    {
         let mut time = Duration::new(0, 0);
         'frame: loop {
             // start of current frame
-            let start_time = Instant::now();
+            stopwatch.reset();
             // reset controller internal frame counter
             self.controller.reset_frame_counter();
             'cpu: loop {
@@ -130,7 +164,7 @@ impl Emulator {
                     if self.controller.frames_count() >= multiplier {
                         // no more frames
                         self.controller.clear_events();
-                        return start_time.elapsed();
+                        return stopwatch.measure();
                     };
                 // if speed is maximal.
                 } else {
@@ -140,7 +174,7 @@ impl Emulator {
                     }
                 }
             }
-            time += start_time.elapsed();
+            time += stopwatch.measure();
             // if time is bigger than `max_time` then stop emulation cycle
             if time > max_time {
                 break 'frame;

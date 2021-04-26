@@ -6,7 +6,9 @@ use crate::{
         sound::ay::ZXAYMode,
     },
 };
+#[cfg(feature = "std")]
 use clap::{App, AppSettings, Arg};
+#[cfg(feature = "std")]
 use std::path::{Path, PathBuf};
 
 /// Structure to handle all emulator runtime settings
@@ -23,8 +25,11 @@ pub struct RustzxSettings {
     pub sound_enabled: bool,
     pub volume: usize,
     pub latency: usize,
+    #[cfg(feature = "std")]
     pub rom: Option<PathBuf>,
+    #[cfg(feature = "std")]
     pub tap: Option<PathBuf>,
+    #[cfg(feature = "std")]
     pub sna: Option<PathBuf>,
 }
 
@@ -44,12 +49,16 @@ impl RustzxSettings {
             sound_enabled: true,
             volume: 100,
             latency: 1024,
+            #[cfg(feature = "std")]
             rom: None,
+            #[cfg(feature = "std")]
             tap: None,
+            #[cfg(feature = "std")]
             sna: None,
         }
     }
 
+    #[cfg(feature = "std")]
     pub fn from_clap() -> RustzxSettings {
         // get defaults
         let mut out = Self::new();
@@ -304,18 +313,21 @@ impl RustzxSettings {
     }
 
     /// changes TAP path
+    #[cfg(feature = "std")]
     pub fn tap(&mut self, value: impl AsRef<Path>) -> &mut Self {
         self.tap = Some(value.as_ref().into());
         self
     }
 
     /// changes SNA path
+    #[cfg(feature = "std")]
     pub fn sna(&mut self, value: impl AsRef<Path>) -> &mut Self {
         self.sna = Some(value.as_ref().into());
         self
     }
 
     /// changes ROM path
+    #[cfg(feature = "std")]
     pub fn rom(&mut self, value: impl AsRef<Path>) -> &mut Self {
         self.rom = Some(value.as_ref().into());
         self

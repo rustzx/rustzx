@@ -5,10 +5,12 @@ authors = ["Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 publish = false
 description = "ZX Spectum emulator core library"
 repository = "https://github.com/pacmancoder/rustzx"
-readme = "README.md"
-keywords = ["emulator", "game", "z80"]
+keywords = ["emulator", "game", "z80", "no_std"]
 license = "MIT"
 edition = "2018"
+
+[features]
+std = []
 
 [dependencies]
 lazy_static = "1.4"

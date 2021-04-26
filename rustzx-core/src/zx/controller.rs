@@ -1,4 +1,10 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
+use alloc::{
+    boxed::Box,
+    vec::Vec,
+};
+
+#[cfg(feature = "std")]
 use std::{
     fs::File,
     io::Read,
@@ -118,7 +124,9 @@ impl ZXController {
     /// loads rom from file
     /// for 128-K machines path must contain ".0" in the tail
     /// and second rom bank will be loaded automatically
+    #[cfg(feature = "std")]
     pub fn load_rom(&mut self, path: impl AsRef<Path>) {
+        // TODO: Remove std fucntionality from rustzx-core
         match self.machine {
             // Single ROM file
             ZXMachine::Sinclair48K => {

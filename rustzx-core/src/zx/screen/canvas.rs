@@ -4,6 +4,7 @@ use crate::{
     utils::{screen::*, *},
     zx::{constants::*, machine::ZXMachine, screen::colors::*},
 };
+use alloc::boxed::Box;
 
 // size of screen buffer in bytes
 const BUFFER_LENGTH: usize = CANVAS_HEIGHT * CANVAS_WIDTH * BYTES_PER_PIXEL;

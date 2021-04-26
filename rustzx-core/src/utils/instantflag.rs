@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use core::cell::Cell;
 
 /// Instant flag - type, which resets self on immutable read
 pub struct InstantFlag {

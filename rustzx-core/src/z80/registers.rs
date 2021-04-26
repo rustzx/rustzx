@@ -1,6 +1,6 @@
 //! Module which contains Z80 registers implementation
 use crate::{utils::*, z80::Prefix};
-use std::fmt;
+use core::fmt;
 
 // Flag register bits
 

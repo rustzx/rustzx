@@ -4,6 +4,7 @@ use crate::{
     utils::Clocks,
     zx::{constants::*, machine::*},
 };
+use alloc::boxed::Box;
 
 /// Internal struct, which contains information about beam position and color
 #[derive(Clone, Copy)]
