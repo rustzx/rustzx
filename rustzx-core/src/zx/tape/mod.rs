@@ -8,10 +8,9 @@ use crate::utils::Clocks;
 
 use enum_dispatch::enum_dispatch;
 
-
 #[enum_dispatch(TapeImpl)]
 pub enum ZXTape {
-    Tap(Tap)
+    Tap(Tap),
 }
 
 #[enum_dispatch]

@@ -1,9 +1,6 @@
 use crate::{
     utils::EmulationSpeed,
-    zx::{
-        machine::ZXMachine,
-        sound::ay::ZXAYMode,
-    },
+    zx::{machine::ZXMachine, sound::ay::ZXAYMode},
 };
 
 pub struct RustzxSettings {

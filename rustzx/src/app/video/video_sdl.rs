@@ -1,8 +1,5 @@
 use super::{Rect, TextureInfo, VideoDevice};
-use crate::{
-    backends::SDL_CONTEXT,
-    app::settings::Settings,
-};
+use crate::{app::settings::Settings, backends::SDL_CONTEXT};
 use sdl2::{
     pixels::PixelFormatEnum as PixelFormat,
     rect::Rect as SdlRect,

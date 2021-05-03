@@ -31,7 +31,7 @@ pub trait LoadableAsset {
             }
         }
         if !buf.is_empty() {
-            return Err(error::AssetReadError::UnexpectedEof)
+            return Err(error::AssetReadError::UnexpectedEof);
         }
 
         Ok(())
@@ -43,7 +43,7 @@ pub trait LoadableAsset {
         while read_bytes != 0 {
             buf.extend_from_slice(&buffer[0..read_bytes]);
             read_bytes = self.read(&mut buffer)?;
-        };
+        }
         Ok(())
     }
 }

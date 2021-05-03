@@ -1,10 +1,12 @@
 use rustzx_core::{
-    host::{LoadableAsset, SeekFrom},
     error::AssetReadError,
+    host::{LoadableAsset, SeekFrom},
 };
 
-use std::fs::File;
-use std::io::{Read, Seek};
+use std::{
+    fs::File,
+    io::{Read, Seek},
+};
 
 pub struct FileAsset {
     file: File,
@@ -25,11 +27,13 @@ impl LoadableAsset for FileAsset {
     }
 
     fn seek(&mut self, pos: SeekFrom) -> Result<usize, AssetReadError> {
-        self.file.seek(into_std_seek_pos(pos)).map_err(|e| {
-            log::error!("Failed to seeek asset: {}", e);
-            AssetReadError::HostAssetImplFailed
-        })
-        .map(|count| count as usize)
+        self.file
+            .seek(into_std_seek_pos(pos))
+            .map_err(|e| {
+                log::error!("Failed to seeek asset: {}", e);
+                AssetReadError::HostAssetImplFailed
+            })
+            .map(|count| count as usize)
     }
 }
 

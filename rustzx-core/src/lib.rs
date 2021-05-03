@@ -2,12 +2,12 @@
 #![allow(dead_code)]
 
 pub mod emulator;
+pub mod error;
+pub mod host;
 pub mod settings;
 pub mod utils;
 pub mod z80;
 pub mod zx;
-pub mod host;
-pub mod error;
 
 // TODO: eliminate need for alloc (optional feature?)
 extern crate alloc;

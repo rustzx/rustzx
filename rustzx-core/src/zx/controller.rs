@@ -1,5 +1,7 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
 use crate::{
+    host::Host,
+    settings::RustzxSettings,
     utils::{events::*, screen::*, split_word, Clocks, InstantFlag},
     z80::Z80Bus,
     zx::{
@@ -14,14 +16,12 @@ use crate::{
             colors::{ZXColor, ZXPalette},
         },
         sound::mixer::ZXMixer,
-        tape::{ZXTape, TapeImpl, Tap},
+        tape::{Tap, TapeImpl, ZXTape},
         RamType,
         RomType,
         ZXKey,
         ZXMemory,
     },
-    host::Host,
-    settings::RustzxSettings,
 };
 
 // TODO: Make feature gates for non-crucial parts of the emulator

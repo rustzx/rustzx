@@ -1,10 +1,10 @@
 // emulator
 use crate::{
     emulator::Emulator,
+    host::Host,
     utils::{make_word, Clocks},
     z80::*,
     zx::tape::TapeImpl,
-    host::Host,
 };
 
 pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) {
