@@ -1,6 +1,4 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
-use alloc::vec::Vec;
-
 use crate::{
     utils::{events::*, screen::*, split_word, Clocks, InstantFlag},
     z80::Z80Bus,
@@ -158,11 +156,6 @@ impl<H: Host> ZXController<H> {
                 self.keyboard[rownum] |= key.mask;
             }
         }
-    }
-
-    /// Dumps memory space
-    pub fn dump(&self) -> Vec<u8> {
-        self.memory.dump()
     }
 
     /// Returns current bus floating value

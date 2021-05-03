@@ -39,6 +39,8 @@ struct BlockInfo {
     end: usize,
 }
 
+// TODO: Eliminate dynamic allocations for Tap loader
+
 pub struct Tap {
     /// state of tape
     state: TapeState,
