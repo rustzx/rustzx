@@ -1,18 +1,27 @@
 //! Platform-independent high-level Emulator interaction module
-use crate::{settings::RustzxSettings, utils::*, z80::*, zx::ZXController};
-#[cfg(feature = "std")]
-use std::path::Path;
+mod loaders;
+
+use crate::{
+    utils::*,
+    z80::*,
+    zx::{
+        ZXController,
+        ZXMachine,
+        tape::{Tap, TapeImpl},
+        memory::PAGE_SIZE
+    },
+    host::{Host, Snapshot, Tape, LoadableAsset},
+    Result,
+};
 
 use core::time::Duration;
 
-#[cfg(feature = "std")]
-mod loaders;
-
 /// Represents main Emulator structure
-pub struct Emulator {
+pub struct Emulator<H: Host> {
+    host: H,
     cpu: Z80,
     // direct access to controller devices and control methods
-    pub controller: ZXController,
+    pub controller: ZXController<H>,
     speed: EmulationSpeed,
     fast_load: bool,
     sound_enabled: bool,
@@ -23,50 +32,34 @@ pub trait Stopwatch {
     fn measure(&self) -> Duration;
 }
 
-impl Emulator {
+impl<H: Host> Emulator<H> {
     /// Constructs new emulator
     /// # Arguments
     /// `settings` - emulator settings
-    #[cfg(feature = "std")]
-    pub fn new(settings: &RustzxSettings) -> Emulator {
-        let mut controller = ZXController::new(&settings);
-        // TODO: move out tape/rom/sna loading via "std" types out of `Emulator`
-        if let Some(ref path) = settings.rom {
-            controller.load_rom(path);
-        } else {
-            controller.load_default_rom();
-        };
-        if let Some(ref path) = settings.tap {
-            controller.tape.insert(path);
-        }
-        let mut out = Emulator {
-            cpu: Z80::new(),
-            controller,
-            speed: settings.speed,
-            fast_load: settings.fastload,
-            sound_enabled: settings.sound_enabled,
-        };
-        if let Some(ref path) = settings.sna {
-            out.load_sna(path)
-        }
-        out
-    }
+    pub fn new(host: H) -> Result<Self> {
+        let settings = host.settings();
 
-    /// Constructs new emulator
-    /// # Arguments
-    /// `settings` - emulator settings
-    #[cfg(not(feature = "std"))]
-    pub fn new(settings: &RustzxSettings) -> Emulator {
-        let mut controller = ZXController::new(&settings);
-        controller.load_default_rom();
+        let speed = settings.emulation_speed;
+        let fast_load = settings.tape_fastload;
+        let sound_enabled = settings.sound_enabled;
 
-        Emulator {
-            cpu: Z80::new(),
+        let cpu = Z80::new();
+        let controller = ZXController::<H>::new(settings);
+
+        let mut this = Self {
+            host,
+            cpu,
             controller,
-            speed: settings.speed,
-            fast_load: settings.fastload,
-            sound_enabled: settings.sound_enabled,
-        }
+            speed,
+            fast_load,
+            sound_enabled,
+        };
+
+        this.load_rom()?;
+        this.load_sna()?;
+        this.load_tap()?;
+
+        Ok(this)
     }
 
     /// changes emulation speed
@@ -98,36 +91,65 @@ impl Emulator {
         }
     }
 
-    /// loads snapshot file
-    #[cfg(feature = "std")]
-    pub fn load_sna(&mut self, file: impl AsRef<Path>) {
-        loaders::load_sna(self, file)
+    pub fn load_sna(&mut self) -> Result<()> {
+        match self.host.snapshot() {
+            Some(Snapshot::Sna(asset)) => {
+                loaders::sna::load_sna(self, asset)
+            }
+            None => Ok(()),
+        }
     }
 
-    /// Loads file, performing appropriate action depending on
-    /// auto-detected file type. For example, loading `.sna` restores
-    /// snapshot, loading `tap` inserts tape.
-    #[cfg(feature = "std")]
-    pub fn load_file_autodetect(&mut self, file: impl AsRef<Path>) {
-        loaders::load_file_autodetect(self, file)
+    pub fn load_tap(&mut self) -> Result<()> {
+        match self.host.tape() {
+            Some(Tape::Tap(asset)) => {
+                self.controller.tape = Tap::from_asset(asset)?.into();
+            }
+            None => {},
+        }
+
+        Ok(())
     }
 
-    /// events processing function
-    #[cfg(feature = "std")]
+    pub fn load_rom(&mut self) -> Result<()> {
+        let mut page = [0u8; PAGE_SIZE];
+        match self.host.settings().machine {
+            ZXMachine::Sinclair48K => {
+                if let Some(mut asset) = self.host.rom(0) {
+                    asset.read_exact(&mut page)?;
+                    self.controller.memory.load_rom(0, &page);
+                }
+            },
+            ZXMachine::Sinclair128K => {
+                if let (
+                    Some(mut page0_asset),
+                    Some(mut page1_asset)
+                ) = (
+                    self.host.rom(0),
+                    self.host.rom(1)
+                ) {
+                    page0_asset.read_exact(&mut page)?;
+                    self.controller.memory.load_rom(0, &page);
+
+                    page1_asset.read_exact(&mut page)?;
+                    self.controller.memory.load_rom(1, &page);
+                }
+            },
+        };
+
+        Ok(())
+    }
+
     fn process_event(&mut self, event: Event) {
         let Event { kind: e, time: _ } = event;
         match e {
             // Fast tape loading found, use it
             EventKind::FastTapeLoad if self.controller.tape.can_fast_load() && self.fast_load => {
-                loaders::fast_load_tap(self);
+                loaders::tap::fast_load_tap(self);
             }
             _ => {}
         }
     }
-
-    /// events processing function
-    #[cfg(not(feature = "std"))]
-    fn process_event(&mut self, _event: Event) {}
 
     // processes all events, happened at frame emulation cycle
     fn process_all_events(&mut self) {

@@ -3,9 +3,11 @@ use crate::{
     emulator::Emulator,
     utils::{make_word, Clocks},
     z80::*,
+    zx::tape::TapeImpl,
+    host::Host,
 };
 
-pub fn fast_load_tap(emulator: &mut Emulator) {
+pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) {
     // resetting tape pos to beginning.
     emulator.controller.tape.reset_pos_in_block();
     // So, at current moment we at 0x056C in 48K Rom.

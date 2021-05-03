@@ -15,4 +15,7 @@ std = []
 [dependencies]
 lazy_static = "1.4"
 clap = "3.0.0-beta.2"
+displaydoc = { version = "0.2", default-features = false }
+from_variants = "0.6"
+enum_dispatch = "0.3"
 ayumi = { git = "https://github.com/pacmancoder/rust-ayumi.git", rev = "9e57902" }
