@@ -1,19 +1,7 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
-use alloc::{
-    boxed::Box,
-    vec::Vec,
-};
+use alloc::vec::Vec;
 
-#[cfg(feature = "std")]
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
-
-// use almost everything :D
 use crate::{
-    settings::RustzxSettings,
     utils::{events::*, screen::*, split_word, Clocks, InstantFlag},
     z80::Z80Bus,
     zx::{
@@ -28,21 +16,26 @@ use crate::{
             colors::{ZXColor, ZXPalette},
         },
         sound::mixer::ZXMixer,
-        tape::*,
+        tape::{ZXTape, TapeImpl, Tap},
         RamType,
         RomType,
         ZXKey,
         ZXMemory,
     },
+    host::Host,
+    settings::RustzxSettings,
 };
 
+// TODO: Make feature gates for non-crucial parts of the emulator
+// e.g. border
+
 /// ZX System controller
-pub struct ZXController {
+pub struct ZXController<H: Host> {
     // parts of ZX Spectum.
     pub machine: ZXMachine,
     pub memory: ZXMemory,
     pub canvas: ZXCanvas,
-    pub tape: Box<dyn ZXTape>,
+    pub tape: ZXTape,
     pub border: ZXBorder,
     pub kempston: Option<KempstonJoy>,
     // pub beeper: ZXBeeper,
@@ -64,11 +57,13 @@ pub struct ZXController {
     ear: bool,
     paging_enabled: bool,
     screen_bank: u8,
+    // `H` will be used when components e.g. Tap type will depend on host impl
+    _phantom: core::marker::PhantomData<H>,
 }
 
-impl ZXController {
+impl<H: Host> ZXController<H> {
     /// Returns new ZXController from settings
-    pub fn new(settings: &RustzxSettings) -> ZXController {
+    pub fn new(settings: &RustzxSettings) -> Self {
         let (memory, paging, screen_bank);
         match settings.machine {
             ZXMachine::Sinclair48K => {
@@ -82,7 +77,7 @@ impl ZXController {
                 screen_bank = 5;
             }
         };
-        let kempston = if settings.kempston {
+        let kempston = if settings.enable_kempston {
             Some(KempstonJoy::new())
         } else {
             None
@@ -98,16 +93,22 @@ impl ZXController {
             border_color: 0x00,
             frame_clocks: Clocks(0),
             passed_frames: 0,
-            tape: Box::new(Tap::new()),
+            tape: Tap::new().into(),
             events: EventQueue::new(),
             instant_event: InstantFlag::new(false),
             mic: false,
             ear: false,
             paging_enabled: paging,
             screen_bank,
+            _phantom: core::marker::PhantomData::default(),
         };
         out.mixer.ay.mode(settings.ay_mode);
-        out.mixer.volume(settings.volume as f64 / 200.0);
+        out.mixer.volume(settings.sound_volume as f64 / 200.0);
+
+        if settings.load_default_rom {
+            out.load_default_rom();
+        }
+
         out
     }
 
@@ -121,50 +122,8 @@ impl ZXController {
         }
     }
 
-    /// loads rom from file
-    /// for 128-K machines path must contain ".0" in the tail
-    /// and second rom bank will be loaded automatically
-    #[cfg(feature = "std")]
-    pub fn load_rom(&mut self, path: impl AsRef<Path>) {
-        // TODO: Remove std fucntionality from rustzx-core
-        match self.machine {
-            // Single ROM file
-            ZXMachine::Sinclair48K => {
-                let mut rom = Vec::new();
-                File::open(path)
-                    .ok()
-                    .expect("[ERROR] ROM not found")
-                    .read_to_end(&mut rom)
-                    .unwrap();
-                self.memory.load_rom(0, &rom);
-            }
-            // Two ROM's
-            ZXMachine::Sinclair128K => {
-                let mut rom0 = Vec::new();
-                let mut rom1 = Vec::new();
-                if !path.as_ref().extension().map_or(false, |e| e == "0") {
-                    println!("[Warning] ROM0 filename should end with .0");
-                }
-                File::open(path.as_ref())
-                    .ok()
-                    .expect("[ERROR] ROM0 not found")
-                    .read_to_end(&mut rom0)
-                    .unwrap();
-                let mut second_path: PathBuf = path.as_ref().to_path_buf();
-                second_path.set_extension("1");
-                File::open(second_path)
-                    .ok()
-                    .expect("[ERROR] ROM1 not found")
-                    .read_to_end(&mut rom1)
-                    .unwrap();
-                self.memory.load_rom(0, &rom0).load_rom(1, &rom1);
-                println!("ROM's Loaded");
-            }
-        }
-    }
-
     /// loads builted-in ROM
-    pub fn load_default_rom(&mut self) {
+    fn load_default_rom(&mut self) {
         match self.machine {
             ZXMachine::Sinclair48K => {
                 self.memory.load_rom(0, ROM_48K);
@@ -328,7 +287,7 @@ impl ZXController {
     }
 }
 
-impl Z80Bus for ZXController {
+impl<H: Host> Z80Bus for ZXController<H> {
     /// we need to check different breakpoints like tape
     /// loading detection breakpoint
     fn pc_callback(&mut self, addr: u16) {
@@ -368,8 +327,8 @@ impl Z80Bus for ZXController {
     /// Cahnges internal state on clocks count change (emualtion processing)
     fn wait_internal(&mut self, clk: Clocks) {
         self.frame_clocks += clk;
-        (*self.tape).process_clocks(clk);
-        let mic = (*self.tape).current_bit();
+        self.tape.process_clocks(clk);
+        let mic = self.tape.current_bit();
         self.mic = mic;
         let pos = self.frame_pos();
         self.mixer.beeper.change_bit(self.mic | self.ear);

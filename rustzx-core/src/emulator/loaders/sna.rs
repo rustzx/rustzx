@@ -1,17 +1,18 @@
-// std
-use std::{fs::File, io::Read, path::Path};
-// emulator
 use crate::{
     emulator::Emulator,
     utils::{make_word, Clocks},
     z80::{opcodes::execute_pop_16, RegName16},
     zx::colors::ZXColor,
+    host::{Host, LoadableAsset},
+    Result,
 };
+use alloc::vec::Vec;
 
 /// SNA snapshot loading function
-pub fn load_sna(emulator: &mut Emulator, file: impl AsRef<Path>) {
+pub fn load_sna<H: Host>(emulator: &mut Emulator<H>, mut asset: H::SnapshotAssetImpl) -> Result<()> {
+    // TODO: Sequential loading of SNA instead of loading to vector
     let mut data = Vec::new();
-    File::open(file).unwrap().read_to_end(&mut data).unwrap();
+    asset.read_to_end(&mut data)?;
     assert!(data.len() == 49179);
     // i-reg
     emulator.cpu.regs.set_i(data[0]);
@@ -58,4 +59,5 @@ pub fn load_sna(emulator: &mut Emulator, file: impl AsRef<Path>) {
         RegName16::PC,
         Clocks(0),
     );
+    Ok(())
 }

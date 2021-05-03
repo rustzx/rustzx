@@ -5,18 +5,17 @@ mod tap;
 pub use self::tap::Tap;
 
 use crate::utils::Clocks;
-#[cfg(feature = "std")]
-use std::path::Path;
 
-/// Result of tape insertion,
-/// `Err` contains string, which describes
-/// what caused errror
-pub enum InsertResult {
-    Ok,
-    Err(&'static str),
+use enum_dispatch::enum_dispatch;
+
+
+#[enum_dispatch(TapeImpl)]
+pub enum ZXTape {
+    Tap(Tap)
 }
 
-pub trait ZXTape {
+#[enum_dispatch]
+pub trait TapeImpl {
     // -----------------
     // FAST LOAD SECTION
     // -----------------
@@ -35,11 +34,6 @@ pub trait ZXTape {
     fn current_bit(&self) -> bool;
     /// Makes procession of type in definite time
     fn process_clocks(&mut self, clocks: Clocks);
-    /// insert new media
-    #[cfg(feature = "std")]
-    fn insert(&mut self, path: &Path) -> InsertResult;
-    /// ejects tape
-    fn eject(&mut self);
     /// stops tape
     fn stop(&mut self);
     /// plays tape

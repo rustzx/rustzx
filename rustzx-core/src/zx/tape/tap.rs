@@ -1,10 +1,12 @@
 //! TAP file tape player
 
-use super::*;
-use crate::utils::Clocks;
+use crate::{
+    zx::tape::TapeImpl,
+    utils::Clocks,
+    host::LoadableAsset,
+    Result,
+};
 use alloc::vec::Vec;
-#[cfg(feature = "std")]
-use std::{fs::File, io::Read};
 
 // main constants
 const PILOT_LENGTH: usize = 2168;
@@ -78,6 +80,45 @@ impl Tap {
         }
     }
 
+    /// updates internal structure according new tape file
+    pub fn from_asset(mut asset: impl LoadableAsset) -> Result<Self> {
+        // TODO: Instead of instant loading to Vec, save asset inside Tap and
+        // do direct loading from asset
+        use crate::utils::make_word;
+
+        let mut tap = Self::new();
+
+        let mut buffer = [0u8; 1024];
+        let mut read_bytes = asset.read(&mut buffer)?;
+        while read_bytes != 0 {
+            tap.data.extend_from_slice(&buffer[0..read_bytes]);
+            read_bytes = asset.read(&mut buffer)?;
+        };
+
+        tap.block_info.clear();
+        // get all blocks data
+        let mut p = 0;
+        'blocks: loop {
+            // get length of the block
+            let len = make_word(tap.data[p + 1], tap.data[p]) as usize;
+            // push to vector of blocks
+            tap.block_info.push(BlockInfo {
+                length: len,
+                pos: p + 2,
+                end: p + 2 + len - 1,
+            });
+            // shift pos
+            p += 2 + len;
+            // check bounds
+            if p >= tap.data.len() {
+                break 'blocks;
+            }
+        }
+        tap.reset_state();
+
+        Ok(tap)
+    }
+
     /// resets internal tape state
     fn reset_state(&mut self) {
         self.state = TapeState::Stop;
@@ -91,7 +132,7 @@ impl Tap {
     }
 }
 
-impl ZXTape for Tap {
+impl TapeImpl for Tap {
     /// can autoload only if tape stopped
     fn can_fast_load(&self) -> bool {
         self.state == TapeState::Stop
@@ -128,41 +169,6 @@ impl ZXTape for Tap {
     /// returns current bit
     fn current_bit(&self) -> bool {
         self.curr_bit
-    }
-
-    /// updates internal structure according new tape file
-    #[cfg(feature = "std")]
-    fn insert(&mut self, path: &Path) -> InsertResult {
-        use crate::utils::make_word;
-
-        if let Ok(mut file) = File::open(path) {
-            if let Err(_) = file.read_to_end(&mut self.data) {
-                return InsertResult::Err("TAP file read error");
-            }
-            self.block_info.clear();
-            // get all blocks data
-            let mut p = 0;
-            'blocks: loop {
-                // get length of the block
-                let len = make_word(self.data[p + 1], self.data[p]) as usize;
-                // push to vector of blocks
-                self.block_info.push(BlockInfo {
-                    length: len,
-                    pos: p + 2,
-                    end: p + 2 + len - 1,
-                });
-                // shift pos
-                p += 2 + len;
-                // check bounds
-                if p >= self.data.len() {
-                    break 'blocks;
-                }
-            }
-            self.reset_state();
-            return InsertResult::Ok;
-        } else {
-            return InsertResult::Err("Can't open TAP file");
-        }
     }
 
     /// makes internal state change based on clocks count
@@ -316,13 +322,6 @@ impl ZXTape for Tap {
                 }
             }
         }
-    }
-
-    /// ejects tape, clears internal state
-    fn eject(&mut self) {
-        self.block_info.clear();
-        self.data.clear();
-        self.reset_state();
     }
 
     /// stops tape playback, sets `Stop` state

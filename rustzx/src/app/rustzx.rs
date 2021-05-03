@@ -188,3 +188,47 @@ impl RustzxApp {
         }
     }
 }
+
+/*
+/// loads rom from file
+/// for 128-K machines path must contain ".0" in the tail
+/// and second rom bank will be loaded automatically
+#[cfg(feature = "std")]
+pub fn load_rom(&mut self, path: impl AsRef<Path>) {
+    // TODO: Remove std fucntionality from rustzx-core
+    match self.machine {
+        // Single ROM file
+        ZXMachine::Sinclair48K => {
+            let mut rom = Vec::new();
+            File::open(path)
+                .ok()
+                .expect("[ERROR] ROM not found")
+                .read_to_end(&mut rom)
+                .unwrap();
+            self.memory.load_rom(0, &rom);
+        }
+        // Two ROM's
+        ZXMachine::Sinclair128K => {
+            let mut rom0 = Vec::new();
+            let mut rom1 = Vec::new();
+            if !path.as_ref().extension().map_or(false, |e| e == "0") {
+                println!("[Warning] ROM0 filename should end with .0");
+            }
+            File::open(path.as_ref())
+                .ok()
+                .expect("[ERROR] ROM0 not found")
+                .read_to_end(&mut rom0)
+                .unwrap();
+            let mut second_path: PathBuf = path.as_ref().to_path_buf();
+            second_path.set_extension("1");
+            File::open(second_path)
+                .ok()
+                .expect("[ERROR] ROM1 not found")
+                .read_to_end(&mut rom1)
+                .unwrap();
+            self.memory.load_rom(0, &rom0).load_rom(1, &rom1);
+            println!("ROM's Loaded");
+        }
+    }
+}
+*/
