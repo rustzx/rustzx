@@ -126,10 +126,14 @@ impl<H: Host> ZXController<H> {
     fn load_default_rom(&mut self) {
         match self.machine {
             ZXMachine::Sinclair48K => {
-                self.memory.load_rom(0, ROM_48K);
+                let page = self.memory.rom_page_data_mut(0);
+                page.copy_from_slice(ROM_48K);
             }
             ZXMachine::Sinclair128K => {
-                self.memory.load_rom(0, ROM_128K_0).load_rom(1, ROM_128K_1);
+                let page = self.memory.rom_page_data_mut(0);
+                page.copy_from_slice(ROM_128K_0);
+                let page = self.memory.rom_page_data_mut(1);
+                page.copy_from_slice(ROM_128K_1);
             }
         }
     }

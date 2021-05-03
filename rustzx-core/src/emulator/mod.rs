@@ -8,7 +8,6 @@ use crate::{
         ZXController,
         ZXMachine,
         tape::{Tap, TapeImpl},
-        memory::PAGE_SIZE
     },
     host::{Host, Snapshot, Tape, LoadableAsset},
     Result,
@@ -113,12 +112,11 @@ impl<H: Host> Emulator<H> {
     }
 
     pub fn reload_rom(&mut self) -> Result<()> {
-        let mut page = [0u8; PAGE_SIZE];
         match self.host.settings().machine {
             ZXMachine::Sinclair48K => {
                 if let Some(mut asset) = self.host.rom(0) {
-                    asset.read_exact(&mut page)?;
-                    self.controller.memory.load_rom(0, &page);
+                    let page = self.controller.memory.rom_page_data_mut(0);
+                    asset.read_exact(page)?;
                 }
             },
             ZXMachine::Sinclair128K => {
@@ -129,11 +127,11 @@ impl<H: Host> Emulator<H> {
                     self.host.rom(0),
                     self.host.rom(1)
                 ) {
-                    page0_asset.read_exact(&mut page)?;
-                    self.controller.memory.load_rom(0, &page);
+                    let page = self.controller.memory.rom_page_data_mut(0);
+                    page0_asset.read_exact(page)?;
 
-                    page1_asset.read_exact(&mut page)?;
-                    self.controller.memory.load_rom(1, &page);
+                    let page = self.controller.memory.rom_page_data_mut(1);
+                    page1_asset.read_exact(page)?;
                 }
             },
         };

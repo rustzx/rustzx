@@ -32,8 +32,9 @@ pub fn load_sna<H: Host>(emulator: &mut Emulator<H>, mut asset: H::SnapshotAsset
     emulator.cpu.regs.set_iy(make_word(data[16], data[15]));
     emulator.cpu.regs.set_ix(make_word(data[18], data[17]));
     // iff1, iff2
-    emulator.cpu.regs.set_iff1((data[19] & 0x01) != 0);
-    emulator.cpu.regs.set_iff1((data[19] & 0x04) != 0);
+    let iff = (data[19] & 0x04) != 0;
+    emulator.cpu.regs.set_iff1(iff);
+    emulator.cpu.regs.set_iff2(iff);
     // r
     emulator.cpu.regs.set_r(data[20]);
     // af
@@ -41,17 +42,20 @@ pub fn load_sna<H: Host>(emulator: &mut Emulator<H>, mut asset: H::SnapshotAsset
     // sp
     emulator.cpu.regs.set_sp(make_word(data[24], data[23]));
     // interrupt mode
-    emulator.cpu.set_im(data[25]);
+    emulator.cpu.set_im(data[25] & 0x03);
     // set border
     emulator
         .controller
         .border
-        .set_border(Clocks(0), ZXColor::from_bits(data[26]));
+        .set_border(Clocks(0), ZXColor::from_bits(data[26] & 0x07));
     // ram pages
-    emulator.controller.memory.load_ram(0, &data[27..16411]);
-    // validate screen, it has been changed
-    emulator.controller.memory.load_ram(1, &data[16411..32795]);
-    emulator.controller.memory.load_ram(2, &data[32795..49179]);
+    let page = emulator.controller.memory.ram_page_data_mut(0);
+    page.copy_from_slice(&data[27..16411]);
+    let page = emulator.controller.memory.ram_page_data_mut(1);
+    page.copy_from_slice(&data[16411..32795]);
+    let page = emulator.controller.memory.ram_page_data_mut(2);
+    page.copy_from_slice(&data[32795..49179]);
+
     // RET
     execute_pop_16(
         &mut emulator.cpu,
