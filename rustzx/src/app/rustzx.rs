@@ -9,7 +9,6 @@ use crate::{
 use rustzx_core::{
     emulator::*,
     zx::constants::*,
-    zx::tape::TapeImpl,
 };
 use std::{
     thread,
@@ -128,7 +127,7 @@ impl RustzxApp {
                 if self.emulator.have_sound() {
                     loop {
                         // TODO: eliminate direct access to the controller
-                        if let Some(sample) = self.emulator.controller.mixer.pop() {
+                        if let Some(sample) = self.emulator.next_audio_sample() {
                             snd.send_sample(sample);
                         } else {
                             break;
@@ -169,7 +168,7 @@ impl RustzxApp {
                         break 'emulator;
                     }
                     Event::GameKey(key, state) => {
-                        self.emulator.controller.send_key(key, state);
+                        self.emulator.send_key(key, state);
                     }
                     Event::SwitchDebug => {
                         debug = !debug;
@@ -182,12 +181,10 @@ impl RustzxApp {
                         self.emulator.set_speed(speed);
                     }
                     Event::Kempston(key, state) => {
-                        if let Some(ref mut joy) = self.emulator.controller.kempston {
-                            joy.key(key, state);
-                        }
+                        self.emulator.send_kempston_key(key, state);
                     }
-                    Event::InsertTape => self.emulator.controller.tape.play(),
-                    Event::StopTape => self.emulator.controller.tape.stop(),
+                    Event::InsertTape => self.emulator.play_tape(),
+                    Event::StopTape => self.emulator.stop_tape(),
                     Event::OpenFile(path) => {
                         match self.emulator.host.load_autodetect(&path)? {
                             DetectedFileKind::Snapshot => {
