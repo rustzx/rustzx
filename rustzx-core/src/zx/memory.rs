@@ -130,36 +130,22 @@ impl ZXMemory {
         self.map[addr as usize / PAGE_SIZE]
     }
 
-    /// Loads ROM from array slice to memory
-    /// # Panics
-    /// panics when ram page number is out of range. This must me checked at
-    /// development stage
-    pub fn load_rom(&mut self, page: u8, data: &[u8]) -> &mut ZXMemory {
+    /// Returns mutable slice to rom page
+    pub fn rom_page_data_mut(&mut self, page: u8) -> &mut [u8] {
         if (page as usize + 1) * PAGE_SIZE > self.rom.len() {
-            panic!("[ERROR] Rom page {} do not exists!", page);
+            panic!("[ERROR] Rom page {} does not exists!", page);
         }
         let shift = page as usize * PAGE_SIZE;
-        {
-            let slice = &mut self.rom[shift..shift + PAGE_SIZE];
-            slice[..data.len()].clone_from_slice(data);
-        }
-        self
+        &mut self.rom[shift..shift + PAGE_SIZE]
     }
 
-    /// Loads RAM from array slice to memory
-    /// # Panics
-    /// panics when ram page number is out of range. This must me checked at
-    /// development stage
-    pub fn load_ram(&mut self, page: u8, data: &[u8]) -> &mut ZXMemory {
+    /// Returns mutable slice to ram page
+    pub fn ram_page_data_mut(&mut self, page: u8) -> &mut [u8] {
         if (page as usize + 1) * PAGE_SIZE > self.ram.len() {
-            panic!("[ERROR] Ram page {} do not exists!", page);
+            panic!("[ERROR] Ram page {} does not exists!", page);
         }
         let shift = page as usize * PAGE_SIZE;
-        {
-            let slice = &mut self.ram[shift..shift + PAGE_SIZE];
-            slice[..data.len()].clone_from_slice(data);
-        }
-        self
+        &mut self.ram[shift..shift + PAGE_SIZE]
     }
 
     /// Dumps current address space
