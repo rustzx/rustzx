@@ -40,7 +40,7 @@ impl GuiHost {
             }
             ZXMachine::Sinclair128K => {
                 let rom0_path = path;
-                if !rom0_path.extension().map_or(false, |e| e == "0") {
+                if !file_extension_matches(rom0_path, "0") {
                     bail!("128K ROM filename should end with '.0' extension");
                 }
                 if !rom0_path.exists() {
@@ -57,7 +57,7 @@ impl GuiHost {
     }
 
     pub fn with_snapshot(mut self, path: &Path) -> anyhow::Result<Self> {
-        if !path.extension().unwrap_or_default().eq_ignore_ascii_case("sna") {
+        if !file_extension_matches(path, "sna") {
             bail!("Invalid snapshot format");
         }
 
@@ -70,7 +70,7 @@ impl GuiHost {
     }
 
     pub fn with_tape(mut self, path: &Path) -> anyhow::Result<Self> {
-        if !path.extension().unwrap_or_default().eq_ignore_ascii_case("tap") {
+        if !file_extension_matches(path, "tap") {
             bail!("Invalid tape format");
         }
 
@@ -127,5 +127,33 @@ impl Host for GuiHost {
 
     fn settings(&self) -> &RustzxSettings {
         &self.settings
+    }
+}
+
+fn file_extension_matches(path: &Path, expected: &str) -> bool {
+    let actual = path.extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or_default()
+        .to_lowercase();
+
+    actual == expected
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn file_extension_matches_returns_true() {
+        assert!(file_extension_matches(&Path::new("test.tap"), "tap"));
+        assert!(file_extension_matches(&Path::new("test.TAP"), "tap"));
+        assert!(file_extension_matches(&Path::new("test.tAp"), "tap"));
+    }
+
+    #[test]
+    fn file_extension_matches_returns_false() {
+        assert!(!file_extension_matches(&Path::new("test.tap"), "sna"));
     }
 }
