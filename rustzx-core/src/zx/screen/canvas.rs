@@ -166,7 +166,7 @@ impl ZXCanvas {
                         .palette
                         .get_rgba(attr.active_color(state, self.flash), attr.brightness);
                     let index = (block * 8 + pixel) * BYTES_PER_PIXEL;
-                    self.buffer[index..index + BYTES_PER_PIXEL].clone_from_slice(color);
+                    self.back_buffer[index..index + BYTES_PER_PIXEL].clone_from_slice(color);
                 }
             }
             // cahnge last block to current
@@ -177,7 +177,7 @@ impl ZXCanvas {
     /// starts new frame
     pub fn new_frame(&mut self) {
         // post finished bitmap to second buffer (all not-rendered part will be updated)
-        self.back_buffer.clone_from_slice(&(*self.buffer));
+        self.buffer.clone_from_slice(&(*self.back_buffer));
         self.last_blocks = BlocksCount::new(0, 0);
         if self.frame_counter % 16 == 0 {
             self.switch_flash();
