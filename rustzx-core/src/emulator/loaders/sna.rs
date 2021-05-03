@@ -1,15 +1,18 @@
 use crate::{
     emulator::Emulator,
+    host::{Host, LoadableAsset},
     utils::{make_word, Clocks},
     z80::{opcodes::execute_pop_16, RegName16},
     zx::colors::ZXColor,
-    host::{Host, LoadableAsset},
     Result,
 };
 use alloc::vec::Vec;
 
 /// SNA snapshot loading function
-pub fn load_sna<H: Host>(emulator: &mut Emulator<H>, mut asset: H::SnapshotAssetImpl) -> Result<()> {
+pub fn load_sna<H: Host>(
+    emulator: &mut Emulator<H>,
+    mut asset: H::SnapshotAssetImpl,
+) -> Result<()> {
     // TODO: Sequential loading of SNA instead of loading to vector
     let mut data = Vec::new();
     asset.read_to_end(&mut data)?;

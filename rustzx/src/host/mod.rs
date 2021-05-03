@@ -1,17 +1,16 @@
 mod io;
 
-use std::{
-    path::Path,
-    fs::File,
-};
+use anyhow::{anyhow, bail};
+use io::FileAsset;
 use rustzx_core::{
     host::{Host, Snapshot, Tape},
     settings::RustzxSettings,
     zx::ZXMachine,
 };
-use anyhow::{bail, anyhow};
-use std::path::PathBuf;
-use io::FileAsset;
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 pub struct GuiHost {
     settings: RustzxSettings,
@@ -111,9 +110,7 @@ impl Host for GuiHost {
     fn rom(&self, page: usize) -> Option<FileAsset> {
         self.roms.get(page).and_then(|path| {
             File::open(path)
-                .map_err(|e| {
-                    log::error!("Failed to open ROM file: {}", e)
-                })
+                .map_err(|e| log::error!("Failed to open ROM file: {}", e))
                 .ok()
                 .map(|file| file.into())
         })
@@ -122,26 +119,18 @@ impl Host for GuiHost {
     fn snapshot(&self) -> Option<Snapshot<FileAsset>> {
         self.snapshot.as_ref().and_then(|path| {
             File::open(path)
-                .map_err(|e| {
-                    log::error!("Failed to open snapshot file: {}", e)
-                })
+                .map_err(|e| log::error!("Failed to open snapshot file: {}", e))
                 .ok()
-                .map(|file| {
-                    Snapshot::Sna(file.into())
-                })
+                .map(|file| Snapshot::Sna(file.into()))
         })
     }
 
     fn tape(&self) -> Option<Tape<FileAsset>> {
         self.tape.as_ref().and_then(|path| {
             File::open(path)
-                .map_err(|e| {
-                    log::error!("Failed to open tape file: {}", e)
-                })
+                .map_err(|e| log::error!("Failed to open tape file: {}", e))
                 .ok()
-                .map(|file| {
-                    Tape::Tap(file.into())
-                })
+                .map(|file| Tape::Tap(file.into()))
         })
     }
 
@@ -151,7 +140,8 @@ impl Host for GuiHost {
 }
 
 fn file_extension_matches(path: &Path, expected: &str) -> bool {
-    let actual = path.extension()
+    let actual = path
+        .extension()
         .unwrap_or_default()
         .to_str()
         .unwrap_or_default()

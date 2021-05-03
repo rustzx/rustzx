@@ -1,10 +1,9 @@
 //! This module provides main application class.
 mod events;
 mod rustzx;
+mod settings;
 mod sound;
 mod video;
-mod settings;
 
 // main re-export
-pub use self::rustzx::RustzxApp;
-pub use self::settings::Settings;
+pub use self::{rustzx::RustzxApp, settings::Settings};

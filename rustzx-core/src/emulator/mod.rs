@@ -2,17 +2,17 @@
 mod loaders;
 
 use crate::{
+    host::{Host, LoadableAsset, Snapshot, Tape},
     utils::*,
     z80::*,
     zx::{
-        ZXController,
-        ZXMachine,
-        tape::{Tap, TapeImpl},
-        ZXKey,
         joy::kempston::KempstonKey,
         sound::sample::SoundSample,
+        tape::{Tap, TapeImpl},
+        ZXController,
+        ZXKey,
+        ZXMachine,
     },
-    host::{Host, Snapshot, Tape, LoadableAsset},
     Result,
 };
 
@@ -96,9 +96,7 @@ impl<H: Host> Emulator<H> {
 
     pub fn reload_snapshot(&mut self) -> Result<()> {
         match self.host.snapshot() {
-            Some(Snapshot::Sna(asset)) => {
-                loaders::sna::load_sna(self, asset)
-            }
+            Some(Snapshot::Sna(asset)) => loaders::sna::load_sna(self, asset),
             None => Ok(()),
         }
     }
@@ -108,7 +106,7 @@ impl<H: Host> Emulator<H> {
             Some(Tape::Tap(asset)) => {
                 self.controller.tape = Tap::from_asset(asset)?.into();
             }
-            None => {},
+            None => {}
         }
 
         Ok(())
@@ -121,22 +119,18 @@ impl<H: Host> Emulator<H> {
                     let page = self.controller.memory.rom_page_data_mut(0);
                     asset.read_exact(page)?;
                 }
-            },
+            }
             ZXMachine::Sinclair128K => {
-                if let (
-                    Some(mut page0_asset),
-                    Some(mut page1_asset)
-                ) = (
-                    self.host.rom(0),
-                    self.host.rom(1)
-                ) {
+                if let (Some(mut page0_asset), Some(mut page1_asset)) =
+                    (self.host.rom(0), self.host.rom(1))
+                {
                     let page = self.controller.memory.rom_page_data_mut(0);
                     page0_asset.read_exact(page)?;
 
                     let page = self.controller.memory.rom_page_data_mut(1);
                     page1_asset.read_exact(page)?;
                 }
-            },
+            }
         };
 
         Ok(())
@@ -190,7 +184,8 @@ impl<H: Host> Emulator<H> {
     /// in most cases time is max 1/50 of second, even when using
     /// loader acceleration
     pub fn emulate_frames<S>(&mut self, max_time: Duration, stopwatch: &mut S) -> Duration
-        where S: Stopwatch
+    where
+        S: Stopwatch,
     {
         let mut time = Duration::new(0, 0);
         'frame: loop {

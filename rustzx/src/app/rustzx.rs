@@ -3,18 +3,15 @@
 //! and command-line interface
 
 use crate::{
-    app::{events::*, sound::*, video::*, settings::Settings},
-    host::{GuiHost, DetectedFileKind},
+    app::{events::*, settings::Settings, sound::*, video::*},
+    host::{DetectedFileKind, GuiHost},
 };
-use rustzx_core::{
-    emulator::*,
-    zx::constants::*,
-};
+use anyhow::anyhow;
+use rustzx_core::{emulator::*, zx::constants::*};
 use std::{
     thread,
     time::{Duration, Instant},
 };
-use anyhow::anyhow;
 
 /// max 100 ms interval in `max frames` speed mode
 const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
@@ -25,7 +22,9 @@ struct InstantStopwatch {
 
 impl Default for InstantStopwatch {
     fn default() -> Self {
-        InstantStopwatch { timestamp: Instant::now() }
+        InstantStopwatch {
+            timestamp: Instant::now(),
+        }
     }
 }
 
@@ -94,9 +93,8 @@ impl RustzxApp {
             host.load_tape(tape)?;
         }
 
-        let emulator = Emulator::from_host(host).map_err(|e| {
-            anyhow::anyhow!("Failed to construct emulator: {}", e)
-        })?;
+        let emulator = Emulator::from_host(host)
+            .map_err(|e| anyhow::anyhow!("Failed to construct emulator: {}", e))?;
 
         let app = RustzxApp {
             emulator,
@@ -185,22 +183,18 @@ impl RustzxApp {
                     }
                     Event::InsertTape => self.emulator.play_tape(),
                     Event::StopTape => self.emulator.stop_tape(),
-                    Event::OpenFile(path) => {
-                        match self.emulator.host.load_autodetect(&path)? {
-                            DetectedFileKind::Snapshot => {
-                                self.emulator.reload_snapshot()
-                                    .map_err(|e| {
-                                        anyhow!("Failed to reload snapshot: {}", e)
-                                    })?;
-                            },
-                            DetectedFileKind::Tape => {
-                                self.emulator.reload_tape()
-                                    .map_err(|e| {
-                                        anyhow!("Failed to reload tape: {}", e)
-                                    })?;
-                            }
+                    Event::OpenFile(path) => match self.emulator.host.load_autodetect(&path)? {
+                        DetectedFileKind::Snapshot => {
+                            self.emulator
+                                .reload_snapshot()
+                                .map_err(|e| anyhow!("Failed to reload snapshot: {}", e))?;
                         }
-                    }
+                        DetectedFileKind::Tape => {
+                            self.emulator
+                                .reload_tape()
+                                .map_err(|e| anyhow!("Failed to reload tape: {}", e))?;
+                        }
+                    },
                 }
             }
             // how long emulation iteration was

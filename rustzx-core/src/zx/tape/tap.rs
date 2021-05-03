@@ -1,11 +1,6 @@
 //! TAP file tape player
 
-use crate::{
-    zx::tape::TapeImpl,
-    utils::Clocks,
-    host::LoadableAsset,
-    Result,
-};
+use crate::{host::LoadableAsset, utils::Clocks, zx::tape::TapeImpl, Result};
 use alloc::vec::Vec;
 
 // main constants
@@ -95,7 +90,7 @@ impl Tap {
         while read_bytes != 0 {
             tap.data.extend_from_slice(&buffer[0..read_bytes]);
             read_bytes = asset.read(&mut buffer)?;
-        };
+        }
 
         tap.block_info.clear();
         // get all blocks data

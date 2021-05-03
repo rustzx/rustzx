@@ -1,4 +1,4 @@
-use alloc::{vec::Vec, vec};
+use alloc::{vec, vec::Vec};
 
 // page size in bytes
 pub const PAGE_SIZE: usize = 16 * 1024;

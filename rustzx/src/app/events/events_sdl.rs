@@ -1,9 +1,6 @@
 //! Real events SDL backend
 use super::{Event, EventDevice};
-use crate::{
-    backends::SDL_CONTEXT,
-    app::settings::Settings,
-};
+use crate::{app::settings::Settings, backends::SDL_CONTEXT};
 use rustzx_core::{
     utils::EmulationSpeed,
     zx::{joy::kempston::KempstonKey, keys::*},

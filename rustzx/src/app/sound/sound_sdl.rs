@@ -1,9 +1,6 @@
 //! Real Audio SDL backend
 use super::{SoundDevice, ZXSample};
-use crate::{
-    backends::SDL_CONTEXT,
-    app::settings::Settings,
-};
+use crate::{app::settings::Settings, backends::SDL_CONTEXT};
 use rustzx_core::zx::sound::{CHANNELS, SAMPLE_RATE};
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
