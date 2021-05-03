@@ -1,10 +1,10 @@
 //! Real Audio SDL backend
 use super::{SoundDevice, ZXSample};
-use crate::backends::SDL_CONTEXT;
-use rustzx_core::{
-    settings::RustzxSettings,
-    zx::sound::{CHANNELS, SAMPLE_RATE},
+use crate::{
+    backends::SDL_CONTEXT,
+    app::settings::Settings,
 };
+use rustzx_core::zx::sound::{CHANNELS, SAMPLE_RATE};
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 
@@ -36,7 +36,7 @@ pub struct SoundSdl {
 
 impl SoundSdl {
     /// constructs sound backend from settings
-    pub fn new(settings: &RustzxSettings) -> SoundSdl {
+    pub fn new(settings: &Settings) -> SoundSdl {
         // init backend
         let mut audio_subsystem = None;
         SDL_CONTEXT.with(|sdl| {

@@ -11,4 +11,6 @@ pub enum Error {
 pub enum AssetReadError {
     /// Unexpected end of file
     UnexpectedEof,
+    /// Host-provided asset implementation failed
+    HostAssetImplFailed,
 }

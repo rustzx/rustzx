@@ -3,12 +3,13 @@
 //! and command-line interface
 
 use crate::{
-    app::{events::*, sound::*, video::*},
+    app::{events::*, sound::*, video::*, settings::Settings},
+    host::GuiHost,
 };
 use rustzx_core::{
     emulator::*,
-    settings::RustzxSettings,
     zx::constants::*,
+    zx::tape::TapeImpl,
 };
 use std::{
     thread,
@@ -56,19 +57,19 @@ fn frame_length(fps: usize) -> Duration {
 /// Application instance type
 pub struct RustzxApp {
     /// main emulator object
-    emulator: Emulator,
+    emulator: Emulator<GuiHost>,
     /// Sound rendering in a separate thread
     snd: Option<Box<dyn SoundDevice>>,
     video: Box<dyn VideoDevice>,
     events: Box<dyn EventDevice>,
     tex_border: TextureInfo,
     tex_canvas: TextureInfo,
-    settings: RustzxSettings,
+    scale: u32,
 }
 
 impl RustzxApp {
     /// Starts application itself
-    pub fn from_config(settings: RustzxSettings) -> RustzxApp {
+    pub fn from_config(settings: Settings) -> anyhow::Result<RustzxApp> {
         let snd: Option<Box<dyn SoundDevice>> = if settings.sound_enabled {
             Some(Box::new(SoundSdl::new(&settings)))
         } else {
@@ -77,20 +78,41 @@ impl RustzxApp {
         let mut video = Box::new(VideoSdl::new(&settings));
         let tex_border = video.gen_texture(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32);
         let tex_canvas = video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32);
-        RustzxApp {
-            emulator: Emulator::new(&settings),
+        let scale = settings.scale as u32;
+        let events = Box::new(EventsSdl::new(&settings));
+
+        let mut host = GuiHost::from_settings(settings.to_rustzx_settings());
+
+        if let Some(rom) = settings.rom.as_ref() {
+            host = host.with_rom(rom)?;
+        }
+        if let Some(snapshot) = settings.sna.as_ref() {
+            host = host.with_snapshot(snapshot)?;
+        }
+        if let Some(tape) = settings.tap.as_ref() {
+            host = host.with_tape(tape)?;
+        }
+
+        let emulator = Emulator::new(host).map_err(|e| {
+            anyhow::anyhow!("Failed to construct emulator: {}", e)
+        })?;
+
+        let app = RustzxApp {
+            emulator,
             snd,
             video,
-            events: Box::new(EventsSdl::new(&settings)),
+            events,
             tex_border,
             tex_canvas,
-            settings,
-        }
+            scale,
+        };
+
+        Ok(app)
     }
 
     pub fn start(&mut self) {
         let mut debug = false;
-        let scale = self.settings.scale as u32;
+        let scale = self.scale;
         let mut stopwatch = InstantStopwatch::default();
         'emulator: loop {
             let frame_target_dt = frame_length(FPS);
@@ -163,8 +185,9 @@ impl RustzxApp {
                     }
                     Event::InsertTape => self.emulator.controller.tape.play(),
                     Event::StopTape => self.emulator.controller.tape.stop(),
-                    Event::OpenFile(path) => {
-                        self.emulator.load_file_autodetect(path);
+                    Event::OpenFile(_path) => {
+                        // TODO: Implement Drag-n-drop file loading after global refactoring
+                        // self.emulator.load_file_autodetect(path);
                     }
                 }
             }
@@ -188,47 +211,3 @@ impl RustzxApp {
         }
     }
 }
-
-/*
-/// loads rom from file
-/// for 128-K machines path must contain ".0" in the tail
-/// and second rom bank will be loaded automatically
-#[cfg(feature = "std")]
-pub fn load_rom(&mut self, path: impl AsRef<Path>) {
-    // TODO: Remove std fucntionality from rustzx-core
-    match self.machine {
-        // Single ROM file
-        ZXMachine::Sinclair48K => {
-            let mut rom = Vec::new();
-            File::open(path)
-                .ok()
-                .expect("[ERROR] ROM not found")
-                .read_to_end(&mut rom)
-                .unwrap();
-            self.memory.load_rom(0, &rom);
-        }
-        // Two ROM's
-        ZXMachine::Sinclair128K => {
-            let mut rom0 = Vec::new();
-            let mut rom1 = Vec::new();
-            if !path.as_ref().extension().map_or(false, |e| e == "0") {
-                println!("[Warning] ROM0 filename should end with .0");
-            }
-            File::open(path.as_ref())
-                .ok()
-                .expect("[ERROR] ROM0 not found")
-                .read_to_end(&mut rom0)
-                .unwrap();
-            let mut second_path: PathBuf = path.as_ref().to_path_buf();
-            second_path.set_extension("1");
-            File::open(second_path)
-                .ok()
-                .expect("[ERROR] ROM1 not found")
-                .read_to_end(&mut rom1)
-                .unwrap();
-            self.memory.load_rom(0, &rom0).load_rom(1, &rom1);
-            println!("ROM's Loaded");
-        }
-    }
-}
-*/

@@ -1,8 +1,10 @@
 //! Real events SDL backend
 use super::{Event, EventDevice};
-use crate::backends::SDL_CONTEXT;
+use crate::{
+    backends::SDL_CONTEXT,
+    app::settings::Settings,
+};
 use rustzx_core::{
-    settings::RustzxSettings,
     utils::EmulationSpeed,
     zx::{joy::kempston::KempstonKey, keys::*},
 };
@@ -16,7 +18,7 @@ pub struct EventsSdl {
 impl EventsSdl {
     /// constructs new event backend from setttigs/
     /// Settings will be used in future for key bindings sittings
-    pub fn new(_settings: &RustzxSettings) -> EventsSdl {
+    pub fn new(_settings: &Settings) -> EventsSdl {
         // init event system
         let mut pump = None;
         SDL_CONTEXT.with(|sdl| {

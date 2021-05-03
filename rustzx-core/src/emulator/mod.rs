@@ -18,7 +18,7 @@ use core::time::Duration;
 
 /// Represents main Emulator structure
 pub struct Emulator<H: Host> {
-    host: H,
+    pub host: H,
     cpu: Z80,
     // direct access to controller devices and control methods
     pub controller: ZXController<H>,

@@ -1,6 +1,8 @@
 use super::{Rect, TextureInfo, VideoDevice};
-use crate::backends::SDL_CONTEXT;
-use rustzx_core::settings::RustzxSettings;
+use crate::{
+    backends::SDL_CONTEXT,
+    app::settings::Settings,
+};
 use sdl2::{
     pixels::PixelFormatEnum as PixelFormat,
     rect::Rect as SdlRect,
@@ -19,7 +21,7 @@ pub struct VideoSdl {
 
 impl VideoSdl {
     /// constructs new renderer with application settings
-    pub fn new(settings: &RustzxSettings) -> VideoSdl {
+    pub fn new(settings: &Settings) -> VideoSdl {
         // init video subsystem
         let mut video_subsystem = None;
         SDL_CONTEXT.with(|sdl| {
