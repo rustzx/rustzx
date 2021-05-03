@@ -8,6 +8,9 @@ use crate::{
         ZXController,
         ZXMachine,
         tape::{Tap, TapeImpl},
+        ZXKey,
+        joy::kempston::KempstonKey,
+        sound::sample::SoundSample,
     },
     host::{Host, Snapshot, Tape, LoadableAsset},
     Result,
@@ -137,6 +140,28 @@ impl<H: Host> Emulator<H> {
         };
 
         Ok(())
+    }
+
+    pub fn play_tape(&mut self) {
+        self.controller.tape.play();
+    }
+
+    pub fn stop_tape(&mut self) {
+        self.controller.tape.stop();
+    }
+
+    pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
+        self.controller.send_key(key, pressed);
+    }
+
+    pub fn send_kempston_key(&mut self, key: KempstonKey, state: bool) {
+        if let Some(joy) = &mut self.controller.kempston {
+            joy.key(key, state);
+        }
+    }
+
+    pub fn next_audio_sample(&mut self) -> Option<SoundSample<f32>> {
+        self.controller.mixer.pop()
     }
 
     fn process_event(&mut self, event: Event) {
