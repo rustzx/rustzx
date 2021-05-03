@@ -5,13 +5,14 @@ use rustzx_core::{
         machine::ZXMachine,
         sound::ay::ZXAYMode,
     },
+    settings::RustzxSettings,
 };
 
 use clap::{App, AppSettings, Arg};
 use std::path::{Path, PathBuf};
 
 /// Structure to handle all emulator runtime settings
-pub struct RustzxSettings {
+pub struct Settings {
     pub machine: ZXMachine,
     pub speed: EmulationSpeed,
     pub fastload: bool,
@@ -29,10 +30,10 @@ pub struct RustzxSettings {
     pub sna: Option<PathBuf>,
 }
 
-impl RustzxSettings {
+impl Settings {
     /// constructs new Settings
-    pub fn new() -> RustzxSettings {
-        RustzxSettings {
+    pub fn new() -> Self {
+        Self {
             machine: ZXMachine::Sinclair48K,
             speed: EmulationSpeed::Definite(1),
             fastload: false,
@@ -51,7 +52,7 @@ impl RustzxSettings {
         }
     }
 
-    pub fn from_clap() -> RustzxSettings {
+    pub fn from_clap() -> Self {
         // get defaults
         let mut out = Self::new();
         // parse cli
@@ -326,5 +327,20 @@ impl RustzxSettings {
     pub fn speed(&mut self, value: EmulationSpeed) -> &mut Self {
         self.speed = value;
         self
+    }
+
+    pub fn to_rustzx_settings(&self) -> RustzxSettings {
+        RustzxSettings {
+            machine: self.machine,
+            emulation_speed: self.speed,
+            tape_fastload: self.fastload,
+            enable_kempston: self.kempston,
+            ay_mode: self.ay_mode,
+            ay_enabled: self.ay_enabled,
+            beeper_enabled: self.beeper_enabled,
+            sound_enabled: self.sound_enabled,
+            sound_volume: self.volume as u8,
+            load_default_rom: self.rom.is_none(),
+        }
     }
 }

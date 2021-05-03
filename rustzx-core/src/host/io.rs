@@ -16,7 +16,7 @@ pub trait LoadableAsset {
     /// Return count of read bytes. Should return 0 read bytes when EOF was reached
     fn read(&mut self, buf: &mut [u8]) -> Result<usize>;
     /// Seek position in the asset. Returns current position in the asset
-    fn seek(pos: SeekFrom) -> Result<usize>;
+    fn seek(&mut self, pos: SeekFrom) -> Result<usize>;
 
     fn read_exact(&mut self, mut buf: &mut [u8]) -> Result<()> {
         while !buf.is_empty() {

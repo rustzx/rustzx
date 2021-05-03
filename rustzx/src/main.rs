@@ -2,11 +2,22 @@
 
 mod app;
 mod backends;
+mod host;
 
-use app::RustzxApp;
-use rustzx_core::settings::RustzxSettings;
+use app::{ RustzxApp, Settings };
 
 fn main() {
-    let settings = RustzxSettings::from_clap();
-    RustzxApp::from_config(settings).start();
+    env_logger::init();
+
+    let settings = Settings::from_clap();
+    let result = RustzxApp::from_config(settings)
+        .map_err(|e| log::error!("ERROR: {}", e))
+        .and_then(|mut emulator| {
+            emulator.start();
+            Ok(())
+        });
+
+    if result.is_err() {
+        std::process::exit(1);
+    }
 }

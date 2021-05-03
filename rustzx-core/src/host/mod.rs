@@ -1,6 +1,6 @@
 mod io;
 
-pub use io::LoadableAsset;
+pub use io::{LoadableAsset, SeekFrom};
 
 use crate::settings::RustzxSettings;
 
