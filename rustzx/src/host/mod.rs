@@ -9,7 +9,7 @@ use rustzx_core::{
     settings::RustzxSettings,
     zx::ZXMachine,
 };
-use anyhow::bail;
+use anyhow::{bail, anyhow};
 use std::path::PathBuf;
 use io::FileAsset;
 
@@ -18,6 +18,14 @@ pub struct GuiHost {
     roms: Vec<PathBuf>,
     snapshot: Option<PathBuf>,
     tape: Option<PathBuf>,
+}
+
+const SUPPORTED_SNAPSHOT_FORMATS: [&str; 1] = ["sna"];
+const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
+
+pub enum DetectedFileKind {
+    Tape,
+    Snapshot,
 }
 
 impl GuiHost {
@@ -30,7 +38,7 @@ impl GuiHost {
         }
     }
 
-    pub fn with_rom(mut self, path: &Path) -> anyhow::Result<Self> {
+    pub fn load_rom(&mut self, path: &Path) -> anyhow::Result<()> {
         match self.settings.machine {
             ZXMachine::Sinclair48K => {
                 if !path.exists() {
@@ -53,11 +61,11 @@ impl GuiHost {
                 self.roms = vec![rom0_path.to_owned(), rom1_path.to_owned()];
             }
         }
-        Ok(self)
+        Ok(())
     }
 
-    pub fn with_snapshot(mut self, path: &Path) -> anyhow::Result<Self> {
-        if !file_extension_matches(path, "sna") {
+    pub fn load_snapshot(&mut self, path: &Path) -> anyhow::Result<()> {
+        if !file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
             bail!("Invalid snapshot format");
         }
 
@@ -66,11 +74,11 @@ impl GuiHost {
         }
 
         self.snapshot.replace(path.to_owned());
-        Ok(self)
+        Ok(())
     }
 
-    pub fn with_tape(mut self, path: &Path) -> anyhow::Result<Self> {
-        if !file_extension_matches(path, "tap") {
+    pub fn load_tape(&mut self, path: &Path) -> anyhow::Result<()> {
+        if !file_extension_matches_one_of(path, &SUPPORTED_TAPE_FORMATS) {
             bail!("Invalid tape format");
         }
 
@@ -79,7 +87,19 @@ impl GuiHost {
         }
 
         self.tape.replace(path.to_owned());
-        Ok(self)
+        Ok(())
+    }
+
+    pub fn load_autodetect(&mut self, path: &Path) -> anyhow::Result<DetectedFileKind> {
+        if file_extension_matches_one_of(path, &SUPPORTED_TAPE_FORMATS) {
+            self.load_tape(path)?;
+            Ok(DetectedFileKind::Tape)
+        } else if file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
+            self.load_snapshot(path)?;
+            Ok(DetectedFileKind::Snapshot)
+        } else {
+            Err(anyhow!("Not supported file format"))
+        }
     }
 }
 
@@ -138,6 +158,13 @@ fn file_extension_matches(path: &Path, expected: &str) -> bool {
         .to_lowercase();
 
     actual == expected
+}
+
+fn file_extension_matches_one_of(path: &Path, extensions: &[&str]) -> bool {
+    extensions
+        .iter()
+        .copied()
+        .any(|ext| file_extension_matches(path, ext))
 }
 
 #[cfg(test)]

@@ -36,7 +36,7 @@ impl<H: Host> Emulator<H> {
     /// Constructs new emulator
     /// # Arguments
     /// `settings` - emulator settings
-    pub fn new(host: H) -> Result<Self> {
+    pub fn from_host(host: H) -> Result<Self> {
         let settings = host.settings();
 
         let speed = settings.emulation_speed;
@@ -55,9 +55,10 @@ impl<H: Host> Emulator<H> {
             sound_enabled,
         };
 
-        this.load_rom()?;
-        this.load_sna()?;
-        this.load_tap()?;
+        // Load initial assets
+        this.reload_rom()?;
+        this.reload_snapshot()?;
+        this.reload_tape()?;
 
         Ok(this)
     }
@@ -91,7 +92,7 @@ impl<H: Host> Emulator<H> {
         }
     }
 
-    pub fn load_sna(&mut self) -> Result<()> {
+    pub fn reload_snapshot(&mut self) -> Result<()> {
         match self.host.snapshot() {
             Some(Snapshot::Sna(asset)) => {
                 loaders::sna::load_sna(self, asset)
@@ -100,7 +101,7 @@ impl<H: Host> Emulator<H> {
         }
     }
 
-    pub fn load_tap(&mut self) -> Result<()> {
+    pub fn reload_tape(&mut self) -> Result<()> {
         match self.host.tape() {
             Some(Tape::Tap(asset)) => {
                 self.controller.tape = Tap::from_asset(asset)?.into();
@@ -111,7 +112,7 @@ impl<H: Host> Emulator<H> {
         Ok(())
     }
 
-    pub fn load_rom(&mut self) -> Result<()> {
+    pub fn reload_rom(&mut self) -> Result<()> {
         let mut page = [0u8; PAGE_SIZE];
         match self.host.settings().machine {
             ZXMachine::Sinclair48K => {

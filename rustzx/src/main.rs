@@ -11,11 +11,10 @@ fn main() {
 
     let settings = Settings::from_clap();
     let result = RustzxApp::from_config(settings)
-        .map_err(|e| log::error!("ERROR: {}", e))
         .and_then(|mut emulator| {
-            emulator.start();
-            Ok(())
-        });
+            emulator.start()
+        })
+        .map_err(|e| log::error!("ERROR: {}", e));
 
     if result.is_err() {
         std::process::exit(1);
