@@ -4,7 +4,7 @@
 
 use crate::{
     app::{events::*, sound::*, video::*, settings::Settings},
-    host::GuiHost,
+    host::{GuiHost, DetectedFileKind},
 };
 use rustzx_core::{
     emulator::*,
@@ -15,6 +15,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+use anyhow::anyhow;
 
 /// max 100 ms interval in `max frames` speed mode
 const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
@@ -75,6 +76,7 @@ impl RustzxApp {
         } else {
             None
         };
+        // TODO: make host interface for screen interaction instead of direct texture transfer
         let mut video = Box::new(VideoSdl::new(&settings));
         let tex_border = video.gen_texture(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32);
         let tex_canvas = video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32);
@@ -84,16 +86,16 @@ impl RustzxApp {
         let mut host = GuiHost::from_settings(settings.to_rustzx_settings());
 
         if let Some(rom) = settings.rom.as_ref() {
-            host = host.with_rom(rom)?;
+            host.load_rom(rom)?;
         }
         if let Some(snapshot) = settings.sna.as_ref() {
-            host = host.with_snapshot(snapshot)?;
+            host.load_snapshot(snapshot)?;
         }
         if let Some(tape) = settings.tap.as_ref() {
-            host = host.with_tape(tape)?;
+            host.load_tape(tape)?;
         }
 
-        let emulator = Emulator::new(host).map_err(|e| {
+        let emulator = Emulator::from_host(host).map_err(|e| {
             anyhow::anyhow!("Failed to construct emulator: {}", e)
         })?;
 
@@ -110,7 +112,7 @@ impl RustzxApp {
         Ok(app)
     }
 
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> anyhow::Result<()> {
         let mut debug = false;
         let scale = self.scale;
         let mut stopwatch = InstantStopwatch::default();
@@ -125,6 +127,7 @@ impl RustzxApp {
                 // if can be turned off even on speed change, so check it everytime
                 if self.emulator.have_sound() {
                     loop {
+                        // TODO: eliminate direct access to the controller
                         if let Some(sample) = self.emulator.controller.mixer.pop() {
                             snd.send_sample(sample);
                         } else {
@@ -185,9 +188,21 @@ impl RustzxApp {
                     }
                     Event::InsertTape => self.emulator.controller.tape.play(),
                     Event::StopTape => self.emulator.controller.tape.stop(),
-                    Event::OpenFile(_path) => {
-                        // TODO: Implement Drag-n-drop file loading after global refactoring
-                        // self.emulator.load_file_autodetect(path);
+                    Event::OpenFile(path) => {
+                        match self.emulator.host.load_autodetect(&path)? {
+                            DetectedFileKind::Snapshot => {
+                                self.emulator.reload_snapshot()
+                                    .map_err(|e| {
+                                        anyhow!("Failed to reload snapshot: {}", e)
+                                    })?;
+                            },
+                            DetectedFileKind::Tape => {
+                                self.emulator.reload_tape()
+                                    .map_err(|e| {
+                                        anyhow!("Failed to reload tape: {}", e)
+                                    })?;
+                            }
+                        }
                     }
                 }
             }
@@ -209,5 +224,6 @@ impl RustzxApp {
                 ));
             }
         }
+        Ok(())
     }
 }

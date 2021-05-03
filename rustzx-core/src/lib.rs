@@ -9,6 +9,7 @@ pub mod zx;
 pub mod host;
 pub mod error;
 
+// TODO: eliminate need for alloc (optional feature?)
 extern crate alloc;
 
 pub use crate::error::Error;
