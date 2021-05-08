@@ -8,7 +8,7 @@ Licensed under MIT License.
 
 **Watch [this](https://youtu.be/Xho3GWFyP2I) video showcase!**
 
-[![Build Status](https://travis-ci.org/pacmancoder/rustzx.svg?branch=master)](https://travis-ci.org/pacmancoder/rustzx)
+[![RustZX CI](https://github.com/pacmancoder/rustzx/actions/workflows/ci.yml/badge.svg)](https://github.com/pacmancoder/rustzx/actions/workflows/ci.yml)
 ## Features
 - Written in pure rust
 - Cross-platform
