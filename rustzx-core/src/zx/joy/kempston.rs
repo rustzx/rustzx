@@ -14,11 +14,6 @@ pub struct KempstonJoy {
 }
 
 impl KempstonJoy {
-    /// Constructs new Kemoston
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Simulates key press/release
     pub fn key(&mut self, key: KempstonKey, state: bool) {
         if state {

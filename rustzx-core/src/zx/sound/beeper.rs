@@ -8,11 +8,6 @@ pub struct ZXBeeper {
 }
 
 impl ZXBeeper {
-    /// Constructs new beeper
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     /// Changes next beeper bit
     pub fn change_bit(&mut self, value: bool) {
         self.curr_bit = self.next_bit;

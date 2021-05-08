@@ -44,7 +44,7 @@ impl<H: Host> Emulator<H> {
         let fast_load = settings.tape_fastload;
         let sound_enabled = settings.sound_enabled;
 
-        let cpu = Z80::new();
+        let cpu = Z80::default();
         let controller = ZXController::<H>::new(&settings);
 
         let this = Self {

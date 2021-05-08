@@ -60,14 +60,7 @@ pub struct Tap {
 
 impl Default for Tap {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Tap {
-    /// returns new *Tap* Tape instance
-    pub fn new() -> Tap {
-        Tap {
+        Self {
             prev_state: TapeState::Stop,
             state: TapeState::Stop,
             data: Vec::new(),
@@ -82,12 +75,14 @@ impl Tap {
             acc_clocks: Clocks(0),
         }
     }
+}
 
+impl Tap {
     /// updates internal structure according new tape file
     pub fn from_asset(mut asset: impl LoadableAsset) -> Result<Self> {
         use crate::utils::make_word;
 
-        let mut tap = Self::new();
+        let mut tap = Self::default();
 
         let mut buffer = [0u8; 1024];
         let mut read_bytes = asset.read(&mut buffer)?;
