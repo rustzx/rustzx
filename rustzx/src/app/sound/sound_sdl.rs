@@ -17,7 +17,7 @@ impl AudioCallback for SdlCallback {
     fn callback(&mut self, out: &mut [f32]) {
         for chunk in out.chunks_mut(CHANNELS) {
             // recieve samples from channel
-            if let Some(sample) = self.samples.recv().ok() {
+            if let Ok(sample) = self.samples.recv() {
                 chunk[0] = sample.left;
                 chunk[1] = sample.right;
             }

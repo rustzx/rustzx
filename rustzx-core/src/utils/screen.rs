@@ -28,12 +28,12 @@ pub fn bitmap_col_rel(addr: u16) -> usize {
 
 /// get attribute row from address
 pub fn attr_row_rel(addr: u16) -> usize {
-    assert!(addr >= ATTR_BASE_REL && addr <= ATTR_MAX_REL);
+    assert!((ATTR_BASE_REL..=ATTR_MAX_REL).contains(&addr));
     ((addr - ATTR_BASE_REL) / ATTR_COLS as u16) as usize
 }
 
 /// get attribute column from address
 pub fn attr_col_rel(addr: u16) -> usize {
-    assert!(addr >= ATTR_BASE_REL && addr <= ATTR_MAX_REL);
+    assert!((ATTR_BASE_REL..=ATTR_MAX_REL).contains(&addr));
     ((addr - ATTR_BASE_REL) % ATTR_COLS as u16) as usize
 }

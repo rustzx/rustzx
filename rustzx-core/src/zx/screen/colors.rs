@@ -5,14 +5,14 @@ use crate::zx::constants::BYTES_PER_PIXEL;
 pub type ColorArray = [u8; BYTES_PER_PIXEL];
 
 /// splits usize value to 4 bytes
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 fn split_in_bytes(val: usize) -> ColorArray {
-    return [
+    [
         ((val >> 24) & 0xFF) as u8,
         ((val >> 16) & 0xFF) as u8,
         ((val >>  8) & 0xFF) as u8,
-        ((val >>  0) & 0xFF) as u8
-    ];
+        (val & 0xFF) as u8
+    ]
 }
 
 /// Represents color brightness
@@ -115,7 +115,7 @@ pub struct ZXPalette {
 
 impl ZXPalette {
     /// Returns default palette
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     pub fn default() -> ZXPalette {
         ZXPalette {
             transparent: split_in_bytes(0x00000000),
@@ -149,7 +149,7 @@ impl ZXPalette {
             ZXBrightness::Normal => &self.normal,
             ZXBrightness::Bright => &self.bright,
         };
-        return match color {
+        match color {
             ZXColor::Black => &set.black,
             ZXColor::Blue => &set.blue,
             ZXColor::Red => &set.red,
@@ -158,6 +158,6 @@ impl ZXPalette {
             ZXColor::Cyan => &set.cyan,
             ZXColor::Yellow => &set.yellow,
             ZXColor::White => &set.white,
-        };
+        }
     }
 }

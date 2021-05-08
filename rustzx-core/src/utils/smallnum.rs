@@ -1,5 +1,5 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 /// 1 bit unsigned
 pub enum U1 {
     N0, N1,
@@ -25,7 +25,7 @@ impl U1 {
     }
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 /// 2 bit unsigned
 pub enum U2 {
     N0, N1, N2, N3,
@@ -55,7 +55,7 @@ impl U2 {
     }
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 /// 3 bit unsigned
 pub enum U3 {
     N0, N1, N2, N3, N4, N5, N6, N7,

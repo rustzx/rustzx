@@ -22,16 +22,15 @@ impl Event {
 }
 
 /// Queue-based event container
+#[derive(Default)]
 pub struct EventQueue {
     deque: VecDeque<Event>,
 }
 
 impl EventQueue {
     /// cnstructs new EventQueue
-    pub fn new() -> EventQueue {
-        EventQueue {
-            deque: VecDeque::new(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// addd new event

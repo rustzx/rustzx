@@ -57,15 +57,14 @@ impl BlocksCount {
     /// # Notes
     /// `prev` must be lover than `self`
     pub fn passed_from(&self, prev: &BlocksCount) -> usize {
-        if self.lines < prev.lines {
-            ATTR_COLS - prev.columns
-        // self.lines * ATTR_COLS + self.columns
-        } else if self.lines == prev.lines {
-            // if positions on the same line => just use difference in columns.
-            self.columns - prev.columns
-        } else {
-            // add blocks left from start line, blocks on lines between and blocks on end line
-            (ATTR_COLS - prev.columns) + (self.lines - prev.lines - 1) * ATTR_COLS + self.columns
+        match self.lines {
+            lines if lines < prev.lines => ATTR_COLS - prev.columns,
+            lines if lines == prev.lines => self.columns - prev.columns,
+            _ => {
+                (ATTR_COLS - prev.columns)
+                    + (self.lines - prev.lines - 1) * ATTR_COLS
+                    + self.columns
+            }
         }
     }
 }

@@ -150,7 +150,7 @@ impl<H: Host> ZXController<H> {
             _ => None,
         };
         if let Some(rownum) = rownum {
-            self.keyboard[rownum] = self.keyboard[rownum] & (!key.mask);
+            self.keyboard[rownum] &= !key.mask;
             if !pressed {
                 self.keyboard[rownum] |= key.mask;
             }
@@ -179,7 +179,7 @@ impl<H: Host> ZXController<H> {
                 return self.memory.read(0x5800 + byte as u16);
             };
         }
-        return 0xFF;
+        0xFF
     }
 
     /// make contention
@@ -196,11 +196,11 @@ impl<H: Host> ZXController<H> {
 
     // check addr contention
     fn addr_is_contended(&self, addr: u16) -> bool {
-        return if let Page::Ram(bank) = self.memory.get_page(addr) {
+        if let Page::Ram(bank) = self.memory.get_page(addr) {
             self.machine.bank_is_contended(bank as usize)
         } else {
             false
-        };
+        }
     }
 
     /// Returns early IO contention clocks
@@ -215,14 +215,12 @@ impl<H: Host> ZXController<H> {
     fn io_contention_last(&mut self, port: u16) {
         if self.machine.port_is_contended(port) {
             self.do_contention_and_wait(Clocks(2));
+        } else if self.addr_is_contended(port) {
+            self.do_contention_and_wait(Clocks(1));
+            self.do_contention_and_wait(Clocks(1));
+            self.do_contention();
         } else {
-            if self.addr_is_contended(port) {
-                self.do_contention_and_wait(Clocks(1));
-                self.do_contention_and_wait(Clocks(1));
-                self.do_contention();
-            } else {
-                self.wait_internal(Clocks(2));
-            }
+            self.wait_internal(Clocks(2));
         }
     }
 

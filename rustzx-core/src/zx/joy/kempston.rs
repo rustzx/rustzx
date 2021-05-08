@@ -8,6 +8,7 @@ pub enum KempstonKey {
 }
 
 /// Kempston Joystick
+#[derive(Default)]
 pub struct KempstonJoy {
     state: u8,
 }
@@ -15,7 +16,7 @@ pub struct KempstonJoy {
 impl KempstonJoy {
     /// Constructs new Kemoston
     pub fn new() -> Self {
-        KempstonJoy { state: 0x00 }
+        Self::default()
     }
 
     /// Simulates key press/release

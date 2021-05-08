@@ -18,6 +18,12 @@ pub struct Z80 {
     active_prefix: Prefix,
 }
 
+impl Default for Z80 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Z80 {
     /// Returns new cpu instance
     pub fn new() -> Z80 {
@@ -198,6 +204,6 @@ impl Z80 {
         // next cpu step
         bus.pc_callback(self.regs.get_pc());
         // return true if events happened
-        return if bus.instant_event() { true } else { false };
+        bus.instant_event()
     }
 }

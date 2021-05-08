@@ -12,6 +12,7 @@ const AY_FREQ: f64 = 1773400.0;
 
 /// AY output mode
 #[derive(Clone, Copy)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum ZXAYMode {
     Mono,
     ABC,

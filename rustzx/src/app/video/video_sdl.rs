@@ -87,9 +87,8 @@ impl VideoDevice for VideoSdl {
                     for x in 0..tex.width {
                         let offset_dest = (y * pitch as u32 + x * 4) as usize;
                         let offset_src = (y * tex.width * 4 + x * 4) as usize;
-                        for n in 0..4 {
-                            out[offset_dest + n] = buffer[offset_src + n];
-                        }
+                        out[offset_dest..(4 + offset_dest)]
+                            .clone_from_slice(&buffer[offset_src..(4 + offset_src)]);
                     }
                 }
             })
@@ -108,11 +107,7 @@ impl VideoDevice for VideoSdl {
             .get_mut(&tex)
             .expect("[ERROR] Wrong texrure ID on draw");
         // construct sdl rect
-        let dest_rect = if let Some(rect) = rect {
-            Some(SdlRect::new(rect.x, rect.y, rect.w, rect.h))
-        } else {
-            None
-        };
+        let dest_rect = rect.map(|rect| SdlRect::new(rect.x, rect.y, rect.w, rect.h));
         // render
         self.renderer
             .copy(tex, None, dest_rect)
