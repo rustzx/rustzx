@@ -50,7 +50,7 @@ fn ms_to_ns(s: f64) -> u64 {
 
 /// returns frame length from given `fps`
 fn frame_length(fps: usize) -> Duration {
-    Duration::from_millis((1000 as f64 / fps as f64) as u64)
+    Duration::from_millis((1000_f64 / fps as f64) as u64)
 }
 
 /// Application instance type
@@ -126,12 +126,8 @@ impl RustzxApp {
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime
                 if self.emulator.have_sound() {
-                    loop {
-                        if let Some(sample) = self.emulator.next_audio_sample() {
-                            snd.send_sample(sample);
-                        } else {
-                            break;
-                        }
+                    while let Some(sample) = self.emulator.next_audio_sample() {
+                        snd.send_sample(sample);
                     }
                 }
             }

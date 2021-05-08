@@ -3,6 +3,7 @@
 pub mod constants;
 pub mod controller;
 pub mod joy;
+#[rustfmt::skip]
 pub mod keys;
 pub mod machine;
 pub mod memory;

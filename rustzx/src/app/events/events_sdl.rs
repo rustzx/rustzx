@@ -30,11 +30,7 @@ impl EventsSdl {
 
     /// returns ZX Spectum key form scancode of None if not found
     fn scancode_to_zxkey(&self, scancode: Option<Scancode>) -> Option<ZXKey> {
-        if scancode.is_none() {
-            return None;
-        };
-        let scancode = scancode.unwrap();
-        match scancode {
+        match scancode? {
             // FEFE
             Scancode::LShift | Scancode::RShift => Some(ZX_KEY_SHIFT),
             Scancode::Z => Some(ZX_KEY_Z),
@@ -89,11 +85,7 @@ impl EventsSdl {
 
     /// returns kempston key form scancode of None if not found
     fn scancode_to_joy(&self, scancode: Option<Scancode>) -> Option<KempstonKey> {
-        if scancode.is_none() {
-            return None;
-        };
-        let scancode = scancode.unwrap();
-        match scancode {
+        match scancode? {
             Scancode::LAlt | Scancode::RAlt => Some(KempstonKey::Fire),
             Scancode::Up => Some(KempstonKey::Up),
             Scancode::Down => Some(KempstonKey::Down),
@@ -128,7 +120,7 @@ impl EventDevice for EventsSdl {
                         Some(Event::Kempston(key, state))
                     } else {
                         // if speial keys are used
-                        if state == true {
+                        if state {
                             if let Some(code) = scancode {
                                 match code {
                                     // speed control

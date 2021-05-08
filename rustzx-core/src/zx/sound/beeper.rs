@@ -1,6 +1,7 @@
 use crate::zx::sound::sample::{SampleGenerator, SoundSample};
 
 /// Simple beeper implementation
+#[derive(Default)]
 pub struct ZXBeeper {
     curr_bit: bool,
     next_bit: bool,
@@ -8,11 +9,8 @@ pub struct ZXBeeper {
 
 impl ZXBeeper {
     /// Constructs new beeper
-    pub fn new() -> ZXBeeper {
-        ZXBeeper {
-            curr_bit: false,
-            next_bit: false,
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Changes next beeper bit

@@ -175,7 +175,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             // mem_hi to mem_lo and clear hi nimble
                             mem = (mem >> 4) & 0x0F;
                             // acc_lo to mem_hi
-                            mem = mem | ((acc << 4) & 0xF0);
+                            mem |= (acc << 4) & 0xF0;
                             acc = (acc & 0xF0) | mem_lo;
                             cpu.regs.set_acc(acc);
                             bus.wait_loop(cpu.regs.get_hl(), Clocks(4));

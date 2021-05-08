@@ -58,6 +58,12 @@ pub struct Tap {
     acc_clocks: Clocks,
 }
 
+impl Default for Tap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tap {
     /// returns new *Tap* Tape instance
     pub fn new() -> Tap {
@@ -135,7 +141,7 @@ impl TapeImpl for Tap {
 
     /// returns byte of block
     fn block_byte(&self, offset: usize) -> Option<u8> {
-        if self.block_info.len() == 0 {
+        if self.block_info.is_empty() {
             return None;
         };
         let block = self.block_info[self.block];
@@ -169,7 +175,7 @@ impl TapeImpl for Tap {
     /// makes internal state change based on clocks count
     fn process_clocks(&mut self, clocks: Clocks) {
         // if there are no blocks
-        if self.block_info.len() == 0 {
+        if self.block_info.is_empty() {
             return;
         }
         // get block info, check bunds
@@ -277,7 +283,7 @@ impl TapeImpl for Tap {
                     } else {
                         self.delay = Clocks(BIT_ONE_LENGTH);
                         self.state = TapeState::BitHalf(BIT_ONE_LENGTH);
-                        self.curr_byte |= self.curr_mask & 0xFF;
+                        self.curr_byte |= self.curr_mask;
                     };
                     break 'state_machine;
                 }

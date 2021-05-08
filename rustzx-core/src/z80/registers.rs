@@ -72,7 +72,8 @@ impl Condition {
 
 /// 8-bit register names
 #[derive(Clone,Copy)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
+#[allow(clippy::upper_case_acronyms)]
 pub enum RegName8 {
     A, F,
     B, C,
@@ -122,7 +123,8 @@ impl RegName8 {
 
 /// 16-bit register names
 #[derive(Clone,Copy)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
+#[allow(clippy::upper_case_acronyms)]
 pub enum RegName16 {
     PC, SP,
     AF, BC,
@@ -164,7 +166,8 @@ impl RegName16 {
 }
 
 /// Z80 registers structure
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
+#[derive(Default)]
 pub struct Regs {
     // program counter
     pc: u16,
@@ -194,23 +197,8 @@ pub struct Regs {
 
 impl Regs {
     /// Returns new Regs struct
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    pub fn new() -> Regs {
-        Regs {
-            pc: 0, sp: 0,
-            ixh: 0, ixl: 0,
-            iyh: 0, iyl: 0,
-            r: 0, i: 0,
-            iff1: false, iff2: false,
-            a: 0, f: 0,
-            b: 0, c: 0,
-            d: 0, e: 0,
-            h: 0, l: 0,
-            a_alt: 0, f_alt: 0,
-            b_alt: 0, c_alt: 0,
-            d_alt: 0, e_alt: 0,
-            h_alt: 0, l_alt: 0,
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     // general operations, name of reg as param --------------------------------------------------
@@ -258,7 +246,7 @@ impl Regs {
 
     /// Returns value of 16-bit register
     pub fn get_reg_16(&self, index: RegName16) -> u16 {
-        let value = match index {
+        match index {
             RegName16::PC => self.pc,
             RegName16::SP => self.sp,
             _ => {
@@ -273,8 +261,7 @@ impl Regs {
                 };
                 make_word(h, l)
             }
-        };
-        value
+        }
     }
 
     /// Changes value of 16-bit register
@@ -581,7 +568,8 @@ impl Regs {
     }
 
     /// Swaps BC, DE, HL with alternatives
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
+    #[allow(clippy::many_single_char_names)]
     pub fn exx(&mut self) {
         let (b, c) = (self.b, self.c);
         let (d, e) = (self.d, self.e);
@@ -627,7 +615,7 @@ impl Regs {
 }
 
 impl fmt::Display for Regs {
-    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[rustfmt::skip]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "Regs:
                      \tpc: {:02X}; sp: {:02X}; i: {:02X}; r: {:02X}

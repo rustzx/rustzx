@@ -11,11 +11,11 @@ use lazy_static::lazy_static;
 // result, 1 is the 3rd bit of the 1st argument and 2 is the
 // third bit of the 2nd argument; the tables differ for add and subtract
 // operations
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub const HALF_CARRY_ADD_TABLE: [u8; 8] = [
     0, FLAG_HALF_CARRY, FLAG_HALF_CARRY, FLAG_HALF_CARRY,0, 0, 0, FLAG_HALF_CARRY
 ];
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub const HALF_CARRY_SUB_TABLE: [u8; 8] = [
     0, 0, FLAG_HALF_CARRY, 0, FLAG_HALF_CARRY, 0, FLAG_HALF_CARRY, FLAG_HALF_CARRY
 ];
@@ -27,15 +27,15 @@ pub const OVERFLOW_SUB_TABLE: [u8; 8] = [0, FLAG_PV, 0, 0, 0, 0, FLAG_PV, 0];
 
 /// Returns pv/hc flags lookup id from 8-bit operands
 pub fn lookup8_r12(a: u8, b: u8, r: u8) -> u8 {
-    return ((a & 0x88) >> 3) | ((b & 0x88) >> 2) | ((r & 0x88) >> 1);
+    ((a & 0x88) >> 3) | ((b & 0x88) >> 2) | ((r & 0x88) >> 1)
 }
 /// Returns pv/hc flags lookup id from 16-bit operands
 pub fn lookup16_r12(a: u16, b: u16, r: u16) -> u8 {
-    return (((a & 0x8800) >> 11) | ((b & 0x8800) >> 10) | ((r & 0x8800) >> 9)) as u8;
+    (((a & 0x8800) >> 11) | ((b & 0x8800) >> 10) | ((r & 0x8800) >> 9)) as u8
 }
 
 /// Parity table, internal
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 const PARITY_BIT: [u8; 256] = [
 	1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
 	0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,

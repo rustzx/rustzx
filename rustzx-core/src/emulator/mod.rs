@@ -78,11 +78,7 @@ impl<H: Host> Emulator<H> {
     pub fn have_sound(&self) -> bool {
         // enable sound only if speed is normal
         if let EmulationSpeed::Definite(1) = self.speed {
-            if self.sound_enabled {
-                true
-            } else {
-                false
-            }
+            self.sound_enabled
         } else {
             false
         }
@@ -157,12 +153,8 @@ impl<H: Host> Emulator<H> {
 
     // processes all events, happened at frame emulation cycle
     fn process_all_events(&mut self) {
-        loop {
-            if let Some(event) = self.controller.pop_event() {
-                self.process_event(event);
-            } else {
-                break;
-            }
+        while let Some(event) = self.controller.pop_event() {
+            self.process_event(event);
         }
     }
 
@@ -208,6 +200,6 @@ impl<H: Host> Emulator<H> {
             }
         }
         self.controller.clear_events();
-        return time;
+        time
     }
 }

@@ -87,9 +87,9 @@ impl ZXBorder {
         }
         // if beam out of screen on vertical pos.
         if line >= SCREEN_HEIGHT {
-            return (0, 0, true);
+            (0, 0, true)
         } else {
-            return (line, pixel, false);
+            (line, pixel, false)
         }
     }
 
@@ -99,9 +99,13 @@ impl ZXBorder {
         let color_array = self.palette.get_rgba(last.color, ZXBrightness::Normal);
         // fill pixels
         for p in (last.line * SCREEN_WIDTH + last.pixel)..(line * SCREEN_WIDTH + pixel) {
-            // all 4 bytes of color
-            for b in 0..BYTES_PER_PIXEL {
-                self.buffer[p * BYTES_PER_PIXEL + b] = color_array[b];
+            for (b, color_value) in color_array
+                .iter()
+                .copied()
+                .enumerate()
+                .take(BYTES_PER_PIXEL)
+            {
+                self.buffer[p * BYTES_PER_PIXEL + b] = color_value;
             }
         }
     }

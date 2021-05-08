@@ -95,10 +95,9 @@ impl ZXMemory {
     pub fn write(&mut self, addr: u16, value: u8) {
         let page = self.map[(addr as usize) / PAGE_SIZE];
         let addr_rel = addr as usize % PAGE_SIZE;
-        match page {
-            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + addr_rel] = value,
-            _ => {}
-        };
+        if let Page::Ram(page) = page {
+            self.ram[(page as usize) * PAGE_SIZE + addr_rel] = value;
+        }
     }
 
     /// Changes memory map
