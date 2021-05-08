@@ -1,141 +1,128 @@
 mod io;
 
-use anyhow::{anyhow, bail};
+use anyhow::{Context, anyhow, bail};
 use io::FileAsset;
 use rustzx_core::{
-    host::{Host, Snapshot, Tape},
-    settings::RustzxSettings,
+    host::{Host, Snapshot, Tape, RomSet, RomFormat},
     zx::ZXMachine,
 };
 use std::{
     fs::File,
-    path::{Path, PathBuf},
+    path::Path,
+    collections::VecDeque,
 };
-
-pub struct GuiHost {
-    settings: RustzxSettings,
-    roms: Vec<PathBuf>,
-    snapshot: Option<PathBuf>,
-    tape: Option<PathBuf>,
-}
 
 const SUPPORTED_SNAPSHOT_FORMATS: [&str; 1] = ["sna"];
 const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
+
+pub struct GuiHost;
+
+impl Host for GuiHost {
+    type TapeAsset = FileAsset;
+    type SnapshotAsset = FileAsset;
+    type RomSet = FileRomSet;
+}
+
+pub struct FileRomSet {
+    pages: VecDeque<FileAsset>,
+}
+
+impl RomSet for FileRomSet {
+    type Asset = FileAsset;
+
+    fn format(&self) -> RomFormat {
+        RomFormat::Binary16KPages
+    }
+
+    fn next_asset(&mut self) -> Option<Self::Asset> {
+        self.pages.pop_front()
+    }
+}
 
 pub enum DetectedFileKind {
     Tape,
     Snapshot,
 }
 
-impl GuiHost {
-    pub fn from_settings(settings: RustzxSettings) -> Self {
-        Self {
-            settings,
-            roms: Default::default(),
-            snapshot: None,
-            tape: None,
-        }
+pub fn load_tape(path: &Path) -> anyhow::Result<Tape<FileAsset>> {
+    if !file_extension_matches_one_of(path, &SUPPORTED_TAPE_FORMATS) {
+        bail!("Invalid tape format");
     }
 
-    pub fn load_rom(&mut self, path: &Path) -> anyhow::Result<()> {
-        match self.settings.machine {
-            ZXMachine::Sinclair48K => {
-                if !path.exists() {
-                    bail!("Provided 48K ROM file does not exist")
-                }
-                self.roms = vec![path.to_owned()];
+    if !path.exists() {
+        bail!("Provided tape file does not exist");
+    }
+
+    File::open(path)
+        .with_context(|| "Failed to open tape file")
+        .map(|file| Tape::Tap(file.into()))
+}
+
+pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<FileAsset>> {
+    if !file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
+        bail!("Invalid snapshot format");
+    }
+
+    if !path.exists() {
+        bail!("Provided snapshot file does not exist");
+    }
+
+    File::open(path)
+        .with_context(|| "Failed to open snapshot file")
+        .map(|file| Snapshot::Sna(file.into()))
+}
+
+fn load_rom_asset(path: &Path) -> anyhow::Result<FileAsset> {
+    File::open(path)
+        .with_context(|| "Failed to load rom asset")
+        .map(|file| file.into())
+}
+
+pub fn load_rom(path: &Path, machine: ZXMachine) -> anyhow::Result<FileRomSet> {
+    match machine {
+        ZXMachine::Sinclair48K => {
+            if !path.exists() {
+                bail!("Provided 48K ROM file does not exist")
             }
-            ZXMachine::Sinclair128K => {
-                let rom0_path = path;
-                if !file_extension_matches(rom0_path, "0") {
-                    bail!("128K ROM filename should end with '.0' extension");
-                }
-                if !rom0_path.exists() {
-                    bail!("Provided 128K ROM0 file does not exist");
-                }
-                let rom1_path = rom0_path.to_owned().with_extension("1");
-                if !rom1_path.exists() {
-                    bail!("Provided 128K ROM1 file does not exist");
-                }
-                self.roms = vec![rom0_path.to_owned(), rom1_path.to_owned()];
+
+            Ok(FileRomSet {
+                pages: VecDeque::from(vec![
+                    load_rom_asset(path).with_context(|| "48K ROM load failed")?,
+                ])
+            })
+        }
+        ZXMachine::Sinclair128K => {
+            let rom0_path = path;
+            if !file_extension_matches(rom0_path, "0") {
+                bail!("128K ROM filename should end with '.0' extension");
             }
-        }
-        Ok(())
-    }
+            if !rom0_path.exists() {
+                bail!("Provided 128K ROM0 file does not exist");
+            }
+            let rom1_path = rom0_path.to_owned().with_extension("1");
+            if !rom1_path.exists() {
+                bail!("Provided 128K ROM1 file does not exist");
+            }
 
-    pub fn load_snapshot(&mut self, path: &Path) -> anyhow::Result<()> {
-        if !file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
-            bail!("Invalid snapshot format");
-        }
-
-        if !path.exists() {
-            bail!("Provided snapshot file does not exist");
-        }
-
-        self.snapshot.replace(path.to_owned());
-        Ok(())
-    }
-
-    pub fn load_tape(&mut self, path: &Path) -> anyhow::Result<()> {
-        if !file_extension_matches_one_of(path, &SUPPORTED_TAPE_FORMATS) {
-            bail!("Invalid tape format");
-        }
-
-        if !path.exists() {
-            bail!("Provided tape file does not exist");
-        }
-
-        self.tape.replace(path.to_owned());
-        Ok(())
-    }
-
-    pub fn load_autodetect(&mut self, path: &Path) -> anyhow::Result<DetectedFileKind> {
-        if file_extension_matches_one_of(path, &SUPPORTED_TAPE_FORMATS) {
-            self.load_tape(path)?;
-            Ok(DetectedFileKind::Tape)
-        } else if file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
-            self.load_snapshot(path)?;
-            Ok(DetectedFileKind::Snapshot)
-        } else {
-            Err(anyhow!("Not supported file format"))
+            Ok(FileRomSet {
+                pages: VecDeque::from(vec![
+                    load_rom_asset(&rom0_path).with_context(|| "128K ROM0 load failed")?,
+                    load_rom_asset(&rom1_path).with_context(|| "128K ROM1 load failed")?,
+                ])
+            })
         }
     }
 }
 
-impl Host for GuiHost {
-    type RomAssetImpl = FileAsset;
-    type SnapshotAssetImpl = FileAsset;
-    type TapeAssetImpl = FileAsset;
-
-    fn rom(&self, page: usize) -> Option<FileAsset> {
-        self.roms.get(page).and_then(|path| {
-            File::open(path)
-                .map_err(|e| log::error!("Failed to open ROM file: {}", e))
-                .ok()
-                .map(|file| file.into())
-        })
-    }
-
-    fn snapshot(&self) -> Option<Snapshot<FileAsset>> {
-        self.snapshot.as_ref().and_then(|path| {
-            File::open(path)
-                .map_err(|e| log::error!("Failed to open snapshot file: {}", e))
-                .ok()
-                .map(|file| Snapshot::Sna(file.into()))
-        })
-    }
-
-    fn tape(&self) -> Option<Tape<FileAsset>> {
-        self.tape.as_ref().and_then(|path| {
-            File::open(path)
-                .map_err(|e| log::error!("Failed to open tape file: {}", e))
-                .ok()
-                .map(|file| Tape::Tap(file.into()))
-        })
-    }
-
-    fn settings(&self) -> &RustzxSettings {
-        &self.settings
+pub fn detect_file_type(path: &Path) -> anyhow::Result<DetectedFileKind> {
+    if file_extension_matches_one_of(path, &SUPPORTED_TAPE_FORMATS) {
+        load_tape(path)?;
+        Ok(DetectedFileKind::Tape)
+    } else if file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
+        load_snapshot(path)?;
+        Ok(DetectedFileKind::Snapshot)
+    } else {
+        Err(anyhow!("Not supported file format"))
     }
 }
 

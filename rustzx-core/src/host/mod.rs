@@ -2,8 +2,6 @@ mod io;
 
 pub use io::{LoadableAsset, SeekFrom};
 
-use crate::settings::RustzxSettings;
-
 pub enum Snapshot<LoadableAssetImpl: LoadableAsset> {
     Sna(LoadableAssetImpl),
     // TODO: Implement SLT format support
@@ -14,21 +12,24 @@ pub enum Tape<LoadableAssetImpl: LoadableAsset> {
     // TODO: Implement TZX format support
 }
 
+pub enum RomFormat {
+    Binary16KPages
+}
+
+pub trait RomSet {
+    type Asset: LoadableAsset;
+
+    fn format(&self) -> RomFormat;
+    fn next_asset(&mut self) -> Option<Self::Asset>;
+}
+
+/// Represents set of required types for emulator implementation
+/// based on `rustzx-core`.
 pub trait Host {
     /// File-like type implementation for tape loading
-    type TapeAssetImpl: LoadableAsset;
+    type TapeAsset: LoadableAsset;
     /// File-like type implementation for snapshot loading
-    type SnapshotAssetImpl: LoadableAsset;
+    type SnapshotAsset: LoadableAsset;
     /// File-like type implementation for rom loading
-    type RomAssetImpl: LoadableAsset;
-
-    /// Get custom rom image file. If host returns `None`,
-    /// emulator will load default rom for the machine.
-    fn rom(&self, page: usize) -> Option<Self::RomAssetImpl>;
-    /// Get snapshot file to load
-    fn snapshot(&self) -> Option<Snapshot<Self::SnapshotAssetImpl>>;
-    /// Get tape file to insert on emulator start
-    fn tape(&self) -> Option<Tape<Self::TapeAssetImpl>>;
-    /// Return general emulator settings
-    fn settings(&self) -> &RustzxSettings;
+    type RomSet: RomSet;
 }

@@ -32,6 +32,7 @@ pub struct ZXSpecs {
     // contention
     pub contention_offset: usize,
     pub contention_pattern: [usize; 8],
+    pub rom_pages: u8,
 }
 
 /// Specs builder, used to make static valiables with machines specs
@@ -72,6 +73,8 @@ impl ZXSpecsBuilder {
                 // contention
                 contention_offset: 0,
                 contention_pattern: [0; 8],
+                // memory
+                rom_pages: 0,
             },
         }
     }
@@ -160,6 +163,11 @@ impl ZXSpecsBuilder {
     /// changes interrupt length
     pub fn interrupt_length(mut self, value: usize) -> Self {
         self.specs.interrupt_length = value;
+        self
+    }
+
+    pub fn rom_pages(mut self, value: u8) -> Self {
+        self.specs.rom_pages = value;
         self
     }
 }

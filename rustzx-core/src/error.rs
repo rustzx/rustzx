@@ -5,6 +5,8 @@ use from_variants::FromVariants;
 pub enum Error {
     /// Failed to read asset
     AssetReadError(AssetReadError),
+    /// Failed to load rom
+    RomLoad(RomLoadError),
 }
 
 #[derive(Debug, Display)]
@@ -13,4 +15,10 @@ pub enum AssetReadError {
     UnexpectedEof,
     /// Host-provided asset implementation failed
     HostAssetImplFailed,
+}
+
+#[derive(Debug, Display)]
+pub enum RomLoadError {
+    /// More assets required to load rom
+    MoreAssetsRequired,
 }
