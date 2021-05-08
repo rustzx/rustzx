@@ -74,7 +74,6 @@ impl RustzxApp {
         } else {
             None
         };
-        // TODO: make host interface for screen interaction instead of direct texture transfer
         let mut video = Box::new(VideoSdl::new(&settings));
         let tex_border = video.gen_texture(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32);
         let tex_canvas = video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32);
@@ -85,15 +84,18 @@ impl RustzxApp {
             .map_err(|e| anyhow!("Failed to construct emulator: {}", e))?;
 
         if let Some(rom) = settings.rom.as_ref() {
-            emulator.load_rom(host::load_rom(rom, settings.machine)?)
+            emulator
+                .load_rom(host::load_rom(rom, settings.machine)?)
                 .map_err(|e| anyhow!("Emulator failed to load rom: {}", e))?;
         }
         if let Some(snapshot) = settings.sna.as_ref() {
-            emulator.load_snapshot(host::load_snapshot(snapshot)?)
+            emulator
+                .load_snapshot(host::load_snapshot(snapshot)?)
                 .map_err(|e| anyhow!("Emulator failed to load snapshot: {}", e))?;
         }
         if let Some(tape) = settings.tap.as_ref() {
-            emulator.load_tape(host::load_tape(tape)?)
+            emulator
+                .load_tape(host::load_tape(tape)?)
                 .map_err(|e| anyhow!("Emulator failed to load tape: {}", e))?;
         }
 
@@ -125,7 +127,6 @@ impl RustzxApp {
                 // if can be turned off even on speed change, so check it everytime
                 if self.emulator.have_sound() {
                     loop {
-                        // TODO: eliminate direct access to the controller
                         if let Some(sample) = self.emulator.next_audio_sample() {
                             snd.send_sample(sample);
                         } else {
@@ -186,14 +187,18 @@ impl RustzxApp {
                     Event::StopTape => self.emulator.stop_tape(),
                     Event::OpenFile(path) => match host::detect_file_type(&path)? {
                         DetectedFileKind::Snapshot => {
-                            self.emulator.load_snapshot(host::load_snapshot(&path)?).map_err(|e| {
-                                anyhow!("Emulator failed to drag-n-drop load snapshot: {}", e)
-                            })?;
+                            self.emulator
+                                .load_snapshot(host::load_snapshot(&path)?)
+                                .map_err(|e| {
+                                    anyhow!("Emulator failed to drag-n-drop load snapshot: {}", e)
+                                })?;
                         }
                         DetectedFileKind::Tape => {
-                            self.emulator.load_tape(host::load_tape(&path)?).map_err(|e| {
-                                anyhow!("Emulator failed to drag-n-drop load tape: {}", e)
-                            })?;
+                            self.emulator
+                                .load_tape(host::load_tape(&path)?)
+                                .map_err(|e| {
+                                    anyhow!("Emulator failed to drag-n-drop load tape: {}", e)
+                                })?;
                         }
                     },
                 }

@@ -2,7 +2,9 @@
 mod loaders;
 
 use crate::{
-    host::{Host, Snapshot, Tape, RomSet, RomFormat, LoadableAsset},
+    error::RomLoadError,
+    host::{Host, LoadableAsset, RomFormat, RomSet, Snapshot, Tape},
+    settings::RustzxSettings,
     utils::*,
     z80::*,
     zx::{
@@ -12,8 +14,6 @@ use crate::{
         ZXController,
         ZXKey,
     },
-    error::RomLoadError,
-    settings::RustzxSettings,
     Result,
 };
 
@@ -23,7 +23,7 @@ use core::time::Duration;
 pub struct Emulator<H: Host> {
     settings: RustzxSettings,
     cpu: Z80,
-    // direct access to controller devices and control methods
+    // TODO(#52): eliminate direct access to the controller
     pub controller: ZXController<H>,
     speed: EmulationSpeed,
     fast_load: bool,
@@ -90,9 +90,7 @@ impl<H: Host> Emulator<H> {
 
     pub fn load_snapshot(&mut self, snapshot: Snapshot<H::SnapshotAsset>) -> Result<()> {
         match snapshot {
-            Snapshot::Sna(asset) => {
-                loaders::sna::load_sna(self, asset)
-            }
+            Snapshot::Sna(asset) => loaders::sna::load_sna(self, asset),
         }
     }
 
@@ -110,8 +108,7 @@ impl<H: Host> Emulator<H> {
         let page_count = self.settings.machine.specs().rom_pages;
 
         for page_index in 0..page_count {
-            let mut page_asset = rom.next_asset()
-                .ok_or(RomLoadError::MoreAssetsRequired)?;
+            let mut page_asset = rom.next_asset().ok_or(RomLoadError::MoreAssetsRequired)?;
             let page_buffer = self.controller.memory.rom_page_data_mut(page_index);
             page_asset.read_exact(page_buffer)?;
         }
@@ -121,9 +118,7 @@ impl<H: Host> Emulator<H> {
 
     pub fn load_rom(&mut self, rom: H::RomSet) -> Result<()> {
         match rom.format() {
-            RomFormat::Binary16KPages => {
-                self.load_rom_binary_16k_pages(rom)
-            },
+            RomFormat::Binary16KPages => self.load_rom_binary_16k_pages(rom),
         }
     }
 

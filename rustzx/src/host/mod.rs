@@ -1,16 +1,12 @@
 mod io;
 
-use anyhow::{Context, anyhow, bail};
+use anyhow::{anyhow, bail, Context};
 use io::FileAsset;
 use rustzx_core::{
-    host::{Host, Snapshot, Tape, RomSet, RomFormat},
+    host::{Host, RomFormat, RomSet, Snapshot, Tape},
     zx::ZXMachine,
 };
-use std::{
-    fs::File,
-    path::Path,
-    collections::VecDeque,
-};
+use std::{collections::VecDeque, fs::File, path::Path};
 
 const SUPPORTED_SNAPSHOT_FORMATS: [&str; 1] = ["sna"];
 const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
@@ -18,9 +14,9 @@ const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
 pub struct GuiHost;
 
 impl Host for GuiHost {
-    type TapeAsset = FileAsset;
-    type SnapshotAsset = FileAsset;
     type RomSet = FileRomSet;
+    type SnapshotAsset = FileAsset;
+    type TapeAsset = FileAsset;
 }
 
 pub struct FileRomSet {
@@ -87,8 +83,8 @@ pub fn load_rom(path: &Path, machine: ZXMachine) -> anyhow::Result<FileRomSet> {
 
             Ok(FileRomSet {
                 pages: VecDeque::from(vec![
-                    load_rom_asset(path).with_context(|| "48K ROM load failed")?,
-                ])
+                    load_rom_asset(path).with_context(|| "48K ROM load failed")?
+                ]),
             })
         }
         ZXMachine::Sinclair128K => {
@@ -108,7 +104,7 @@ pub fn load_rom(path: &Path, machine: ZXMachine) -> anyhow::Result<FileRomSet> {
                 pages: VecDeque::from(vec![
                     load_rom_asset(&rom0_path).with_context(|| "128K ROM0 load failed")?,
                     load_rom_asset(&rom1_path).with_context(|| "128K ROM1 load failed")?,
-                ])
+                ]),
             })
         }
     }
