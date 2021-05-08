@@ -11,8 +11,7 @@ use crate::{
         joy::kempston::KempstonKey,
         sound::sample::SoundSample,
         tape::{Tap, TapeImpl},
-        ZXController,
-        ZXKey,
+        ZXController, ZXKey,
     },
     Result,
 };
