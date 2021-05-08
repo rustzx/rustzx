@@ -2,7 +2,7 @@
 mod loaders;
 
 use crate::{
-    host::{Host, LoadableAsset, Snapshot, Tape},
+    host::{Host, Snapshot, Tape, RomSet, RomFormat, LoadableAsset},
     utils::*,
     z80::*,
     zx::{
@@ -11,8 +11,9 @@ use crate::{
         tape::{Tap, TapeImpl},
         ZXController,
         ZXKey,
-        ZXMachine,
     },
+    error::RomLoadError,
+    settings::RustzxSettings,
     Result,
 };
 
@@ -20,7 +21,7 @@ use core::time::Duration;
 
 /// Represents main Emulator structure
 pub struct Emulator<H: Host> {
-    pub host: H,
+    settings: RustzxSettings,
     cpu: Z80,
     // direct access to controller devices and control methods
     pub controller: ZXController<H>,
@@ -38,29 +39,22 @@ impl<H: Host> Emulator<H> {
     /// Constructs new emulator
     /// # Arguments
     /// `settings` - emulator settings
-    pub fn from_host(host: H) -> Result<Self> {
-        let settings = host.settings();
-
+    pub fn new(settings: RustzxSettings) -> Result<Self> {
         let speed = settings.emulation_speed;
         let fast_load = settings.tape_fastload;
         let sound_enabled = settings.sound_enabled;
 
         let cpu = Z80::new();
-        let controller = ZXController::<H>::new(settings);
+        let controller = ZXController::<H>::new(&settings);
 
-        let mut this = Self {
-            host,
+        let this = Self {
+            settings,
             cpu,
             controller,
             speed,
             fast_load,
             sound_enabled,
         };
-
-        // Load initial assets
-        this.reload_rom()?;
-        this.reload_snapshot()?;
-        this.reload_tape()?;
 
         Ok(this)
     }
@@ -94,46 +88,43 @@ impl<H: Host> Emulator<H> {
         }
     }
 
-    pub fn reload_snapshot(&mut self) -> Result<()> {
-        match self.host.snapshot() {
-            Some(Snapshot::Sna(asset)) => loaders::sna::load_sna(self, asset),
-            None => Ok(()),
+    pub fn load_snapshot(&mut self, snapshot: Snapshot<H::SnapshotAsset>) -> Result<()> {
+        match snapshot {
+            Snapshot::Sna(asset) => {
+                loaders::sna::load_sna(self, asset)
+            }
         }
     }
 
-    pub fn reload_tape(&mut self) -> Result<()> {
-        match self.host.tape() {
-            Some(Tape::Tap(asset)) => {
+    pub fn load_tape(&mut self, tape: Tape<H::TapeAsset>) -> Result<()> {
+        match tape {
+            Tape::Tap(asset) => {
                 self.controller.tape = Tap::from_asset(asset)?.into();
             }
-            None => {}
         }
 
         Ok(())
     }
 
-    pub fn reload_rom(&mut self) -> Result<()> {
-        match self.host.settings().machine {
-            ZXMachine::Sinclair48K => {
-                if let Some(mut asset) = self.host.rom(0) {
-                    let page = self.controller.memory.rom_page_data_mut(0);
-                    asset.read_exact(page)?;
-                }
-            }
-            ZXMachine::Sinclair128K => {
-                if let (Some(mut page0_asset), Some(mut page1_asset)) =
-                    (self.host.rom(0), self.host.rom(1))
-                {
-                    let page = self.controller.memory.rom_page_data_mut(0);
-                    page0_asset.read_exact(page)?;
+    fn load_rom_binary_16k_pages(&mut self, mut rom: H::RomSet) -> Result<()> {
+        let page_count = self.settings.machine.specs().rom_pages;
 
-                    let page = self.controller.memory.rom_page_data_mut(1);
-                    page1_asset.read_exact(page)?;
-                }
-            }
-        };
+        for page_index in 0..page_count {
+            let mut page_asset = rom.next_asset()
+                .ok_or(RomLoadError::MoreAssetsRequired)?;
+            let page_buffer = self.controller.memory.rom_page_data_mut(page_index);
+            page_asset.read_exact(page_buffer)?;
+        }
 
         Ok(())
+    }
+
+    pub fn load_rom(&mut self, rom: H::RomSet) -> Result<()> {
+        match rom.format() {
+            RomFormat::Binary16KPages => {
+                self.load_rom_binary_16k_pages(rom)
+            },
+        }
     }
 
     pub fn play_tape(&mut self) {

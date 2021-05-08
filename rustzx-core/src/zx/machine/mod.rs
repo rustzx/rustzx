@@ -19,6 +19,7 @@ lazy_static! {
             .lines(48, 192, 48, 24)
             .contention([6, 5, 4, 3, 2, 1, 0, 0], 1)
             .interrupt_length(32)
+            .rom_pages(1)
             .build()
         };
 }
@@ -35,6 +36,7 @@ lazy_static! {
             .lines(48, 192, 48, 23)
             .contention([6, 5, 4, 3, 2, 1, 0, 0], 1)
             .interrupt_length(32)
+            .rom_pages(2)
             .build()
     };
 }

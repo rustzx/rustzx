@@ -4,7 +4,7 @@
 
 use crate::{
     app::{events::*, settings::Settings, sound::*, video::*},
-    host::{DetectedFileKind, GuiHost},
+    host::{self, DetectedFileKind, GuiHost},
 };
 use anyhow::anyhow;
 use rustzx_core::{emulator::*, zx::constants::*};
@@ -81,20 +81,21 @@ impl RustzxApp {
         let scale = settings.scale as u32;
         let events = Box::new(EventsSdl::new(&settings));
 
-        let mut host = GuiHost::from_settings(settings.to_rustzx_settings());
+        let mut emulator = Emulator::new(settings.to_rustzx_settings())
+            .map_err(|e| anyhow!("Failed to construct emulator: {}", e))?;
 
         if let Some(rom) = settings.rom.as_ref() {
-            host.load_rom(rom)?;
+            emulator.load_rom(host::load_rom(rom, settings.machine)?)
+                .map_err(|e| anyhow!("Emulator failed to load rom: {}", e))?;
         }
         if let Some(snapshot) = settings.sna.as_ref() {
-            host.load_snapshot(snapshot)?;
+            emulator.load_snapshot(host::load_snapshot(snapshot)?)
+                .map_err(|e| anyhow!("Emulator failed to load snapshot: {}", e))?;
         }
         if let Some(tape) = settings.tap.as_ref() {
-            host.load_tape(tape)?;
+            emulator.load_tape(host::load_tape(tape)?)
+                .map_err(|e| anyhow!("Emulator failed to load tape: {}", e))?;
         }
-
-        let emulator = Emulator::from_host(host)
-            .map_err(|e| anyhow::anyhow!("Failed to construct emulator: {}", e))?;
 
         let app = RustzxApp {
             emulator,
@@ -183,16 +184,16 @@ impl RustzxApp {
                     }
                     Event::InsertTape => self.emulator.play_tape(),
                     Event::StopTape => self.emulator.stop_tape(),
-                    Event::OpenFile(path) => match self.emulator.host.load_autodetect(&path)? {
+                    Event::OpenFile(path) => match host::detect_file_type(&path)? {
                         DetectedFileKind::Snapshot => {
-                            self.emulator
-                                .reload_snapshot()
-                                .map_err(|e| anyhow!("Failed to reload snapshot: {}", e))?;
+                            self.emulator.load_snapshot(host::load_snapshot(&path)?).map_err(|e| {
+                                anyhow!("Emulator failed to drag-n-drop load snapshot: {}", e)
+                            })?;
                         }
                         DetectedFileKind::Tape => {
-                            self.emulator
-                                .reload_tape()
-                                .map_err(|e| anyhow!("Failed to reload tape: {}", e))?;
+                            self.emulator.load_tape(host::load_tape(&path)?).map_err(|e| {
+                                anyhow!("Emulator failed to drag-n-drop load tape: {}", e)
+                            })?;
                         }
                     },
                 }
