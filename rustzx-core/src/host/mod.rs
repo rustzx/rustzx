@@ -4,16 +4,16 @@ pub use io::{LoadableAsset, SeekFrom};
 
 pub enum Snapshot<LoadableAssetImpl: LoadableAsset> {
     Sna(LoadableAssetImpl),
-    // TODO: Implement SLT format support
+    // TODO(#55): Implement SLT snapshot format support
 }
 
 pub enum Tape<LoadableAssetImpl: LoadableAsset> {
     Tap(LoadableAssetImpl),
-    // TODO: Implement TZX format support
+    // TODO(#56): Implement TZX tape format support
 }
 
 pub enum RomFormat {
-    Binary16KPages
+    Binary16KPages,
 }
 
 pub trait RomSet {

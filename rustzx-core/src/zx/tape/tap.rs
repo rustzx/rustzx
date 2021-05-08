@@ -34,7 +34,7 @@ struct BlockInfo {
     end: usize,
 }
 
-// TODO: Eliminate dynamic allocations for Tap loader
+// TODO(#53): Eliminate loading a whole file to vector in tap loader
 
 pub struct Tap {
     /// state of tape
@@ -79,8 +79,6 @@ impl Tap {
 
     /// updates internal structure according new tape file
     pub fn from_asset(mut asset: impl LoadableAsset) -> Result<Self> {
-        // TODO: Instead of instant loading to Vec, save asset inside Tap and
-        // do direct loading from asset
         use crate::utils::make_word;
 
         let mut tap = Self::new();

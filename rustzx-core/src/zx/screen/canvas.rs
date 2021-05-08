@@ -210,6 +210,7 @@ impl ZXCanvas {
 
     /// Returns reference to canvas main texture
     pub fn texture(&self) -> &[u8] {
+        // TODO(#51): Perform texture generation and color mapping on the host implementation side
         &(*self.buffer)
     }
 }

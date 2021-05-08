@@ -9,11 +9,8 @@ use crate::{
 use alloc::vec::Vec;
 
 /// SNA snapshot loading function
-pub fn load_sna<H: Host>(
-    emulator: &mut Emulator<H>,
-    mut asset: H::SnapshotAsset,
-) -> Result<()> {
-    // TODO: Sequential loading of SNA instead of loading to vector
+pub fn load_sna<H: Host>(emulator: &mut Emulator<H>, mut asset: H::SnapshotAsset) -> Result<()> {
+    // TODO(#54): Eliminate loading a whole file to vector in sna loader
     let mut data = Vec::new();
     asset.read_to_end(&mut data)?;
     assert!(data.len() == 49179);

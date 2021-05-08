@@ -24,8 +24,7 @@ use crate::{
     },
 };
 
-// TODO: Make feature gates for non-crucial parts of the emulator
-// e.g. border
+// TODO(#57): Feature gates for resource-heavy features
 
 /// ZX System controller
 pub struct ZXController<H: Host> {

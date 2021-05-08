@@ -9,7 +9,6 @@ pub mod utils;
 pub mod z80;
 pub mod zx;
 
-// TODO: eliminate need for alloc (optional feature?)
 extern crate alloc;
 
 pub use crate::error::Error;
