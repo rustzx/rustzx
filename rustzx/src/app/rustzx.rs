@@ -22,7 +22,7 @@ struct InstantStopwatch {
 
 impl Default for InstantStopwatch {
     fn default() -> Self {
-        InstantStopwatch {
+        Self {
             timestamp: Instant::now(),
         }
     }

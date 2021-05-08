@@ -75,7 +75,7 @@ impl<H: Host> ZXController<H> {
             }
         };
         let kempston = if settings.enable_kempston {
-            Some(KempstonJoy::new())
+            Some(KempstonJoy::default())
         } else {
             None
         };
@@ -90,8 +90,8 @@ impl<H: Host> ZXController<H> {
             border_color: 0x00,
             frame_clocks: Clocks(0),
             passed_frames: 0,
-            tape: Tap::new().into(),
-            events: EventQueue::new(),
+            tape: Tap::default().into(),
+            events: EventQueue::default(),
             instant_event: InstantFlag::new(false),
             mic: false,
             ear: false,

@@ -31,7 +31,7 @@ impl ZXMixer {
     /// - `use_ay` - process ay chip or not
     pub fn new(use_beeper: bool, use_ay: bool) -> ZXMixer {
         ZXMixer {
-            beeper: ZXBeeper::new(),
+            beeper: ZXBeeper::default(),
             ay: ZXAyChip::new(ZXAYMode::Mono),
             ring_buffer: VecDeque::with_capacity(SAMPLES),
             last_pos: 0,

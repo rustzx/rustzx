@@ -196,11 +196,6 @@ pub struct Regs {
 }
 
 impl Regs {
-    /// Returns new Regs struct
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     // general operations, name of reg as param --------------------------------------------------
 
     /// Returns value of 8-bit register

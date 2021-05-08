@@ -20,22 +20,17 @@ pub struct Z80 {
 
 impl Default for Z80 {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Z80 {
-    /// Returns new cpu instance
-    pub fn new() -> Z80 {
-        Z80 {
-            regs: Regs::new(),
+        Self {
+            regs: Regs::default(),
             halted: false,
             skip_interrupt: false,
             int_mode: IntMode::IM0,
             active_prefix: Prefix::None,
         }
     }
+}
 
+impl Z80 {
     /// Reads byte from memory and increments PC
     #[inline]
     pub fn fetch_byte(&mut self, bus: &mut dyn Z80Bus, clk: Clocks) -> u8 {
