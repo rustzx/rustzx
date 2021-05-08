@@ -11,12 +11,6 @@ mod types;
 
 // re-export all functions
 pub use self::{
-    group_bits::*,
-    group_extended::*,
-    group_nonprefixed::*,
-    internal_alu::*,
-    internal_block::*,
-    internal_rot::*,
-    internal_stack::*,
-    types::*,
+    group_bits::*, group_extended::*, group_nonprefixed::*, internal_alu::*, internal_block::*,
+    internal_rot::*, internal_stack::*, types::*,
 };

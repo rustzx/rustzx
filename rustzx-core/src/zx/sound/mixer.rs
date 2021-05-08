@@ -3,8 +3,7 @@ use crate::zx::sound::{
     ay::{ZXAYMode, ZXAyChip},
     beeper::ZXBeeper,
     sample::{SampleGenerator, SoundSample},
-    samples_from_time,
-    SAMPLES,
+    samples_from_time, SAMPLES,
 };
 use alloc::collections::VecDeque;
 

@@ -17,10 +17,7 @@ use crate::{
         },
         sound::mixer::ZXMixer,
         tape::{Tap, TapeImpl, ZXTape},
-        RamType,
-        RomType,
-        ZXKey,
-        ZXMemory,
+        RamType, RomType, ZXKey, ZXMemory,
     },
 };
 
