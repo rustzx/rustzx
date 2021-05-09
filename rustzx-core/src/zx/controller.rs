@@ -14,14 +14,17 @@ use crate::{
         keys::ZXKey,
         machine::ZXMachine,
         memory::{Page, RamType, RomType, ZXMemory, PAGE_SIZE},
-        roms,
-        sound::mixer::ZXMixer,
         tape::{Tap, TapeImpl, ZXTape},
-        video::{border::ZXBorder, colors::ZXColor, screen::ZXScreen},
+        video::{colors::ZXColor, screen::ZXScreen},
     },
 };
 
-// TODO(#57): Feature gates for resource-heavy features
+#[cfg(feature = "embedded-roms")]
+use crate::zx::roms;
+#[cfg(feature = "sound")]
+use crate::zx::sound::mixer::ZXMixer;
+#[cfg(feature = "precise-border")]
+use crate::zx::video::border::ZXBorder;
 
 /// ZX System controller
 pub(crate) struct ZXController<H: Host> {
@@ -30,13 +33,14 @@ pub(crate) struct ZXController<H: Host> {
     pub memory: ZXMemory,
     pub screen: ZXScreen<H::FrameBuffer>,
     pub tape: ZXTape,
+    #[cfg(feature = "precise-border")]
     pub border: ZXBorder<H::FrameBuffer>,
     pub kempston: Option<KempstonJoy>,
-    // pub beeper: ZXBeeper,
+    #[cfg(feature = "sound")]
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
     // current border color
-    border_color: u8,
+    pub border_color: ZXColor,
     // clocls count from frame start
     frame_clocks: Clocks,
     // frames count, which passed during emulation invokation
@@ -76,17 +80,23 @@ impl<H: Host> ZXController<H> {
         };
 
         let screen = ZXScreen::new(settings.machine, host_context.frame_buffer_context());
+        #[cfg(feature = "precise-border")]
         let border = ZXBorder::new(settings.machine, host_context.frame_buffer_context());
 
-        let mut out = ZXController {
+        #[cfg(feature = "sound")]
+        let mixer = Self::create_mixer(settings);
+
+        let out = ZXController {
             machine: settings.machine,
             memory,
             screen,
+            #[cfg(feature = "precise-border")]
             border,
             kempston,
-            mixer: ZXMixer::new(settings.beeper_enabled, settings.ay_enabled),
+            #[cfg(feature = "sound")]
+            mixer,
             keyboard: [0xFF; 8],
-            border_color: 0x00,
+            border_color: ZXColor::Black,
             frame_clocks: Clocks(0),
             passed_frames: 0,
             tape: Tap::default().into(),
@@ -97,14 +107,28 @@ impl<H: Host> ZXController<H> {
             paging_enabled: paging,
             screen_bank,
         };
-        out.mixer.ay.mode(settings.ay_mode);
-        out.mixer.volume(settings.sound_volume as f64 / 200.0);
 
+        #[cfg(feature = "embedded-roms")]
         if settings.load_default_rom {
+            let mut out = out;
             out.load_default_rom();
+            return out;
         }
 
         out
+    }
+
+    #[cfg(feature = "sound")]
+    fn create_mixer(settings: &RustzxSettings) -> ZXMixer {
+        let mut mixer = ZXMixer::new(
+            settings.beeper_enabled,
+            #[cfg(feature = "ay")]
+            settings.ay_enabled,
+        );
+        #[cfg(feature = "ay")]
+        mixer.ay.mode(settings.ay_mode);
+        mixer.volume(settings.sound_volume as f64 / 200.0);
+        mixer
     }
 
     /// returns current frame emulation pos in percents
@@ -118,6 +142,7 @@ impl<H: Host> ZXController<H> {
     }
 
     /// loads builted-in ROM
+    #[cfg(feature = "embedded-roms")]
     fn load_default_rom(&mut self) {
         match self.machine {
             ZXMachine::Sinclair48K => {
@@ -214,7 +239,9 @@ impl<H: Host> ZXController<H> {
     fn new_frame(&mut self) {
         self.frame_clocks -= self.machine.specs().clocks_frame;
         self.screen.new_frame();
+        #[cfg(feature = "precise-border")]
         self.border.new_frame();
+        #[cfg(feature = "sound")]
         self.mixer.new_frame();
     }
 
@@ -265,6 +292,32 @@ impl<H: Host> ZXController<H> {
             self.paging_enabled = false;
         }
     }
+
+    #[cfg(all(feature = "sound", feature = "ay"))]
+    fn read_ay_port(&mut self) -> u8 {
+        self.mixer.ay.read()
+    }
+
+    #[cfg(not(all(feature = "sound", feature = "ay")))]
+    fn read_ay_port(&mut self) -> u8 {
+        self.floating_bus_value()
+    }
+
+    #[cfg(all(feature = "sound", feature = "ay"))]
+    fn write_ay_port(&mut self, value: u8) {
+        self.mixer.ay.write(value);
+    }
+
+    #[cfg(not(all(feature = "sound", feature = "ay")))]
+    fn write_ay_port(&mut self, _: u8) {}
+
+    #[cfg(all(feature = "sound", feature = "ay"))]
+    fn select_ay_reg(&mut self, value: u8) {
+        self.mixer.ay.select_reg(value)
+    }
+
+    #[cfg(not(all(feature = "sound", feature = "ay")))]
+    fn select_ay_reg(&mut self, _: u8) {}
 }
 
 impl<H: Host> Z80Bus for ZXController<H> {
@@ -310,9 +363,12 @@ impl<H: Host> Z80Bus for ZXController<H> {
         self.tape.process_clocks(clk);
         let mic = self.tape.current_bit();
         self.mic = mic;
-        let pos = self.frame_pos();
-        self.mixer.beeper.change_bit(self.mic | self.ear);
-        self.mixer.process(pos);
+        #[cfg(feature = "sound")]
+        {
+            let pos = self.frame_pos();
+            self.mixer.beeper.change_bit(self.mic | self.ear);
+            self.mixer.process(pos);
+        }
         self.screen.process_clocks(self.frame_clocks);
         if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
             self.new_frame();
@@ -362,8 +418,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
             // 5 and 7 unused
             tmp
         } else if port & 0xC002 == 0xC000 {
-            // AY regs
-            self.mixer.ay.read()
+            self.read_ay_port()
         } else if self.kempston.is_some() && (port & 0x0020 == 0) {
             if let Some(ref joy) = self.kempston {
                 joy.read()
@@ -384,15 +439,16 @@ impl<H: Host> Z80Bus for ZXController<H> {
         self.io_contention_first(port);
         // find active port
         if port & 0xC002 == 0xC000 {
-            self.mixer.ay.select_reg(data);
+            self.select_ay_reg(data);
         } else if port & 0xC002 == 0x8000 {
-            self.mixer.ay.write(data);
+            self.write_ay_port(data);
         } else if port & 0x0001 == 0 {
-            self.border_color = data & 0x07;
-            self.border
-                .set_border(self.frame_clocks, ZXColor::from_bits(data & 0x07));
+            self.border_color = ZXColor::from_bits(data & 0x07);
+            #[cfg(feature = "precise-border")]
+            self.border.set_border(self.frame_clocks, self.border_color);
             self.mic = data & 0x08 != 0;
             self.ear = data & 0x10 != 0;
+            #[cfg(feature = "sound")]
             self.mixer.beeper.change_bit(self.mic | self.ear);
         } else if (port & 0x8002 == 0) && (self.machine == ZXMachine::Sinclair128K) {
             self.write_7ffd(data);

@@ -11,11 +11,14 @@ use crate::{
         controller::ZXController,
         joy::kempston::KempstonKey,
         keys::ZXKey,
-        sound::sample::SoundSample,
         tape::{Tap, TapeImpl},
+        video::colors::ZXColor,
     },
     Result,
 };
+
+#[cfg(feature = "sound")]
+use crate::zx::sound::sample::SoundSample;
 
 use core::time::Duration;
 
@@ -26,6 +29,7 @@ pub struct Emulator<H: Host> {
     controller: ZXController<H>,
     speed: EmulationSpeed,
     fast_load: bool,
+    #[cfg(feature = "sound")]
     sound_enabled: bool,
 }
 
@@ -41,6 +45,7 @@ impl<H: Host> Emulator<H> {
     pub fn new(settings: RustzxSettings, context: H::Context) -> Result<Self> {
         let speed = settings.emulation_speed;
         let fast_load = settings.tape_fastload;
+        #[cfg(feature = "sound")]
         let sound_enabled = settings.sound_enabled;
 
         let cpu = Z80::default();
@@ -52,6 +57,7 @@ impl<H: Host> Emulator<H> {
             controller,
             speed,
             fast_load,
+            #[cfg(feature = "sound")]
             sound_enabled,
         };
 
@@ -69,11 +75,13 @@ impl<H: Host> Emulator<H> {
     }
 
     /// changes sound playback flag
+    #[cfg(feature = "sound")]
     pub fn set_sound(&mut self, value: bool) {
         self.sound_enabled = value;
     }
 
     /// function for sound generation request check
+    #[cfg(feature = "sound")]
     pub fn have_sound(&self) -> bool {
         // enable sound only if speed is normal
         if let EmulationSpeed::Definite(1) = self.speed {
@@ -129,8 +137,13 @@ impl<H: Host> Emulator<H> {
         self.controller.screen.frame_buffer()
     }
 
+    #[cfg(feature = "precise-border")]
     pub fn border_buffer(&self) -> &H::FrameBuffer {
         self.controller.border.frame_buffer()
+    }
+
+    pub fn border_color(&self) -> ZXColor {
+        self.controller.border_color
     }
 
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
@@ -143,6 +156,7 @@ impl<H: Host> Emulator<H> {
         }
     }
 
+    #[cfg(feature = "sound")]
     pub fn next_audio_sample(&mut self) -> Option<SoundSample<f32>> {
         self.controller.mixer.pop()
     }

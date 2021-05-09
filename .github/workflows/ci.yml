@@ -38,6 +38,16 @@ jobs:
         with:
           command: build
           args: --release --all --all-features --verbose
+      - name: Lib build - Minimal
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release -p rustzx-core --verbose
+      - name: Lib build - Without AY
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release -p rustzx-core --features without-ay --verbose
       - name: Test
         uses: actions-rs/cargo@v1
         with:

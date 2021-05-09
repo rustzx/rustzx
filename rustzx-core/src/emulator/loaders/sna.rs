@@ -3,9 +3,12 @@ use crate::{
     host::{Host, LoadableAsset},
     utils::{make_word, Clocks},
     z80::{opcodes::execute_pop_16, RegName16},
-    zx::video::colors::ZXColor,
     Result,
 };
+
+#[cfg(feature = "precise-border")]
+use crate::zx::video::colors::ZXColor;
+
 use alloc::vec::Vec;
 
 /// SNA snapshot loading function
@@ -44,6 +47,7 @@ pub fn load_sna<H: Host>(emulator: &mut Emulator<H>, mut asset: H::SnapshotAsset
     // interrupt mode
     emulator.cpu.set_im(data[25] & 0x03);
     // set border
+    #[cfg(feature = "precise-border")]
     emulator
         .controller
         .border

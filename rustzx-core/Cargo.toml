@@ -9,9 +9,18 @@ keywords = ["emulator", "game", "z80", "no_std"]
 license = "MIT"
 edition = "2018"
 
+[features]
+default = []
+full = ["ay", "precise-border", "embedded-roms"]
+without-ay = ["sound", "precise-border", "embedded-roms"]
+precise-border = []
+embedded-roms = []
+sound = []
+ay = ["ayumi", "sound"]
+
 [dependencies]
 lazy_static = "1.4"
 displaydoc = { version = "0.2", default-features = false }
 from_variants = "0.6"
 enum_dispatch = "0.3"
-ayumi = { git = "https://github.com/pacmancoder/rust-ayumi.git", rev = "9e57902" }
+ayumi = { git = "https://github.com/pacmancoder/rust-ayumi.git", rev = "9e57902", optional = true }

@@ -1,10 +1,13 @@
 //! Module implemets zx spectrum audio devices mixer
 use crate::zx::sound::{
-    ay::{ZXAYMode, ZXAyChip},
     beeper::ZXBeeper,
     sample::{SampleGenerator, SoundSample},
     samples_from_time, SAMPLES,
 };
+
+#[cfg(feature = "ay")]
+use crate::zx::sound::ay::{ZXAYMode, ZXAyChip};
+
 use alloc::collections::VecDeque;
 
 /// Main sound mixer.
@@ -12,13 +15,16 @@ pub(crate) struct ZXMixer {
     /// direct access to beeper device
     pub beeper: ZXBeeper,
     /// direct access to AY device
+    #[cfg(feature = "ay")]
     pub ay: ZXAyChip,
     ring_buffer: VecDeque<SoundSample<f32>>,
     last_pos: usize,
     last_sample: SoundSample<f32>,
     master_volume: f64,
     beeper_volume: f64,
+    #[cfg(feature = "ay")]
     ay_volume: f64,
+    #[cfg(feature = "ay")]
     use_ay: bool,
     use_beeper: bool,
 }
@@ -28,16 +34,19 @@ impl ZXMixer {
     /// # Arguments
     /// - `use_beeper` - process beeper or not
     /// - `use_ay` - process ay chip or not
-    pub fn new(use_beeper: bool, use_ay: bool) -> ZXMixer {
+    pub fn new(use_beeper: bool, #[cfg(feature = "ay")] use_ay: bool) -> ZXMixer {
         ZXMixer {
             beeper: ZXBeeper::default(),
+            #[cfg(feature = "ay")]
             ay: ZXAyChip::new(ZXAYMode::Mono),
             ring_buffer: VecDeque::with_capacity(SAMPLES),
             last_pos: 0,
             last_sample: SoundSample::new(0.0, 0.0),
             master_volume: 0.5,
             beeper_volume: 1.0,
+            #[cfg(feature = "ay")]
             ay_volume: 1.0,
+            #[cfg(feature = "ay")]
             use_ay,
             use_beeper,
         }
@@ -92,6 +101,7 @@ impl ZXMixer {
             SoundSample::new(0.0, 0.0)
         };
         // prevent AY sound generation if disabled [it is pretty long process]
+        #[cfg(feature = "ay")]
         if self.use_ay {
             master_float.mix(&self.ay.gen_sample());
         }
