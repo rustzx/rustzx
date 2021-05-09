@@ -1,7 +1,9 @@
 //! platform-independent traits. Submodules with backends will be selectable
 //! via cargo features in future
+mod palette;
 mod video_sdl;
 
+pub use palette::Palette;
 pub use video_sdl::VideoSdl;
 
 /// Texture id binging

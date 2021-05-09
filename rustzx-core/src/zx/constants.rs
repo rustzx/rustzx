@@ -23,8 +23,6 @@ pub const BORDER_ROWS: usize = 3;
 /// canvas (emulated screen) constants
 pub const SCREEN_WIDTH: usize = CANVAS_WIDTH + BORDER_COLS * 8 * 2;
 pub const SCREEN_HEIGHT: usize = CANVAS_HEIGHT + BORDER_ROWS * 8 * 2;
-pub const PIXEL_COUNT: usize = SCREEN_HEIGHT * SCREEN_WIDTH;
-pub const BYTES_PER_PIXEL: usize = 4;
 /// Frames per second
 pub const FPS: usize = 50;
 /// Tape loading trap at LD-BREAK routine in ROM

@@ -1,15 +1,13 @@
 //! Module describes ZX Spectrum screen
 //! *block* - is 8x1 pxels stripe.
 use crate::{
+    host::{FrameBuffer, FrameBufferSource},
     utils::{screen::*, *},
     zx::{constants::*, machine::ZXMachine, screen::colors::*},
 };
 use alloc::boxed::Box;
 
-// size of screen buffer in bytes
-const BUFFER_LENGTH: usize = CANVAS_HEIGHT * CANVAS_WIDTH * BYTES_PER_PIXEL;
-
-/// Represents how much 8x1 have been **passed**.
+/// Represents how much 8x1 have been already **rendered**.
 #[derive(PartialEq, Eq, Debug)]
 pub struct BlocksCount {
     pub lines: usize,
@@ -76,32 +74,28 @@ struct ScreenBank {
 }
 
 /// Represents ZXSpectrum emulated mid part of screen (canvas)
-pub struct ZXCanvas {
+pub struct ZXCanvas<FB: FrameBuffer> {
     machine: ZXMachine,
-    palette: ZXPalette,
     last_blocks: BlocksCount,
     flash: bool,
     frame_counter: usize,
-    // bitmap buffers
-    buffer: Box<[u8; BUFFER_LENGTH]>,
-    back_buffer: Box<[u8; BUFFER_LENGTH]>,
-    // memory
+    buffer: FB,
+    back_buffer: FB,
     banks: [ScreenBank; 2],
     active_bank: usize,
     next_bank: usize,
 }
 
-impl ZXCanvas {
+impl<FB: FrameBuffer> ZXCanvas<FB> {
     /// Constructs new canvas of `machine`
-    pub fn new(machine: ZXMachine) -> ZXCanvas {
+    pub fn new(machine: ZXMachine) -> Self {
         ZXCanvas {
             machine,
-            palette: ZXPalette::default(),
             last_blocks: BlocksCount::new(0, 0),
             flash: false,
             frame_counter: 0,
-            buffer: Box::new([0; BUFFER_LENGTH]),
-            back_buffer: Box::new([0; BUFFER_LENGTH]),
+            buffer: FB::new(CANVAS_WIDTH, CANVAS_HEIGHT, FrameBufferSource::Screen),
+            back_buffer: FB::new(CANVAS_WIDTH, CANVAS_HEIGHT, FrameBufferSource::Screen),
             banks: [
                 ScreenBank {
                     attributes: Box::new([ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS]),
@@ -161,11 +155,12 @@ impl ZXCanvas {
                 for pixel in 0..8 {
                     // from most significant bit
                     let state = ((bitmap << pixel) & 0x80) != 0;
-                    let color = self
-                        .palette
-                        .get_rgba(attr.active_color(state, self.flash), attr.brightness);
-                    let index = (block * 8 + pixel) * BYTES_PER_PIXEL;
-                    self.back_buffer[index..index + BYTES_PER_PIXEL].clone_from_slice(color);
+                    self.back_buffer.set_color(
+                        (block % ATTR_COLS) * 8 + pixel,
+                        block / ATTR_COLS,
+                        attr.active_color(state, self.flash),
+                        attr.brightness,
+                    );
                 }
             }
             // cahnge last block to current
@@ -176,7 +171,14 @@ impl ZXCanvas {
     /// starts new frame
     pub fn new_frame(&mut self) {
         // post finished bitmap to second buffer (all not-rendered part will be updated)
-        self.buffer.clone_from_slice(&(*self.back_buffer));
+        {
+            let Self {
+                buffer,
+                back_buffer,
+                ..
+            } = self;
+            core::mem::swap(buffer, back_buffer);
+        }
         self.last_blocks = BlocksCount::new(0, 0);
         if self.frame_counter % 16 == 0 {
             self.switch_flash();
@@ -207,9 +209,7 @@ impl ZXCanvas {
         }
     }
 
-    /// Returns reference to canvas main texture
-    pub fn texture(&self) -> &[u8] {
-        // TODO(#51): Perform texture generation and color mapping on the host implementation side
-        &(*self.buffer)
+    pub fn frame_buffer(&self) -> &FB {
+        &self.buffer
     }
 }

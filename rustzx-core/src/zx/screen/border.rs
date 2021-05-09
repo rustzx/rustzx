@@ -1,10 +1,10 @@
 //! Contains ZXSpectrum border implementation
 use super::colors::*;
 use crate::{
+    host::{FrameBuffer, FrameBufferSource},
     utils::Clocks,
     zx::{constants::*, machine::*},
 };
-use alloc::boxed::Box;
 
 /// Internal struct, which contains information about beam position and color
 #[derive(Clone, Copy)]
@@ -37,21 +37,19 @@ impl BeamInfo {
 }
 
 /// ZX Spectrum Border Device
-pub struct ZXBorder {
+pub struct ZXBorder<FB: FrameBuffer> {
     machine: ZXMachine,
-    palette: ZXPalette,
-    buffer: Box<[u8; PIXEL_COUNT * BYTES_PER_PIXEL]>,
+    buffer: FB,
     beam_last: BeamInfo,
     border_changed: bool,
     beam_block: bool,
 }
-impl ZXBorder {
+impl<FB: FrameBuffer> ZXBorder<FB> {
     /// Returns new instance of border device
-    pub fn new(machine: ZXMachine, palette: ZXPalette) -> ZXBorder {
+    pub fn new(machine: ZXMachine) -> Self {
         ZXBorder {
             machine,
-            palette,
-            buffer: Box::new([0; PIXEL_COUNT * BYTES_PER_PIXEL]),
+            buffer: FB::new(SCREEN_WIDTH, SCREEN_HEIGHT, FrameBufferSource::Border),
             beam_last: BeamInfo::first_pixel(ZXColor::White),
             border_changed: true,
             beam_block: false,
@@ -96,17 +94,13 @@ impl ZXBorder {
     /// fills pixels from last pos to passed by arguments with
     fn fill_to(&mut self, line: usize, pixel: usize) {
         let last = self.beam_last;
-        let color_array = self.palette.get_rgba(last.color, ZXBrightness::Normal);
-        // fill pixels
         for p in (last.line * SCREEN_WIDTH + last.pixel)..(line * SCREEN_WIDTH + pixel) {
-            for (b, color_value) in color_array
-                .iter()
-                .copied()
-                .enumerate()
-                .take(BYTES_PER_PIXEL)
-            {
-                self.buffer[p * BYTES_PER_PIXEL + b] = color_value;
-            }
+            self.buffer.set_color(
+                p % SCREEN_WIDTH,
+                p / SCREEN_WIDTH,
+                last.color,
+                ZXBrightness::Normal,
+            );
         }
     }
 
@@ -143,7 +137,7 @@ impl ZXBorder {
     }
 
     /// Returns reference to texture
-    pub fn texture(&self) -> &[u8] {
-        &(*self.buffer)
+    pub fn frame_buffer(&self) -> &FB {
+        &self.buffer
     }
 }

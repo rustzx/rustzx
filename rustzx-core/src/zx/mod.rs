@@ -15,7 +15,6 @@ pub mod tape;
 // re-export most of things
 // TODO(#48): Reorganize imports
 pub use self::{
-    controller::ZXController,
     keys::*,
     machine::{ZXMachine, ZXSpecs},
     memory::{RamType, RomType, ZXMemory},

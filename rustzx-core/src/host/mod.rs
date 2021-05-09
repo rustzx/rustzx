@@ -1,5 +1,7 @@
+mod frame_buffer;
 mod io;
 
+pub use frame_buffer::{FrameBuffer, FrameBufferSource};
 pub use io::{LoadableAsset, SeekFrom};
 
 pub enum Snapshot<LoadableAssetImpl: LoadableAsset> {
@@ -32,4 +34,5 @@ pub trait Host {
     type SnapshotAsset: LoadableAsset;
     /// File-like type implementation for rom loading
     type RomSet: RomSet;
+    type FrameBuffer: FrameBuffer;
 }
