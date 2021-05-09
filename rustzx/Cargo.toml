@@ -17,5 +17,5 @@ sdl2 = { version = "0.34", features = ["unsafe_textures", "bundled", "static-lin
 rustzx-core = { path =  "../rustzx-core", features = ["full"] }
 log = "0.4"
 anyhow = "1"
-clap = "3.0.0-beta.2"
+structopt = "0.3"
 env_logger = "0.8"

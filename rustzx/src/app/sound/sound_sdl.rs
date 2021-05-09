@@ -45,9 +45,9 @@ impl SoundSdl {
             let desired_spec = AudioSpecDesired {
                 freq: Some(settings.sound_sample_rate as i32),
                 channels: Some(CHANNEL_COUNT as u8),
-                samples: Some(settings.latency as u16),
+                samples: Some(settings.sound_latency as u16),
             };
-            let (tx, rx) = sync_channel(settings.latency as usize);
+            let (tx, rx) = sync_channel(settings.sound_latency as usize);
             let device_handle = audio
                 .open_playback(None, &desired_spec, |_| SdlCallback { samples: rx })
                 .expect("[ERROR Sdl audio device error, try --nosound]");

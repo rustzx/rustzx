@@ -1,364 +1,157 @@
 use rustzx_core::{
-    zx::{
-        constants::{SCREEN_HEIGHT, SCREEN_WIDTH},
-        machine::ZXMachine,
-        sound::ay::ZXAYMode,
-    },
+    zx::{machine::ZXMachine, sound::ay::ZXAYMode},
     EmulationSpeed, RustzxSettings,
 };
 
-use clap::{App, AppSettings, Arg};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-// TODO(#64): Port settings to Clap 3.x
+use structopt::StructOpt;
 
 /// Structure to handle all emulator runtime settings
+#[derive(StructOpt)]
 pub struct Settings {
+    /// Specify machine type for launch. Possible values:
+    ///   [`48k`, `48`] - Sinclair ZX Spectrum 48K
+    ///   [`128k`, `128`] - Sinclair ZX Spectrum 128K
+    #[structopt(verbatim_doc_comment, short, long, default_value = "48k", parse(try_from_str = machine_from_str))]
     pub machine: ZXMachine,
+    /// Set emulation speed at emualtor start-up. Can be specified as deciamal non-zero
+    /// value or as a special value `MAX` to run emulator as fast as possible
+    #[structopt(long, default_value = "1", parse(try_from_str = emualtion_speed_from_str))]
     pub speed: EmulationSpeed,
-    pub fastload: bool,
+    /// Disable fast tape loading
+    #[structopt(long = "nofastload")]
+    pub disable_fastload: bool,
+    /// Set windows scale for emulator. Can be set as decimal non-zero value. Defaults to 2
+    #[structopt(short, long, default_value = "2", parse(try_from_str = scale_from_str))]
     pub scale: usize,
-    pub screen_size: (usize, usize),
-    pub kempston: bool,
+    /// Disable kempston joy support. In enabled, arrow and `Alt` keys are bound by default
+    /// to the kempston joy.
+    #[structopt(long = "nokempston")]
+    pub disable_kempston: bool,
+    /// Set AY-3-8910 sound chip mode. Can be set to `mono`, `abc`(stereo) or `acb`(stereo).
+    /// Defaults to `abc`
+    #[structopt(long, default_value = "abc", parse(try_from_str = ay_mode_from_str))]
+    /// Disable AY-3-8910 chip support
     pub ay_mode: ZXAYMode,
-    pub ay_enabled: bool,
-    pub beeper_enabled: bool,
-    pub sound_enabled: bool,
-    pub volume: usize,
-    pub latency: usize,
-    pub rom: Option<PathBuf>,
-    pub tap: Option<PathBuf>,
-    pub sna: Option<PathBuf>,
+    /// Force enable AY-3-8910 chip on unsupported machines
+    #[structopt(long = "ay", conflicts_with = "force_disable_ay")]
+    pub force_enable_ay: bool,
+    /// Force disable AY-3-8910 chip on supported systems
+    #[structopt(long = "noay", conflicts_with = "force_enable_ay")]
+    pub force_disable_ay: bool,
+    /// Disable beeper
+    #[structopt(long = "nobeeper")]
+    pub disable_beeper: bool,
+    /// Disable sound
+    #[structopt(long = "nosound")]
+    pub disable_sound: bool,
+    /// Set custom sound latency. Defaults to 1024 samples
+    #[structopt(long, default_value = "1024", parse(try_from_str = sound_latency_from_str))]
+    pub sound_latency: usize,
+    /// Set custom sound sample rate. Defaults to 44100 samples per second
+    #[structopt(long, default_value = "44100", parse(try_from_str = sound_sample_rate_from_str))]
     pub sound_sample_rate: usize,
+
+    /// Set path to custom rom file. in case of multipart ROMs for 128k, the first part file,
+    /// extension of which should end with `.0`
+    #[structopt(long, conflicts_with = "file_autodetect")]
+    pub rom: Option<PathBuf>,
+    /// Set tape file path. Only `.tap` files are supported currently
+    #[structopt(long, conflicts_with = "file_autodetect")]
+    pub tape: Option<PathBuf>,
+    /// Set snapshot file path. Only `.sna` files are supported currently
+    #[structopt(long, conflicts_with = "file_autodetect")]
+    pub snap: Option<PathBuf>,
+
+    /// Load provided file to emulator. Emulator will perform autodetect of format if possible
+    pub file_autodetect: Option<PathBuf>,
+}
+
+fn machine_from_str(s: &str) -> Result<ZXMachine, anyhow::Error> {
+    match s.to_lowercase().as_str() {
+        "48k" | "48" => Ok(ZXMachine::Sinclair48K),
+        "128k" | "128" => Ok(ZXMachine::Sinclair128K),
+        s => Err(anyhow::anyhow!("Invalid machine type `{}`", s)),
+    }
+}
+
+fn emualtion_speed_from_str(s: &str) -> Result<EmulationSpeed, anyhow::Error> {
+    match s.to_lowercase().as_str() {
+        "max" => Ok(EmulationSpeed::Max),
+        s => {
+            let speed: std::num::NonZeroUsize = s
+                .parse()
+                .map_err(|_| anyhow::anyhow!("Invalid emulation speed `{}`", s))?;
+
+            Ok(EmulationSpeed::Definite(speed.into()))
+        }
+    }
+}
+
+fn scale_from_str(s: &str) -> Result<usize, anyhow::Error> {
+    let scale: std::num::NonZeroUsize = s
+        .parse()
+        .map_err(|_| anyhow::anyhow!("Invalid screen scale `{}`", s))?;
+
+    Ok(scale.into())
+}
+
+fn ay_mode_from_str(s: &str) -> Result<ZXAYMode, anyhow::Error> {
+    match s.to_lowercase().as_str() {
+        "mono" => Ok(ZXAYMode::Mono),
+        "abc" => Ok(ZXAYMode::ABC),
+        "acb" => Ok(ZXAYMode::ACB),
+        s => Err(anyhow::anyhow!("Invalid AY chip mode `{}`", s)),
+    }
+}
+
+fn sound_latency_from_str(s: &str) -> Result<usize, anyhow::Error> {
+    let latency = s
+        .parse::<usize>()
+        .map_err(|_| anyhow::anyhow!("Invalid sound latency `{}`", s))?;
+
+    if latency < 64 {
+        anyhow::bail!("Setting sound latency lower than 64 is bad for your health");
+    }
+    if latency > 1024 * 64 {
+        anyhow::bail!("This sound latency is HUGE. Please don't try this at home!");
+    }
+
+    Ok(latency)
+}
+
+fn sound_sample_rate_from_str(s: &str) -> Result<usize, anyhow::Error> {
+    let sample_rate = s
+        .parse::<usize>()
+        .map_err(|_| anyhow::anyhow!("Invalid sound sample rate {}", s))?;
+
+    // Sample rate range derived from https://github.com/audiojs/sample-rate
+    if sample_rate < 8000 {
+        anyhow::bail!("Provided sound sample rate `{}` is too low", sample_rate);
+    }
+    if sample_rate > 384000 {
+        anyhow::bail!("Provided sound sample rate `{}` is too high", sample_rate);
+    }
+
+    Ok(sample_rate)
 }
 
 impl Settings {
-    /// constructs new Settings
-    pub fn new() -> Self {
-        Self {
-            machine: ZXMachine::Sinclair48K,
-            speed: EmulationSpeed::Definite(1),
-            fastload: false,
-            scale: 2,
-            screen_size: (SCREEN_WIDTH * 2, SCREEN_HEIGHT * 2),
-            kempston: false,
-            ay_mode: ZXAYMode::Mono,
-            ay_enabled: false,
-            beeper_enabled: true,
-            sound_enabled: true,
-            volume: 100,
-            latency: 1024,
-            rom: None,
-            tap: None,
-            sna: None,
-            sound_sample_rate: 44100,
-        }
-    }
-
-    pub fn from_clap() -> Self {
-        // get defaults
-        let mut out = Self::new();
-        // parse cli
-        let cmd = App::new("rustzx")
-            .setting(AppSettings::ColoredHelp)
-            .version(env!("CARGO_PKG_VERSION"))
-            .author("Vladislav Nikonov <pacmancoder@gmail.com>")
-            .about("ZX Spectrum emulator written in pure Rust")
-            // machine settings
-            .arg(
-                Arg::new("128K")
-                    .long("128k")
-                    .about("Enables ZX Spectrum 128K mode"),
-            )
-            .arg(
-                Arg::new("FASTLOAD")
-                    .short('f')
-                    .long("fastload")
-                    .about("Accelerates standard tape loaders"),
-            )
-            // media files
-            .arg(
-                Arg::new("ROM")
-                    .long("rom")
-                    .value_name("ROM_PATH")
-                    .about("Selects path to rom, otherwise default will be used"),
-            )
-            .arg(
-                Arg::new("TAP")
-                    .long("tap")
-                    .value_name("TAP_PATH")
-                    .about("Selects path to *.tap file"),
-            )
-            .arg(
-                Arg::new("SNA")
-                    .long("sna")
-                    .value_name("SNA_PATH")
-                    .about("Selects path to *.sna snapshot file"),
-            )
-            // devices
-            .arg(Arg::new("KEMPSTON").short('k').long("kempston").about(
-                "Enables Kempston joystick. Controlls via arrow keys and \
-                 Alt buttons",
-            ))
-            // emulator settings
-            .arg(
-                Arg::new("SPEED")
-                    .long("speed")
-                    .value_name("SPEED_VALUE")
-                    .about("Selects speed for emulator in integer multiplier form"),
-            )
-            .arg(
-                Arg::new("SCALE")
-                    .long("scale")
-                    .value_name("SCALE_VALUE")
-                    .about(
-                        "Selects default screen size. possible values are positive \
-                         integers. Default value is 2",
-                    ),
-            )
-            // sound
-            .arg(Arg::new("NOSOUND").long("nosound").about(
-                "Disables sound. Use it when you have problems with audio \
-                 playback",
-            ))
-            .arg(
-                Arg::new("NOBEEPER")
-                    .long("nobeeper")
-                    .about("Disables beeper"),
-            )
-            .arg(
-                Arg::new("AY")
-                    .long("ay")
-                    .value_name("AY_TYPE")
-                    .possible_values(&["none", "mono", "abc", "acb"])
-                    .about(
-                        "Selects AY mode. Use none to disable. \
-                         For stereo features use abc or acb, default is mono for \
-                         128k and none for 48k.",
-                    ),
-            )
-            .arg(
-                Arg::new("VOLUME")
-                    .long("volume")
-                    .value_name("VOLUME_VALUE")
-                    .about(
-                        "Selects volume - value in range 0..200. Volume over 100 \
-                         can cause sound artifacts",
-                    ),
-            )
-            .arg(
-                Arg::new("LATENCY")
-                    .long("latency")
-                    .short('l')
-                    .value_name("SAMPLES")
-                    .about(
-                        "Selects audio latency. Default is 1024 samples. Set higher \
-                         latency if emulator have sound glitches. Or if your \
-                         machine can handle this - try to set it lower. Must be \
-                         power of two.",
-                    ),
-            )
-            .arg(
-                Arg::new("SOUND_SAMPLE_RATE")
-                    .long("sound-sample-rate")
-                    .value_name("SOUND_SAMPLE_RATE")
-                    .about(
-                        "Sets sample rate for sound playback. Defaults to 44100",
-                    ),
-            )
-            .get_matches();
-        // machine type
-        if cmd.is_present("128K") {
-            out.machine(ZXMachine::Sinclair128K);
-        }
-        if let Some(speed_str) = cmd.value_of("SPEED") {
-            if let Ok(speed) = speed_str.parse::<usize>() {
-                out.speed(EmulationSpeed::Definite(speed));
-            }
-        };
-        if let Some(scale_str) = cmd.value_of("SCALE") {
-            if let Ok(scale) = scale_str.parse::<usize>() {
-                out.scale(scale);
-            } else {
-                println!("[Warning] Invalid scale factor");
-            };
-        }
-        out.fastload(cmd.is_present("FASTLOAD"))
-            .beeper(!cmd.is_present("NOBEEPER"))
-            .sound(!cmd.is_present("NOSOUND"))
-            .kempston(cmd.is_present("KEMPSTON"));
-        if let Some(path) = cmd.value_of_os("ROM") {
-            if Path::new(path).is_file() {
-                out.rom(path);
-            } else {
-                println!(
-                    "[Warning] ROM file \"{}\" not found",
-                    path.to_string_lossy()
-                );
-            }
-        }
-        if let Some(path) = cmd.value_of_os("TAP") {
-            if Path::new(path).is_file() {
-                out.tap(path);
-            } else {
-                println!(
-                    "[Warning] Tape file \"{}\" not found",
-                    path.to_string_lossy()
-                );
-            }
-        }
-        if let Some(path) = cmd.value_of_os("SNA") {
-            if out.machine == ZXMachine::Sinclair48K {
-                if Path::new(path).is_file() {
-                    out.sna(path);
-                } else {
-                    println!(
-                        "[Warning] Snapshot file \"{}\" not found",
-                        path.to_string_lossy()
-                    );
-                }
-            } else {
-                println!("[Warning] 128K SNA is not supported!");
-            }
-        }
-        if let Some(value) = cmd.value_of("AY") {
-            match value {
-                "none" => out.ay(false),
-                "mono" => out.ay_mode(ZXAYMode::Mono),
-                "abc" => out.ay_mode(ZXAYMode::ABC),
-                "acb" => out.ay_mode(ZXAYMode::ACB),
-                _ => unreachable!(),
-            };
-        };
-        if let Some(value) = cmd.value_of("VOLUME") {
-            if let Ok(value) = value.parse::<usize>() {
-                out.volume(value);
-            } else {
-                println!("[Warning] Volume value is incorrect, setting volume to 100");
-            }
-        };
-        if let Some(latency_str) = cmd.value_of("LATENCY") {
-            if let Ok(latency) = latency_str.parse::<usize>() {
-                out.latency(latency);
-            }
-        };
-        if let Ok(sample_rate) = cmd.value_of_t("SOUND_SAMPLE_RATE") {
-            out.sound_sample_rate(sample_rate);
-        }
-        out
-    }
-
-    /// Changes machine type
-    pub fn machine(&mut self, machine: ZXMachine) -> &mut Self {
-        self.machine = machine;
-        match machine {
-            ZXMachine::Sinclair48K => self.ay_enabled = false,
-            ZXMachine::Sinclair128K => self.ay_enabled = true,
-        }
-        self
-    }
-
-    /// changes screen scale
-    pub fn scale(&mut self, scale: usize) -> &mut Self {
-        // place into bounds
-        if scale > 5 {
-            self.scale = 2;
-        } else {
-            self.scale = scale;
-        }
-        self.screen_size = (SCREEN_WIDTH * self.scale, SCREEN_HEIGHT * self.scale);
-        self
-    }
-
-    /// changes fastload flag
-    pub fn fastload(&mut self, value: bool) -> &mut Self {
-        self.fastload = value;
-        self
-    }
-
-    /// changes lound latency
-    pub fn latency(&mut self, latency: usize) -> &mut Self {
-        self.latency = latency;
-        self
-    }
-
-    /// Changes AY chip mode
-    pub fn ay_mode(&mut self, mode: ZXAYMode) -> &mut Self {
-        self.ay_enabled = true;
-        self.ay_mode = mode;
-        self
-    }
-
-    /// Changes ay state (on/off)
-    pub fn ay(&mut self, state: bool) -> &mut Self {
-        self.ay_enabled = state;
-        self
-    }
-
-    /// Changes beeper state (on/off)
-    pub fn beeper(&mut self, state: bool) -> &mut Self {
-        self.beeper_enabled = state;
-        self
-    }
-
-    /// changes sound flag
-    pub fn sound(&mut self, state: bool) -> &mut Self {
-        self.sound_enabled = state;
-        self
-    }
-
-    /// Changes volume
-    pub fn volume(&mut self, val: usize) -> &mut Self {
-        self.volume = if val > 200 { 200 } else { val };
-        self
-    }
-
-    /// cahnges kempston joy connection
-    pub fn kempston(&mut self, value: bool) -> &mut Self {
-        self.kempston = value;
-        self
-    }
-
-    /// changes TAP path
-    pub fn tap(&mut self, value: impl AsRef<Path>) -> &mut Self {
-        self.tap = Some(value.as_ref().into());
-        self
-    }
-
-    /// changes SNA path
-    pub fn sna(&mut self, value: impl AsRef<Path>) -> &mut Self {
-        self.sna = Some(value.as_ref().into());
-        self
-    }
-
-    /// changes ROM path
-    pub fn rom(&mut self, value: impl AsRef<Path>) -> &mut Self {
-        self.rom = Some(value.as_ref().into());
-        self
-    }
-
-    /// changes emulation speed
-    pub fn speed(&mut self, value: EmulationSpeed) -> &mut Self {
-        self.speed = value;
-        self
-    }
-
-    pub fn sound_sample_rate(&mut self, value: usize) -> &mut Self {
-        self.sound_sample_rate = value;
-        self
-    }
-
     pub fn to_rustzx_settings(&self) -> RustzxSettings {
+        let ay_enabled = (matches!(self.machine, ZXMachine::Sinclair128K) || self.force_enable_ay)
+            && (!self.force_disable_ay);
+
         RustzxSettings {
             machine: self.machine,
             emulation_speed: self.speed,
-            tape_fastload: self.fastload,
-            enable_kempston: self.kempston,
+            tape_fastload: !self.disable_fastload,
+            enable_kempston: !self.disable_kempston,
             ay_mode: self.ay_mode,
-            ay_enabled: self.ay_enabled,
-            beeper_enabled: self.beeper_enabled,
-            sound_enabled: self.sound_enabled,
-            sound_volume: self.volume as u8,
+            ay_enabled,
+            beeper_enabled: !self.disable_beeper,
+            sound_enabled: !self.disable_sound,
+            sound_volume: 100,
             load_default_rom: self.rom.is_none(),
             sound_sample_rate: self.sound_sample_rate,
         }
