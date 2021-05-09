@@ -4,7 +4,7 @@
 
 use crate::{
     app::{events::*, settings::Settings, sound::*, video::*},
-    host::{self, DetectedFileKind, GuiHost},
+    host::{self, DetectedFileKind, AppHost, AppHostContext},
 };
 use anyhow::anyhow;
 use rustzx_core::{emulator::*, zx::constants::*};
@@ -56,7 +56,7 @@ fn frame_length(fps: usize) -> Duration {
 /// Application instance type
 pub struct RustzxApp {
     /// main emulator object
-    emulator: Emulator<GuiHost>,
+    emulator: Emulator<AppHost>,
     /// Sound rendering in a separate thread
     snd: Option<Box<dyn SoundDevice>>,
     video: Box<dyn VideoDevice>,
@@ -80,7 +80,7 @@ impl RustzxApp {
         let scale = settings.scale as u32;
         let events = Box::new(EventsSdl::new(&settings));
 
-        let mut emulator = Emulator::new(settings.to_rustzx_settings())
+        let mut emulator = Emulator::new(settings.to_rustzx_settings(), AppHostContext)
             .map_err(|e| anyhow!("Failed to construct emulator: {}", e))?;
 
         if let Some(rom) = settings.rom.as_ref() {
@@ -132,7 +132,7 @@ impl RustzxApp {
                 }
             }
 
-            // TODO: Direct write to backend texture from `impl rustzx_core::host::FrameBuffer`
+            // TODO(#63): Direct write to backend texture from `crate::host::RgbaFrameBuffer`
 
             self.video
                 .update_texture(self.tex_border, self.emulator.border_buffer().rgba_data());

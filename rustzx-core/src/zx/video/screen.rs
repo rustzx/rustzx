@@ -88,14 +88,14 @@ pub struct ZXScreen<FB: FrameBuffer> {
 
 impl<FB: FrameBuffer> ZXScreen<FB> {
     /// Constructs new canvas of `machine`
-    pub fn new(machine: ZXMachine) -> Self {
+    pub fn new(machine: ZXMachine, context: FB::Context) -> Self {
         Self {
             machine,
             last_blocks: BlocksCount::new(0, 0),
             flash: false,
             frame_counter: 0,
-            buffer: FB::new(CANVAS_WIDTH, CANVAS_HEIGHT, FrameBufferSource::Screen),
-            back_buffer: FB::new(CANVAS_WIDTH, CANVAS_HEIGHT, FrameBufferSource::Screen),
+            buffer: FB::new(CANVAS_WIDTH, CANVAS_HEIGHT, FrameBufferSource::Screen, context.clone()),
+            back_buffer: FB::new(CANVAS_WIDTH, CANVAS_HEIGHT, FrameBufferSource::Screen, context),
             banks: [
                 ScreenBank {
                     attributes: Box::new([ZXAttribute::from_byte(0); ATTR_COLS * ATTR_ROWS]),

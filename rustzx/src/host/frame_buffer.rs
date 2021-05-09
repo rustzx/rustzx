@@ -6,6 +6,9 @@ use rustzx_core::{
 
 const RGBA_PIXEL_SIZE: usize = 4;
 
+#[derive(Clone)]
+pub struct FrameBufferContext;
+
 pub struct RgbaFrameBuffer {
     buffer: Vec<u8>,
     palette: Palette,
@@ -13,7 +16,9 @@ pub struct RgbaFrameBuffer {
 }
 
 impl FrameBuffer for RgbaFrameBuffer {
-    fn new(width: usize, height: usize, _source: FrameBufferSource) -> Self {
+    type Context = FrameBufferContext;
+
+    fn new(width: usize, height: usize, _source: FrameBufferSource, _context: Self::Context) -> Self {
         Self {
             buffer: vec![0u8; width * height * RGBA_PIXEL_SIZE],
             palette: Palette::default(),

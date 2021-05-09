@@ -25,14 +25,22 @@ pub trait RomSet {
     fn next_asset(&mut self) -> Option<Self::Asset>;
 }
 
+pub trait HostContext<H: Host + ?Sized> : Sized {
+    fn frame_buffer_context(&self) -> <H::FrameBuffer as FrameBuffer>::Context;
+}
+
 /// Represents set of required types for emulator implementation
 /// based on `rustzx-core`.
 pub trait Host {
+    /// Immutable `Context` implementation which is used to obtain host-specific
+    /// context objects for host-defined emulator parts construction (e.g. FrameBuffers)
+    type Context: HostContext<Self>;
     /// File-like type implementation for tape loading
     type TapeAsset: LoadableAsset;
     /// File-like type implementation for snapshot loading
     type SnapshotAsset: LoadableAsset;
     /// File-like type implementation for rom loading
     type RomSet: RomSet;
+    /// Frame buffer implementation
     type FrameBuffer: FrameBuffer;
 }

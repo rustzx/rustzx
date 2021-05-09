@@ -38,13 +38,13 @@ impl<H: Host> Emulator<H> {
     /// Constructs new emulator
     /// # Arguments
     /// `settings` - emulator settings
-    pub fn new(settings: RustzxSettings) -> Result<Self> {
+    pub fn new(settings: RustzxSettings, context: H::Context) -> Result<Self> {
         let speed = settings.emulation_speed;
         let fast_load = settings.tape_fastload;
         let sound_enabled = settings.sound_enabled;
 
         let cpu = Z80::default();
-        let controller = ZXController::<H>::new(&settings);
+        let controller = ZXController::<H>::new(&settings, context);
 
         let this = Self {
             settings,
