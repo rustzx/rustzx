@@ -131,12 +131,14 @@ impl RustzxApp {
                     }
                 }
             }
-            // load new textures to sdl
+
+            // TODO: Direct write to backend texture from `impl rustzx_core::host::FrameBuffer`
+
             self.video
-                .update_texture(self.tex_border, self.emulator.controller.border.texture());
+                .update_texture(self.tex_border, self.emulator.border_buffer().rgba_data());
             self.video
-                .update_texture(self.tex_canvas, self.emulator.controller.canvas.texture());
-            // rendering block
+                .update_texture(self.tex_canvas, self.emulator.screen_buffer().rgba_data());
+
             self.video.begin();
             self.video.draw_texture_2d(
                 self.tex_border,

@@ -8,10 +8,11 @@ use crate::{
     utils::*,
     z80::*,
     zx::{
+        controller::ZXController,
         joy::kempston::KempstonKey,
         sound::sample::SoundSample,
         tape::{Tap, TapeImpl},
-        ZXController, ZXKey,
+        ZXKey,
     },
     Result,
 };
@@ -22,8 +23,7 @@ use core::time::Duration;
 pub struct Emulator<H: Host> {
     settings: RustzxSettings,
     cpu: Z80,
-    // TODO(#52): eliminate direct access to the controller
-    pub controller: ZXController<H>,
+    controller: ZXController<H>,
     speed: EmulationSpeed,
     fast_load: bool,
     sound_enabled: bool,
@@ -123,6 +123,14 @@ impl<H: Host> Emulator<H> {
 
     pub fn stop_tape(&mut self) {
         self.controller.tape.stop();
+    }
+
+    pub fn screen_buffer(&self) -> &H::FrameBuffer {
+        self.controller.canvas.frame_buffer()
+    }
+
+    pub fn border_buffer(&self) -> &H::FrameBuffer {
+        self.controller.border.frame_buffer()
     }
 
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {

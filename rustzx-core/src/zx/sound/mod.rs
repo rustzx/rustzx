@@ -6,6 +6,7 @@ pub mod sample;
 
 use crate::zx::constants::FPS;
 
+// TODO: Make sample rate configurable
 pub const SAMPLE_RATE: usize = 44100;
 /// samples per frame
 pub const SAMPLES: usize = SAMPLE_RATE / FPS;

@@ -1,6 +1,8 @@
+mod frame_buffer;
 mod io;
 
 use anyhow::{anyhow, bail, Context};
+use frame_buffer::RgbaFrameBuffer;
 use io::FileAsset;
 use rustzx_core::{
     host::{Host, RomFormat, RomSet, Snapshot, Tape},
@@ -17,6 +19,7 @@ impl Host for GuiHost {
     type RomSet = FileRomSet;
     type SnapshotAsset = FileAsset;
     type TapeAsset = FileAsset;
+    type FrameBuffer = RgbaFrameBuffer;
 }
 
 pub struct FileRomSet {

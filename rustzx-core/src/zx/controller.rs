@@ -10,11 +10,7 @@ use crate::{
         machine::ZXMachine,
         memory::{Page, PAGE_SIZE},
         roms::*,
-        screen::{
-            border::ZXBorder,
-            canvas::ZXCanvas,
-            colors::{ZXColor, ZXPalette},
-        },
+        screen::{border::ZXBorder, canvas::ZXCanvas, colors::ZXColor},
         sound::mixer::ZXMixer,
         tape::{Tap, TapeImpl, ZXTape},
         RamType, RomType, ZXKey, ZXMemory,
@@ -28,9 +24,9 @@ pub struct ZXController<H: Host> {
     // parts of ZX Spectum.
     pub machine: ZXMachine,
     pub memory: ZXMemory,
-    pub canvas: ZXCanvas,
+    pub canvas: ZXCanvas<H::FrameBuffer>,
     pub tape: ZXTape,
-    pub border: ZXBorder,
+    pub border: ZXBorder<H::FrameBuffer>,
     pub kempston: Option<KempstonJoy>,
     // pub beeper: ZXBeeper,
     pub mixer: ZXMixer,
@@ -51,8 +47,6 @@ pub struct ZXController<H: Host> {
     ear: bool,
     paging_enabled: bool,
     screen_bank: u8,
-    // `H` will be used when components e.g. Tap type will depend on host impl
-    _phantom: core::marker::PhantomData<H>,
 }
 
 impl<H: Host> ZXController<H> {
@@ -80,7 +74,7 @@ impl<H: Host> ZXController<H> {
             machine: settings.machine,
             memory,
             canvas: ZXCanvas::new(settings.machine),
-            border: ZXBorder::new(settings.machine, ZXPalette::default()),
+            border: ZXBorder::new(settings.machine),
             kempston,
             mixer: ZXMixer::new(settings.beeper_enabled, settings.ay_enabled),
             keyboard: [0xFF; 8],
@@ -94,7 +88,6 @@ impl<H: Host> ZXController<H> {
             ear: false,
             paging_enabled: paging,
             screen_bank,
-            _phantom: core::marker::PhantomData::default(),
         };
         out.mixer.ay.mode(settings.ay_mode);
         out.mixer.volume(settings.sound_volume as f64 / 200.0);

@@ -1,20 +1,3 @@
-//! Contains Color generation related types
-use crate::zx::constants::BYTES_PER_PIXEL;
-
-/// struct represents single pixel color as array of bytes
-pub type ColorArray = [u8; BYTES_PER_PIXEL];
-
-/// splits usize value to 4 bytes
-#[rustfmt::skip]
-fn split_in_bytes(val: usize) -> ColorArray {
-    [
-        ((val >> 24) & 0xFF) as u8,
-        ((val >> 16) & 0xFF) as u8,
-        ((val >>  8) & 0xFF) as u8,
-        (val & 0xFF) as u8
-    ]
-}
-
 /// Represents color brightness
 #[derive(Clone, Copy)]
 pub enum ZXBrightness {
@@ -88,76 +71,6 @@ impl ZXAttribute {
             self.ink
         } else {
             self.paper
-        }
-    }
-}
-
-/// represents set of colors
-struct ColorSet {
-    black: ColorArray,
-    blue: ColorArray,
-    red: ColorArray,
-    purple: ColorArray,
-    green: ColorArray,
-    cyan: ColorArray,
-    yellow: ColorArray,
-    white: ColorArray,
-}
-/// Structure, that holds palette information.
-/// It have method to transform ZX Spectrum screen data
-/// to 4-byte rgba bixel
-pub struct ZXPalette {
-    transparent: ColorArray,
-    // 2 color sets
-    bright: ColorSet,
-    normal: ColorSet,
-}
-
-impl ZXPalette {
-    /// Returns default palette
-    #[rustfmt::skip]
-    pub fn default() -> ZXPalette {
-        ZXPalette {
-            transparent: split_in_bytes(0x00000000),
-            normal: ColorSet {
-                black:   split_in_bytes(0x000000FF),
-                blue:    split_in_bytes(0x0000CDFF),
-                red:     split_in_bytes(0xCD0000FF),
-                purple:  split_in_bytes(0xCD00CDFF),
-                green:   split_in_bytes(0x00CD00FF),
-                cyan:    split_in_bytes(0x00CDCDFF),
-                yellow:  split_in_bytes(0xCDCD00FF),
-                white:   split_in_bytes(0xCDCDCDFF),
-            },
-            bright: ColorSet {
-                black:   split_in_bytes(0x000000FF),
-                blue:    split_in_bytes(0x0000FFFF),
-                red:     split_in_bytes(0xFF0000FF),
-                purple:  split_in_bytes(0xFF00FFFF),
-                green:   split_in_bytes(0x00FF00FF),
-                cyan:    split_in_bytes(0x00FFFFFF),
-                yellow:  split_in_bytes(0xFFFF00FF),
-                white:   split_in_bytes(0xFFFFFFFF),
-            }
-        }
-    }
-
-    /// Returns rgba pixel from screen data
-    pub fn get_rgba(&self, color: ZXColor, brightness: ZXBrightness) -> &ColorArray {
-        // select palette
-        let set = match brightness {
-            ZXBrightness::Normal => &self.normal,
-            ZXBrightness::Bright => &self.bright,
-        };
-        match color {
-            ZXColor::Black => &set.black,
-            ZXColor::Blue => &set.blue,
-            ZXColor::Red => &set.red,
-            ZXColor::Purple => &set.purple,
-            ZXColor::Green => &set.green,
-            ZXColor::Cyan => &set.cyan,
-            ZXColor::Yellow => &set.yellow,
-            ZXColor::White => &set.white,
         }
     }
 }
