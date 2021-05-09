@@ -35,10 +35,10 @@ pub struct Settings {
     /// Disable AY-3-8910 chip support
     pub ay_mode: ZXAYMode,
     /// Force enable AY-3-8910 chip on unsupported machines
-    #[structopt(long = "ay", conflicts_with = "force_disable_ay")]
+    #[structopt(long = "ay", conflicts_with = "force-disable-ay")]
     pub force_enable_ay: bool,
     /// Force disable AY-3-8910 chip on supported systems
-    #[structopt(long = "noay", conflicts_with = "force_enable_ay")]
+    #[structopt(long = "noay", conflicts_with = "force-enable-ay")]
     pub force_disable_ay: bool,
     /// Disable beeper
     #[structopt(long = "nobeeper")]
@@ -55,13 +55,13 @@ pub struct Settings {
 
     /// Set path to custom rom file. in case of multipart ROMs for 128k, the first part file,
     /// extension of which should end with `.0`
-    #[structopt(long, conflicts_with = "file_autodetect")]
+    #[structopt(long, conflicts_with = "file-autodetect")]
     pub rom: Option<PathBuf>,
     /// Set tape file path. Only `.tap` files are supported currently
-    #[structopt(long, conflicts_with = "file_autodetect")]
+    #[structopt(long, conflicts_with = "file-autodetect")]
     pub tape: Option<PathBuf>,
     /// Set snapshot file path. Only `.sna` files are supported currently
-    #[structopt(long, conflicts_with = "file_autodetect")]
+    #[structopt(long, conflicts_with = "file-autodetect")]
     pub snap: Option<PathBuf>,
 
     /// Load provided file to emulator. Emulator will perform autodetect of format if possible
