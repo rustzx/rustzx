@@ -394,7 +394,7 @@ checksum = "24d5f089152e60f62d28b835fbff2cd2e8dc0baf1ac13343bef92ab7eed84548"
 
 [[package]]
 name = "rustzx"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "anyhow",
  "env_logger",
@@ -406,7 +406,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-core"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "ayumi",
  "displaydoc",
