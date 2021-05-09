@@ -43,7 +43,7 @@ impl ZXColor {
 /// It contains information about ink, paper color,
 /// flash attribute and brightness
 #[derive(Clone, Copy)]
-pub struct ZXAttribute {
+pub(crate) struct ZXAttribute {
     pub ink: ZXColor,
     pub paper: ZXColor,
     pub brightness: ZXBrightness,

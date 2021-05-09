@@ -1,6 +1,6 @@
 use crate::{
     utils::{make_word, split_word, Clocks},
-    z80::*,
+    z80::{RegName16, Z80Bus, Z80},
 };
 
 /// Pushes 16 bit value to the stack. Clocks count using for each byte write

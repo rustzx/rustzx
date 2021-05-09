@@ -1,15 +1,19 @@
 #![no_std]
 #![allow(dead_code)]
 
-pub mod emulator;
+pub(crate) mod emulator;
+pub(crate) mod settings;
+pub(crate) mod utils;
+pub(crate) mod z80;
+
 pub mod error;
 pub mod host;
-pub mod settings;
-pub mod utils;
-pub mod z80;
 pub mod zx;
+
+pub use emulator::{Emulator, Stopwatch};
+pub use settings::RustzxSettings;
+pub use utils::EmulationSpeed;
 
 extern crate alloc;
 
-pub use crate::error::Error;
-pub type Result<T> = core::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, error::Error>;

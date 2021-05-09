@@ -5,14 +5,14 @@ use crate::{
     error::RomLoadError,
     host::{Host, LoadableAsset, RomFormat, RomSet, Snapshot, Tape},
     settings::RustzxSettings,
-    utils::*,
-    z80::*,
+    utils::{EmulationSpeed, Event, EventKind},
+    z80::Z80,
     zx::{
         controller::ZXController,
         joy::kempston::KempstonKey,
+        keys::ZXKey,
         sound::sample::SoundSample,
         tape::{Tap, TapeImpl},
-        ZXKey,
     },
     Result,
 };

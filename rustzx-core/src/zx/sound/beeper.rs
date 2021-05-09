@@ -2,7 +2,7 @@ use crate::zx::sound::sample::{SampleGenerator, SoundSample};
 
 /// Simple beeper implementation
 #[derive(Default)]
-pub struct ZXBeeper {
+pub(crate) struct ZXBeeper {
     curr_bit: bool,
     next_bit: bool,
 }

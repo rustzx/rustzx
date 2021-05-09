@@ -2,8 +2,18 @@
 //! *block* - is 8x1 pxels stripe.
 use crate::{
     host::{FrameBuffer, FrameBufferSource},
-    utils::{screen::*, *},
-    zx::{constants::*, machine::ZXMachine, video::colors::*},
+    utils::{
+        screen::{attr_col_rel, attr_row_rel, bitmap_col_rel, bitmap_line_rel},
+        Clocks,
+    },
+    zx::{
+        constants::{
+            ATTR_BASE_REL, ATTR_COLS, ATTR_MAX_REL, ATTR_ROWS, BITMAP_MAX_REL, CANVAS_HEIGHT,
+            CANVAS_WIDTH, CLOCKS_PER_COL,
+        },
+        machine::ZXMachine,
+        video::colors::ZXAttribute,
+    },
 };
 use alloc::boxed::Box;
 

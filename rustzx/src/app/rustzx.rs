@@ -3,11 +3,21 @@
 //! and command-line interface
 
 use crate::{
-    app::{events::*, settings::Settings, sound::*, video::*},
+    app::{
+        events::{Event, EventDevice, EventsSdl},
+        settings::Settings,
+        sound::{SoundDevice, SoundSdl},
+        video::{Rect, TextureInfo, VideoDevice, VideoSdl},
+    },
     host::{self, AppHost, AppHostContext, DetectedFileKind},
 };
 use anyhow::anyhow;
-use rustzx_core::{emulator::*, zx::constants::*};
+use rustzx_core::{
+    zx::constants::{
+        CANVAS_HEIGHT, CANVAS_WIDTH, CANVAS_X, CANVAS_Y, FPS, SCREEN_HEIGHT, SCREEN_WIDTH,
+    },
+    Emulator, Stopwatch,
+};
 use std::{
     thread,
     time::{Duration, Instant},

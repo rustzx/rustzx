@@ -1,4 +1,4 @@
-use crate::utils::*;
+use crate::utils::{make_word, split_word, Clocks};
 
 /// Z80 processor System bus
 /// Implement it for communication with CPU.

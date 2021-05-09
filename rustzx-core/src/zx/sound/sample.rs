@@ -2,6 +2,7 @@ use core::{
     i16,
     ops::{Add, Mul, MulAssign, Sub},
 };
+
 /// Raw Sample can be only f64 or i16
 pub trait RawSample: Clone + Copy + MulAssign + Mul + Add + Sub {}
 impl RawSample for f64 {}
@@ -58,30 +59,6 @@ impl SoundSample<f64> {
         self
     }
 
-    /// Transforms normalized float sample to i16 sample
-    pub fn into_i16(self) -> SoundSample<i16> {
-        // here is some thick hack :D
-        // we have value in 0.0..1.0. We need value in min_i16...max_i16 (signed)
-        // so we unly need one float multiplication, one floor and one XOR with highest bit
-        // multiplication + floor => 0...max_u16
-        // XOR =>  4 bit example {
-        //      0b0000 [0] => 0b1000 [-8]
-        //      0b0001 [1] => 0b1000 [-7]
-        //      ...
-        //      0b0111 [7] => 0b1111 [-1]
-        //      0b1000 [8] => 0b0000 [0]
-        //      0b1000 [9] => 0b0001 [1]
-        //      ...
-        //      0b1111 [15] => 0b0111 [7]
-        // }
-        // So we can easily get range expansion only with XOR operation in MSb
-        // NOTE: `i16 as u16` and `u16 as i16` have no cost
-        SoundSample {
-            left: ((self.left * (u16::max_value() - ERROR_SIZE) as f64) as u16 ^ 0x8000) as i16,
-            right: ((self.right * (u16::max_value() - ERROR_SIZE) as f64) as u16 ^ 0x8000) as i16,
-        }
-    }
-
     /// transform into f32
     pub fn into_f32(self) -> SoundSample<f32> {
         SoundSample {
@@ -105,7 +82,7 @@ impl SoundSample<f64> {
 }
 
 /// Trait which signals that structure can generate SoundSamples
-pub trait SampleGenerator<T>
+pub(crate) trait SampleGenerator<T>
 where
     T: RawSample,
 {
