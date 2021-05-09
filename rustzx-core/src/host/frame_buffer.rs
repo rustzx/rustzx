@@ -1,4 +1,4 @@
-use crate::zx::screen::colors::{ZXBrightness, ZXColor};
+use crate::zx::video::colors::{ZXBrightness, ZXColor};
 
 pub enum FrameBufferSource {
     Screen,
