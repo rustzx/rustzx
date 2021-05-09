@@ -2,10 +2,10 @@ mod frame_buffer;
 mod io;
 
 use anyhow::{anyhow, bail, Context};
-use frame_buffer::{RgbaFrameBuffer, FrameBufferContext};
+use frame_buffer::{FrameBufferContext, RgbaFrameBuffer};
 use io::FileAsset;
 use rustzx_core::{
-    host::{Host, HostContext, FrameBuffer, RomFormat, RomSet, Snapshot, Tape},
+    host::{FrameBuffer, Host, HostContext, RomFormat, RomSet, Snapshot, Tape},
     zx::ZXMachine,
 };
 use std::{collections::VecDeque, fs::File, path::Path};
