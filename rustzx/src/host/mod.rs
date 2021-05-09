@@ -2,10 +2,10 @@ mod frame_buffer;
 mod io;
 
 use anyhow::{anyhow, bail, Context};
-use frame_buffer::RgbaFrameBuffer;
+use frame_buffer::{RgbaFrameBuffer, FrameBufferContext};
 use io::FileAsset;
 use rustzx_core::{
-    host::{Host, RomFormat, RomSet, Snapshot, Tape},
+    host::{Host, HostContext, FrameBuffer, RomFormat, RomSet, Snapshot, Tape},
     zx::ZXMachine,
 };
 use std::{collections::VecDeque, fs::File, path::Path};
@@ -13,13 +13,22 @@ use std::{collections::VecDeque, fs::File, path::Path};
 const SUPPORTED_SNAPSHOT_FORMATS: [&str; 1] = ["sna"];
 const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
 
-pub struct GuiHost;
+pub struct AppHost;
 
-impl Host for GuiHost {
+impl Host for AppHost {
+    type Context = AppHostContext;
     type RomSet = FileRomSet;
     type SnapshotAsset = FileAsset;
     type TapeAsset = FileAsset;
     type FrameBuffer = RgbaFrameBuffer;
+}
+
+pub struct AppHostContext;
+
+impl HostContext<AppHost> for AppHostContext {
+    fn frame_buffer_context(&self) -> <<AppHost as Host>::FrameBuffer as FrameBuffer>::Context {
+        FrameBufferContext
+    }
 }
 
 pub struct FileRomSet {

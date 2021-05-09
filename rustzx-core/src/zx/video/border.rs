@@ -46,10 +46,10 @@ pub struct ZXBorder<FB: FrameBuffer> {
 }
 impl<FB: FrameBuffer> ZXBorder<FB> {
     /// Returns new instance of border device
-    pub fn new(machine: ZXMachine) -> Self {
+    pub fn new(machine: ZXMachine, context: FB::Context) -> Self {
         ZXBorder {
             machine,
-            buffer: FB::new(SCREEN_WIDTH, SCREEN_HEIGHT, FrameBufferSource::Border),
+            buffer: FB::new(SCREEN_WIDTH, SCREEN_HEIGHT, FrameBufferSource::Border, context),
             beam_last: BeamInfo::first_pixel(ZXColor::White),
             border_changed: true,
             beam_block: false,

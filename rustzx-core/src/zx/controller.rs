@@ -1,6 +1,6 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
 use crate::{
-    host::Host,
+    host::{Host, HostContext},
     settings::RustzxSettings,
     utils::{events::*, screen::*, split_word, Clocks, InstantFlag},
     z80::Z80Bus,
@@ -51,7 +51,7 @@ pub struct ZXController<H: Host> {
 
 impl<H: Host> ZXController<H> {
     /// Returns new ZXController from settings
-    pub fn new(settings: &RustzxSettings) -> Self {
+    pub fn new(settings: &RustzxSettings, host_context: H::Context) -> Self {
         let (memory, paging, screen_bank);
         match settings.machine {
             ZXMachine::Sinclair48K => {
@@ -70,11 +70,15 @@ impl<H: Host> ZXController<H> {
         } else {
             None
         };
+
+        let screen = ZXScreen::new(settings.machine, host_context.frame_buffer_context());
+        let border = ZXBorder::new(settings.machine, host_context.frame_buffer_context());
+
         let mut out = ZXController {
             machine: settings.machine,
             memory,
-            screen: ZXScreen::new(settings.machine),
-            border: ZXBorder::new(settings.machine),
+            screen,
+            border,
             kempston,
             mixer: ZXMixer::new(settings.beeper_enabled, settings.ay_enabled),
             keyboard: [0xFF; 8],
