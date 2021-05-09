@@ -2,8 +2,11 @@
 use super::{Event, EventDevice};
 use crate::{app::settings::Settings, backends::SDL_CONTEXT};
 use rustzx_core::{
-    utils::EmulationSpeed,
-    zx::{joy::kempston::KempstonKey, keys::*},
+    zx::{
+        joy::kempston::KempstonKey,
+        keys::{self, ZXKey},
+    },
+    EmulationSpeed,
 };
 use sdl2::{event::Event as SdlEvent, keyboard::Scancode, EventPump};
 
@@ -32,53 +35,53 @@ impl EventsSdl {
     fn scancode_to_zxkey(&self, scancode: Option<Scancode>) -> Option<ZXKey> {
         match scancode? {
             // FEFE
-            Scancode::LShift | Scancode::RShift => Some(ZX_KEY_SHIFT),
-            Scancode::Z => Some(ZX_KEY_Z),
-            Scancode::X => Some(ZX_KEY_X),
-            Scancode::C => Some(ZX_KEY_C),
-            Scancode::V => Some(ZX_KEY_V),
+            Scancode::LShift | Scancode::RShift => Some(keys::ZX_KEY_SHIFT),
+            Scancode::Z => Some(keys::ZX_KEY_Z),
+            Scancode::X => Some(keys::ZX_KEY_X),
+            Scancode::C => Some(keys::ZX_KEY_C),
+            Scancode::V => Some(keys::ZX_KEY_V),
             // FDDE
-            Scancode::A => Some(ZX_KEY_A),
-            Scancode::S => Some(ZX_KEY_S),
-            Scancode::D => Some(ZX_KEY_D),
-            Scancode::F => Some(ZX_KEY_F),
-            Scancode::G => Some(ZX_KEY_G),
+            Scancode::A => Some(keys::ZX_KEY_A),
+            Scancode::S => Some(keys::ZX_KEY_S),
+            Scancode::D => Some(keys::ZX_KEY_D),
+            Scancode::F => Some(keys::ZX_KEY_F),
+            Scancode::G => Some(keys::ZX_KEY_G),
             // FBFE
-            Scancode::Q => Some(ZX_KEY_Q),
-            Scancode::W => Some(ZX_KEY_W),
-            Scancode::E => Some(ZX_KEY_E),
-            Scancode::R => Some(ZX_KEY_R),
-            Scancode::T => Some(ZX_KEY_T),
+            Scancode::Q => Some(keys::ZX_KEY_Q),
+            Scancode::W => Some(keys::ZX_KEY_W),
+            Scancode::E => Some(keys::ZX_KEY_E),
+            Scancode::R => Some(keys::ZX_KEY_R),
+            Scancode::T => Some(keys::ZX_KEY_T),
             // F7FE
-            Scancode::Num1 => Some(ZX_KEY_1),
-            Scancode::Num2 => Some(ZX_KEY_2),
-            Scancode::Num3 => Some(ZX_KEY_3),
-            Scancode::Num4 => Some(ZX_KEY_4),
-            Scancode::Num5 => Some(ZX_KEY_5),
+            Scancode::Num1 => Some(keys::ZX_KEY_1),
+            Scancode::Num2 => Some(keys::ZX_KEY_2),
+            Scancode::Num3 => Some(keys::ZX_KEY_3),
+            Scancode::Num4 => Some(keys::ZX_KEY_4),
+            Scancode::Num5 => Some(keys::ZX_KEY_5),
             // EFFE
-            Scancode::Num0 => Some(ZX_KEY_0),
-            Scancode::Num9 => Some(ZX_KEY_9),
-            Scancode::Num8 => Some(ZX_KEY_8),
-            Scancode::Num7 => Some(ZX_KEY_7),
-            Scancode::Num6 => Some(ZX_KEY_6),
+            Scancode::Num0 => Some(keys::ZX_KEY_0),
+            Scancode::Num9 => Some(keys::ZX_KEY_9),
+            Scancode::Num8 => Some(keys::ZX_KEY_8),
+            Scancode::Num7 => Some(keys::ZX_KEY_7),
+            Scancode::Num6 => Some(keys::ZX_KEY_6),
             // DFFE
-            Scancode::P => Some(ZX_KEY_P),
-            Scancode::O => Some(ZX_KEY_O),
-            Scancode::I => Some(ZX_KEY_I),
-            Scancode::U => Some(ZX_KEY_U),
-            Scancode::Y => Some(ZX_KEY_Y),
+            Scancode::P => Some(keys::ZX_KEY_P),
+            Scancode::O => Some(keys::ZX_KEY_O),
+            Scancode::I => Some(keys::ZX_KEY_I),
+            Scancode::U => Some(keys::ZX_KEY_U),
+            Scancode::Y => Some(keys::ZX_KEY_Y),
             // BFFE
-            Scancode::Return => Some(ZX_KEY_ENTER),
-            Scancode::L => Some(ZX_KEY_L),
-            Scancode::K => Some(ZX_KEY_K),
-            Scancode::J => Some(ZX_KEY_J),
-            Scancode::H => Some(ZX_KEY_H),
+            Scancode::Return => Some(keys::ZX_KEY_ENTER),
+            Scancode::L => Some(keys::ZX_KEY_L),
+            Scancode::K => Some(keys::ZX_KEY_K),
+            Scancode::J => Some(keys::ZX_KEY_J),
+            Scancode::H => Some(keys::ZX_KEY_H),
             // 7FFE
-            Scancode::Space => Some(ZX_KEY_SPACE),
-            Scancode::LCtrl | Scancode::RCtrl => Some(ZX_KEY_SYM_SHIFT),
-            Scancode::M => Some(ZX_KEY_M),
-            Scancode::N => Some(ZX_KEY_N),
-            Scancode::B => Some(ZX_KEY_B),
+            Scancode::Space => Some(keys::ZX_KEY_SPACE),
+            Scancode::LCtrl | Scancode::RCtrl => Some(keys::ZX_KEY_SYM_SHIFT),
+            Scancode::M => Some(keys::ZX_KEY_M),
+            Scancode::N => Some(keys::ZX_KEY_N),
+            Scancode::B => Some(keys::ZX_KEY_B),
             _ => None,
         }
     }

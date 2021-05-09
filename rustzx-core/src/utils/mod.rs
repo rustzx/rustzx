@@ -5,6 +5,7 @@ pub mod events;
 pub mod instantflag;
 pub mod screen;
 pub mod smallnum;
+
 pub use self::{clocks::*, events::*, instantflag::*, smallnum::*};
 
 #[derive(Copy, Clone)]

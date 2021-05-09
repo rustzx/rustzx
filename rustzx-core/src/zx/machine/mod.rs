@@ -2,14 +2,16 @@
 
 // Allow outer modules to use ZXSpecs struct, but not construct
 mod specs;
-pub use self::specs::ZXSpecs;
-use self::specs::ZXSpecsBuilder;
+
 use crate::utils::Clocks;
 use lazy_static::lazy_static;
+use specs::ZXSpecsBuilder;
+
+pub(crate) use specs::ZXSpecs;
 
 lazy_static! {
     /// ZX Spectrum 48K Specs
-    pub static ref SPECS_48K: ZXSpecs = {
+    pub(crate) static ref SPECS_48K: ZXSpecs = {
         ZXSpecsBuilder::new()
             .freq_cpu(3_500_000)
             .clocks_first_pixel(14336)

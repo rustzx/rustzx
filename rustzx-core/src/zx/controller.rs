@@ -2,25 +2,29 @@
 use crate::{
     host::{Host, HostContext},
     settings::RustzxSettings,
-    utils::{events::*, screen::*, split_word, Clocks, InstantFlag},
+    utils::{
+        events::{Event, EventKind, EventQueue},
+        screen::bitmap_line_addr,
+        split_word, Clocks, InstantFlag,
+    },
     z80::Z80Bus,
     zx::{
-        constants::*,
-        joy::kempston::*,
+        constants::{ADDR_LD_BREAK, CANVAS_HEIGHT, CLOCKS_PER_COL},
+        joy::kempston::KempstonJoy,
+        keys::ZXKey,
         machine::ZXMachine,
-        memory::{Page, PAGE_SIZE},
-        roms::*,
+        memory::{Page, RamType, RomType, ZXMemory, PAGE_SIZE},
+        roms,
         sound::mixer::ZXMixer,
         tape::{Tap, TapeImpl, ZXTape},
         video::{border::ZXBorder, colors::ZXColor, screen::ZXScreen},
-        RamType, RomType, ZXKey, ZXMemory,
     },
 };
 
 // TODO(#57): Feature gates for resource-heavy features
 
 /// ZX System controller
-pub struct ZXController<H: Host> {
+pub(crate) struct ZXController<H: Host> {
     // parts of ZX Spectum.
     pub machine: ZXMachine,
     pub memory: ZXMemory,
@@ -118,13 +122,13 @@ impl<H: Host> ZXController<H> {
         match self.machine {
             ZXMachine::Sinclair48K => {
                 let page = self.memory.rom_page_data_mut(0);
-                page.copy_from_slice(ROM_48K);
+                page.copy_from_slice(roms::ROM_48K);
             }
             ZXMachine::Sinclair128K => {
                 let page = self.memory.rom_page_data_mut(0);
-                page.copy_from_slice(ROM_128K_0);
+                page.copy_from_slice(roms::ROM_128K_0);
                 let page = self.memory.rom_page_data_mut(1);
-                page.copy_from_slice(ROM_128K_1);
+                page.copy_from_slice(roms::ROM_128K_1);
             }
         }
     }

@@ -3,8 +3,8 @@
 mod events_sdl;
 
 use rustzx_core::{
-    utils::EmulationSpeed,
-    zx::{joy::kempston::KempstonKey, keys::*},
+    zx::{joy::kempston::KempstonKey, keys::ZXKey},
+    EmulationSpeed,
 };
 use std::path::PathBuf;
 

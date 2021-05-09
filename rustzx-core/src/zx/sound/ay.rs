@@ -20,7 +20,7 @@ pub enum ZXAYMode {
 }
 
 /// AY Chip implementation using Ayumi lib
-pub struct ZXAyChip {
+pub(crate) struct ZXAyChip {
     ay: Ayumi,
     current_reg: usize,
     regs: [u8; 16],

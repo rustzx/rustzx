@@ -6,7 +6,7 @@ use frame_buffer::{FrameBufferContext, RgbaFrameBuffer};
 use io::FileAsset;
 use rustzx_core::{
     host::{FrameBuffer, Host, HostContext, RomFormat, RomSet, Snapshot, Tape},
-    zx::ZXMachine,
+    zx::machine::ZXMachine,
 };
 use std::{collections::VecDeque, fs::File, path::Path};
 

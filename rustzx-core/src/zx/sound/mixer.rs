@@ -8,7 +8,7 @@ use crate::zx::sound::{
 use alloc::collections::VecDeque;
 
 /// Main sound mixer.
-pub struct ZXMixer {
+pub(crate) struct ZXMixer {
     /// direct access to beeper device
     pub beeper: ZXBeeper,
     /// direct access to AY device

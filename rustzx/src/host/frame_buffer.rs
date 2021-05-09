@@ -1,7 +1,7 @@
 use crate::app::video::Palette;
 use rustzx_core::{
     host::{FrameBuffer, FrameBufferSource},
-    zx::colors::{ZXBrightness, ZXColor},
+    zx::video::colors::{ZXBrightness, ZXColor},
 };
 
 const RGBA_PIXEL_SIZE: usize = 4;

@@ -1,11 +1,10 @@
 use rustzx_core::{
-    settings::RustzxSettings,
-    utils::EmulationSpeed,
     zx::{
         constants::{SCREEN_HEIGHT, SCREEN_WIDTH},
         machine::ZXMachine,
         sound::ay::ZXAYMode,
     },
+    EmulationSpeed, RustzxSettings,
 };
 
 use clap::{App, AppSettings, Arg};

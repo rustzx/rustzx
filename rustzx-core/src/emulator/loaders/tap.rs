@@ -3,7 +3,7 @@ use crate::{
     emulator::Emulator,
     host::Host,
     utils::{make_word, Clocks},
-    z80::*,
+    z80::{opcodes, RegName16, Z80Bus, FLAG_CARRY, FLAG_ZERO},
     zx::tape::TapeImpl,
 };
 

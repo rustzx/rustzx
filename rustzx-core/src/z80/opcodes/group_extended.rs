@@ -1,7 +1,16 @@
-use super::*;
 use crate::{
-    utils::*,
-    z80::{tables::*, *},
+    utils::{bool_to_u8, Clocks, U1, U2, U3},
+    z80::{
+        opcodes::{
+            execute_cpi_cpd, execute_ini_ind, execute_ldi_ldd, execute_outi_outd, execute_pop_16,
+            BlockDir, Opcode,
+        },
+        tables::{
+            lookup16_r12, lookup8_r12, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE,
+            OVERFLOW_ADD_TABLE, OVERFLOW_SUB_TABLE, SZF3F5_TABLE, SZPF3F5_TABLE,
+        },
+        Flag, IntMode, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_PV, FLAG_SUB, FLAG_ZERO, Z80,
+    },
 };
 
 /// Extended instruction group (ED-prefixed)

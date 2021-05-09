@@ -1,9 +1,14 @@
 //! Contains ZXSpectrum border implementation
-use super::colors::*;
+use super::colors::{ZXBrightness, ZXColor};
 use crate::{
     host::{FrameBuffer, FrameBufferSource},
     utils::Clocks,
-    zx::{constants::*, machine::*},
+    zx::{
+        constants::{
+            BORDER_COLS, BORDER_ROWS, CLOCKS_PER_COL, PIXELS_PER_CLOCK, SCREEN_HEIGHT, SCREEN_WIDTH,
+        },
+        machine::ZXMachine,
+    },
 };
 
 /// Internal struct, which contains information about beam position and color

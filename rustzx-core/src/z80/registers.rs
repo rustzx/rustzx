@@ -1,5 +1,8 @@
 //! Module which contains Z80 registers implementation
-use crate::{utils::*, z80::Prefix};
+use crate::{
+    utils::{make_word, split_word, word_displacement, U2, U3},
+    z80::Prefix,
+};
 use core::fmt;
 
 // Flag register bits

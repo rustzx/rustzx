@@ -1,7 +1,6 @@
-use super::*;
 use crate::{
-    utils::*,
-    z80::{tables::*, *},
+    utils::{bool_to_u8, Clocks, U3},
+    z80::{opcodes::BitOperand8, tables::SZPF3F5_TABLE, Flag, Z80Bus, FLAG_CARRY, Z80},
 };
 
 /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)

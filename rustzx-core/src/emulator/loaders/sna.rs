@@ -3,7 +3,7 @@ use crate::{
     host::{Host, LoadableAsset},
     utils::{make_word, Clocks},
     z80::{opcodes::execute_pop_16, RegName16},
-    zx::colors::ZXColor,
+    zx::video::colors::ZXColor,
     Result,
 };
 use alloc::vec::Vec;

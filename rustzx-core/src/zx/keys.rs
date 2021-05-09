@@ -7,7 +7,7 @@ pub struct ZXKey {
 }
 
 impl ZXKey {
-    pub fn row_id(&self) -> Option<usize> {
+    pub(crate) fn row_id(&self) -> Option<usize> {
         match self.half_port {
             0xFE => Some(0),
             0xFD => Some(1),

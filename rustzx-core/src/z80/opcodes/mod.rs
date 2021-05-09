@@ -9,7 +9,7 @@ mod internal_rot;
 mod internal_stack;
 mod types;
 
-// re-export all functions
+// re-export all public functions
 pub use self::{
     group_bits::*, group_extended::*, group_nonprefixed::*, internal_alu::*, internal_block::*,
     internal_rot::*, internal_stack::*, types::*,
