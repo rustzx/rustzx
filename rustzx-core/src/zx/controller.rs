@@ -10,9 +10,9 @@ use crate::{
         machine::ZXMachine,
         memory::{Page, PAGE_SIZE},
         roms::*,
-        video::{border::ZXBorder, screen::ZXScreen, colors::ZXColor},
         sound::mixer::ZXMixer,
         tape::{Tap, TapeImpl, ZXTape},
+        video::{border::ZXBorder, colors::ZXColor, screen::ZXScreen},
         RamType, RomType, ZXKey, ZXMemory,
     },
 };
@@ -131,22 +131,10 @@ impl<H: Host> ZXController<H> {
 
     /// Changes key state in controller
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
-        // TODO(#49): Move row detection to ZXKey type
-        let rownum = match key.half_port {
-            0xFE => Some(0),
-            0xFD => Some(1),
-            0xFB => Some(2),
-            0xF7 => Some(3),
-            0xEF => Some(4),
-            0xDF => Some(5),
-            0xBF => Some(6),
-            0x7F => Some(7),
-            _ => None,
-        };
-        if let Some(rownum) = rownum {
-            self.keyboard[rownum] &= !key.mask;
+        if let Some(row_id) = key.row_id() {
+            self.keyboard[row_id] &= !key.mask;
             if !pressed {
-                self.keyboard[rownum] |= key.mask;
+                self.keyboard[row_id] |= key.mask;
             }
         }
     }
