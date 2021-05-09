@@ -25,7 +25,7 @@ pub trait RomSet {
     fn next_asset(&mut self) -> Option<Self::Asset>;
 }
 
-pub trait HostContext<H: Host + ?Sized> : Sized {
+pub trait HostContext<H: Host + ?Sized>: Sized {
     fn frame_buffer_context(&self) -> <H::FrameBuffer as FrameBuffer>::Context;
 }
 

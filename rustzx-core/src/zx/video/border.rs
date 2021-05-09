@@ -49,7 +49,12 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
     pub fn new(machine: ZXMachine, context: FB::Context) -> Self {
         ZXBorder {
             machine,
-            buffer: FB::new(SCREEN_WIDTH, SCREEN_HEIGHT, FrameBufferSource::Border, context),
+            buffer: FB::new(
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                FrameBufferSource::Border,
+                context,
+            ),
             beam_last: BeamInfo::first_pixel(ZXColor::White),
             border_changed: true,
             beam_block: false,

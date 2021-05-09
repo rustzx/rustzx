@@ -4,7 +4,7 @@
 
 use crate::{
     app::{events::*, settings::Settings, sound::*, video::*},
-    host::{self, DetectedFileKind, AppHost, AppHostContext},
+    host::{self, AppHost, AppHostContext, DetectedFileKind},
 };
 use anyhow::anyhow;
 use rustzx_core::{emulator::*, zx::constants::*};
