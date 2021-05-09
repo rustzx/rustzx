@@ -19,6 +19,7 @@ use rustzx_core::{
     Emulator, Stopwatch,
 };
 use std::{
+    path::Path,
     thread,
     time::{Duration, Instant},
 };
@@ -79,7 +80,7 @@ pub struct RustzxApp {
 impl RustzxApp {
     /// Starts application itself
     pub fn from_config(settings: Settings) -> anyhow::Result<RustzxApp> {
-        let snd: Option<Box<dyn SoundDevice>> = if settings.sound_enabled {
+        let snd: Option<Box<dyn SoundDevice>> = if !settings.disable_sound {
             Some(Box::new(SoundSdl::new(&settings)))
         } else {
             None
@@ -98,18 +99,18 @@ impl RustzxApp {
                 .load_rom(host::load_rom(rom, settings.machine)?)
                 .map_err(|e| anyhow!("Emulator failed to load rom: {}", e))?;
         }
-        if let Some(snapshot) = settings.sna.as_ref() {
+        if let Some(snapshot) = settings.snap.as_ref() {
             emulator
                 .load_snapshot(host::load_snapshot(snapshot)?)
                 .map_err(|e| anyhow!("Emulator failed to load snapshot: {}", e))?;
         }
-        if let Some(tape) = settings.tap.as_ref() {
+        if let Some(tape) = settings.tape.as_ref() {
             emulator
                 .load_tape(host::load_tape(tape)?)
                 .map_err(|e| anyhow!("Emulator failed to load tape: {}", e))?;
         }
 
-        let app = RustzxApp {
+        let mut app = RustzxApp {
             emulator,
             snd,
             video,
@@ -118,6 +119,10 @@ impl RustzxApp {
             tex_canvas,
             scale,
         };
+
+        if let Some(file) = settings.file_autodetect.as_ref() {
+            app.load_file_autodetect(file)?;
+        }
 
         Ok(app)
     }
@@ -141,8 +146,6 @@ impl RustzxApp {
                     }
                 }
             }
-
-            // TODO(#63): Direct write to backend texture from `crate::host::RgbaFrameBuffer`
 
             self.video
                 .update_texture(self.tex_border, self.emulator.border_buffer().rgba_data());
@@ -193,22 +196,7 @@ impl RustzxApp {
                     }
                     Event::InsertTape => self.emulator.play_tape(),
                     Event::StopTape => self.emulator.stop_tape(),
-                    Event::OpenFile(path) => match host::detect_file_type(&path)? {
-                        DetectedFileKind::Snapshot => {
-                            self.emulator
-                                .load_snapshot(host::load_snapshot(&path)?)
-                                .map_err(|e| {
-                                    anyhow!("Emulator failed to drag-n-drop load snapshot: {}", e)
-                                })?;
-                        }
-                        DetectedFileKind::Tape => {
-                            self.emulator
-                                .load_tape(host::load_tape(&path)?)
-                                .map_err(|e| {
-                                    anyhow!("Emulator failed to drag-n-drop load tape: {}", e)
-                                })?;
-                        }
-                    },
+                    Event::OpenFile(path) => self.load_file_autodetect(&path)?,
                 }
             }
             // how long emulation iteration was
@@ -227,6 +215,24 @@ impl RustzxApp {
                     cpu_dt.as_millis(),
                     frame_dt.as_millis()
                 ));
+            }
+        }
+        Ok(())
+    }
+
+    fn load_file_autodetect(&mut self, path: &Path) -> anyhow::Result<()> {
+        match host::detect_file_type(&path)? {
+            DetectedFileKind::Snapshot => {
+                self.emulator
+                    .load_snapshot(host::load_snapshot(&path)?)
+                    .map_err(|e| {
+                        anyhow!("Emulator failed to load auto-detected snapshot: {}", e)
+                    })?;
+            }
+            DetectedFileKind::Tape => {
+                self.emulator
+                    .load_tape(host::load_tape(&path)?)
+                    .map_err(|e| anyhow!("Emulator failed to load auto-detected tape: {}", e))?;
             }
         }
         Ok(())

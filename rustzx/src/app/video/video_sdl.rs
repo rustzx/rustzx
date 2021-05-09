@@ -1,5 +1,6 @@
 use super::{Rect, TextureInfo, VideoDevice};
 use crate::{app::settings::Settings, backends::SDL_CONTEXT};
+use rustzx_core::zx::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use sdl2::{
     pixels::PixelFormatEnum as PixelFormat,
     rect::Rect as SdlRect,
@@ -26,7 +27,10 @@ impl VideoSdl {
         });
         if let Some(video) = video_subsystem {
             // construct window and renderer form it
-            let (width, height) = settings.screen_size;
+            let (width, height) = (
+                SCREEN_WIDTH * settings.scale,
+                SCREEN_HEIGHT * settings.scale,
+            );
             let window = video
                 .window(
                     &format!("RustZX v{}", env!("CARGO_PKG_VERSION")),
