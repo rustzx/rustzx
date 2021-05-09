@@ -1,8 +1,10 @@
 //! Module implemets zx spectrum audio devices mixer
-use crate::zx::sound::{
-    beeper::ZXBeeper,
-    sample::{SampleGenerator, SoundSample},
-    samples_from_time, SAMPLES,
+use crate::zx::{
+    constants::FPS,
+    sound::{
+        beeper::ZXBeeper,
+        sample::{SampleGenerator, SoundSample},
+    },
 };
 
 #[cfg(feature = "ay")]
@@ -27,6 +29,7 @@ pub(crate) struct ZXMixer {
     #[cfg(feature = "ay")]
     use_ay: bool,
     use_beeper: bool,
+    sample_rate: usize,
 }
 
 impl ZXMixer {
@@ -34,12 +37,16 @@ impl ZXMixer {
     /// # Arguments
     /// - `use_beeper` - process beeper or not
     /// - `use_ay` - process ay chip or not
-    pub fn new(use_beeper: bool, #[cfg(feature = "ay")] use_ay: bool) -> ZXMixer {
+    pub fn new(
+        use_beeper: bool,
+        #[cfg(feature = "ay")] use_ay: bool,
+        sample_rate: usize,
+    ) -> ZXMixer {
         ZXMixer {
             beeper: ZXBeeper::default(),
             #[cfg(feature = "ay")]
-            ay: ZXAyChip::new(ZXAYMode::Mono),
-            ring_buffer: VecDeque::with_capacity(SAMPLES),
+            ay: ZXAyChip::new(sample_rate, ZXAYMode::Mono),
+            ring_buffer: VecDeque::with_capacity(sample_rate),
             last_pos: 0,
             last_sample: SoundSample::new(0.0, 0.0),
             master_volume: 0.5,
@@ -49,6 +56,7 @@ impl ZXMixer {
             #[cfg(feature = "ay")]
             use_ay,
             use_beeper,
+            sample_rate,
         }
     }
 
@@ -62,11 +70,11 @@ impl ZXMixer {
     /// Updates internal buffer of mixer and fills it with new samples
     pub fn process(&mut self, current_time: f64) {
         // buffer overflow
-        if self.ring_buffer.len() >= SAMPLES {
+        if self.ring_buffer.len() >= self.samples_per_frame() {
             return;
         }
         // so at this moment we need to get new samples from devices
-        let curr_pos = samples_from_time(current_time);
+        let curr_pos = self.sample_count_for_frame_fraction(current_time);
         // if we on same pos or frame passed then no new samples
         if curr_pos <= self.last_pos {
             return;
@@ -82,8 +90,8 @@ impl ZXMixer {
 
     /// fills buffer to eng on new frame
     pub fn new_frame(&mut self) {
-        if self.ring_buffer.len() < SAMPLES {
-            for _ in self.ring_buffer.len()..SAMPLES {
+        if self.ring_buffer.len() < self.samples_per_frame() {
+            for _ in self.ring_buffer.len()..self.samples_per_frame() {
                 self.ring_buffer.push_back(self.last_sample);
             }
         }
@@ -108,5 +116,16 @@ impl ZXMixer {
         let master = master_float.mul_eq(self.master_volume).into_f32();
         self.last_sample = master;
         master
+    }
+
+    fn samples_per_frame(&self) -> usize {
+        self.sample_rate / FPS
+    }
+
+    fn sample_count_for_frame_fraction(&self, fraction: f64) -> usize {
+        if fraction >= 1f64 {
+            return self.samples_per_frame();
+        }
+        (self.samples_per_frame() as f64 * fraction) as usize
     }
 }

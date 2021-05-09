@@ -1,9 +1,6 @@
 use crate::{
     utils::make_word,
-    zx::sound::{
-        sample::{SampleGenerator, SoundSample},
-        SAMPLE_RATE,
-    },
+    zx::sound::sample::{SampleGenerator, SoundSample},
 };
 use ayumi::{Ayumi, ChipType, ToneChannel};
 
@@ -28,10 +25,10 @@ pub(crate) struct ZXAyChip {
 
 impl ZXAyChip {
     /// Constructs new AY Chip
-    pub fn new(mode: ZXAYMode) -> ZXAyChip {
+    pub fn new(sample_rate: usize, mode: ZXAYMode) -> ZXAyChip {
         // configure ayumi
         let mut out = ZXAyChip {
-            ay: Ayumi::new(ChipType::AY, AY_FREQ, SAMPLE_RATE as i32),
+            ay: Ayumi::new(ChipType::AY, AY_FREQ, sample_rate as i32),
             current_reg: 0,
             regs: [0; 16],
         };

@@ -10,6 +10,8 @@ use rustzx_core::{
 use clap::{App, AppSettings, Arg};
 use std::path::{Path, PathBuf};
 
+// TODO(#64): Port settings to Clap 3.x
+
 /// Structure to handle all emulator runtime settings
 pub struct Settings {
     pub machine: ZXMachine,
@@ -27,6 +29,7 @@ pub struct Settings {
     pub rom: Option<PathBuf>,
     pub tap: Option<PathBuf>,
     pub sna: Option<PathBuf>,
+    pub sound_sample_rate: usize,
 }
 
 impl Settings {
@@ -48,6 +51,7 @@ impl Settings {
             rom: None,
             tap: None,
             sna: None,
+            sound_sample_rate: 44100,
         }
     }
 
@@ -154,6 +158,14 @@ impl Settings {
                          power of two.",
                     ),
             )
+            .arg(
+                Arg::new("SOUND_SAMPLE_RATE")
+                    .long("sound-sample-rate")
+                    .value_name("SOUND_SAMPLE_RATE")
+                    .about(
+                        "Sets sample rate for sound playback. Defaults to 44100",
+                    ),
+            )
             .get_matches();
         // machine type
         if cmd.is_present("128K") {
@@ -230,6 +242,9 @@ impl Settings {
                 out.latency(latency);
             }
         };
+        if let Ok(sample_rate) = cmd.value_of_t("SOUND_SAMPLE_RATE") {
+            out.sound_sample_rate(sample_rate);
+        }
         out
     }
 
@@ -328,6 +343,11 @@ impl Settings {
         self
     }
 
+    pub fn sound_sample_rate(&mut self, value: usize) -> &mut Self {
+        self.sound_sample_rate = value;
+        self
+    }
+
     pub fn to_rustzx_settings(&self) -> RustzxSettings {
         RustzxSettings {
             machine: self.machine,
@@ -340,6 +360,7 @@ impl Settings {
             sound_enabled: self.sound_enabled,
             sound_volume: self.volume as u8,
             load_default_rom: self.rom.is_none(),
+            sound_sample_rate: self.sound_sample_rate,
         }
     }
 }

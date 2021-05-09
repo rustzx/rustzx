@@ -1,9 +1,10 @@
 //! Real Audio SDL backend
 use super::{SoundDevice, ZXSample};
 use crate::{app::settings::Settings, backends::SDL_CONTEXT};
-use rustzx_core::zx::sound::{CHANNELS, SAMPLE_RATE};
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+
+const CHANNEL_COUNT: usize = 2;
 
 /// Struct which used in SDL audio callback
 struct SdlCallback {
@@ -15,7 +16,7 @@ impl AudioCallback for SdlCallback {
 
     /// main callback function
     fn callback(&mut self, out: &mut [f32]) {
-        for chunk in out.chunks_mut(CHANNELS) {
+        for chunk in out.chunks_mut(CHANNEL_COUNT) {
             // recieve samples from channel
             if let Ok(sample) = self.samples.recv() {
                 chunk[0] = sample.left;
@@ -42,8 +43,8 @@ impl SoundSdl {
         if let Some(audio) = audio_subsystem {
             // prepare specs
             let desired_spec = AudioSpecDesired {
-                freq: Some(SAMPLE_RATE as i32),
-                channels: Some(CHANNELS as u8),
+                freq: Some(settings.sound_sample_rate as i32),
+                channels: Some(CHANNEL_COUNT as u8),
                 samples: Some(settings.latency as u16),
             };
             let (tx, rx) = sync_channel(settings.latency as usize);

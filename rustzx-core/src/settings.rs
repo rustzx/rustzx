@@ -18,6 +18,8 @@ pub struct RustzxSettings {
     pub sound_enabled: bool,
     #[cfg(feature = "sound")]
     pub sound_volume: u8,
+    #[cfg(feature = "sound")]
+    pub sound_sample_rate: usize,
     #[cfg(feature = "embedded-roms")]
     pub load_default_rom: bool,
 }

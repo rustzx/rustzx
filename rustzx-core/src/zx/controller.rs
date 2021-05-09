@@ -124,6 +124,7 @@ impl<H: Host> ZXController<H> {
             settings.beeper_enabled,
             #[cfg(feature = "ay")]
             settings.ay_enabled,
+            settings.sound_sample_rate,
         );
         #[cfg(feature = "ay")]
         mixer.ay.mode(settings.ay_mode);
