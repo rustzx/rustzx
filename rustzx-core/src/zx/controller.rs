@@ -10,7 +10,7 @@ use crate::{
         machine::ZXMachine,
         memory::{Page, PAGE_SIZE},
         roms::*,
-        screen::{border::ZXBorder, canvas::ZXCanvas, colors::ZXColor},
+        video::{border::ZXBorder, screen::ZXScreen, colors::ZXColor},
         sound::mixer::ZXMixer,
         tape::{Tap, TapeImpl, ZXTape},
         RamType, RomType, ZXKey, ZXMemory,
@@ -24,7 +24,7 @@ pub struct ZXController<H: Host> {
     // parts of ZX Spectum.
     pub machine: ZXMachine,
     pub memory: ZXMemory,
-    pub canvas: ZXCanvas<H::FrameBuffer>,
+    pub screen: ZXScreen<H::FrameBuffer>,
     pub tape: ZXTape,
     pub border: ZXBorder<H::FrameBuffer>,
     pub kempston: Option<KempstonJoy>,
@@ -73,7 +73,7 @@ impl<H: Host> ZXController<H> {
         let mut out = ZXController {
             machine: settings.machine,
             memory,
-            canvas: ZXCanvas::new(settings.machine),
+            screen: ZXScreen::new(settings.machine),
             border: ZXBorder::new(settings.machine),
             kempston,
             mixer: ZXMixer::new(settings.beeper_enabled, settings.ay_enabled),
@@ -217,7 +217,7 @@ impl<H: Host> ZXController<H> {
     /// Starts a new frame
     fn new_frame(&mut self) {
         self.frame_clocks -= self.machine.specs().clocks_frame;
-        self.canvas.new_frame();
+        self.screen.new_frame();
         self.border.new_frame();
         self.mixer.new_frame();
     }
@@ -260,7 +260,7 @@ impl<H: Host> ZXController<H> {
         // third block is not pageable
         // second block is screen buffer, not pageable. but we need to change active buffer
         let new_screen_bank = if val & 0x08 == 0 { 5 } else { 7 };
-        self.canvas.switch_bank(new_screen_bank as usize);
+        self.screen.switch_bank(new_screen_bank as usize);
         self.screen_bank = new_screen_bank;
         // remap ROM
         self.memory.remap(0, Page::Rom((val >> 4) & 0x01));
@@ -303,7 +303,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         self.memory.write(addr, data);
         // if ram then compare bank to screen bank
         if let Page::Ram(bank) = self.memory.get_page(addr) {
-            self.canvas
+            self.screen
                 .update(addr % PAGE_SIZE as u16, bank as usize, data);
         }
     }
@@ -317,7 +317,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         let pos = self.frame_pos();
         self.mixer.beeper.change_bit(self.mic | self.ear);
         self.mixer.process(pos);
-        self.canvas.process_clocks(self.frame_clocks);
+        self.screen.process_clocks(self.frame_clocks);
         if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
             self.new_frame();
             self.passed_frames += 1;

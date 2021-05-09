@@ -126,7 +126,7 @@ impl<H: Host> Emulator<H> {
     }
 
     pub fn screen_buffer(&self) -> &H::FrameBuffer {
-        self.controller.canvas.frame_buffer()
+        self.controller.screen.frame_buffer()
     }
 
     pub fn border_buffer(&self) -> &H::FrameBuffer {

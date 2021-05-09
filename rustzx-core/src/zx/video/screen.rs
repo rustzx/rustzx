@@ -3,7 +3,7 @@
 use crate::{
     host::{FrameBuffer, FrameBufferSource},
     utils::{screen::*, *},
-    zx::{constants::*, machine::ZXMachine, screen::colors::*},
+    zx::{constants::*, machine::ZXMachine, video::colors::*},
 };
 use alloc::boxed::Box;
 
@@ -74,7 +74,7 @@ struct ScreenBank {
 }
 
 /// Represents ZXSpectrum emulated mid part of screen (canvas)
-pub struct ZXCanvas<FB: FrameBuffer> {
+pub struct ZXScreen<FB: FrameBuffer> {
     machine: ZXMachine,
     last_blocks: BlocksCount,
     flash: bool,
@@ -86,10 +86,10 @@ pub struct ZXCanvas<FB: FrameBuffer> {
     next_bank: usize,
 }
 
-impl<FB: FrameBuffer> ZXCanvas<FB> {
+impl<FB: FrameBuffer> ZXScreen<FB> {
     /// Constructs new canvas of `machine`
     pub fn new(machine: ZXMachine) -> Self {
-        ZXCanvas {
+        Self {
             machine,
             last_blocks: BlocksCount::new(0, 0),
             flash: false,

@@ -1,4 +1,4 @@
-use rustzx_core::zx::screen::colors::{ZXBrightness, ZXColor};
+use rustzx_core::zx::video::colors::{ZXBrightness, ZXColor};
 
 type ColorRgba = [u8; 4];
 
