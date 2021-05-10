@@ -1,60 +1,54 @@
-# rustzx
-![logo](assets/logo_small.png)
-
-ZX Spectrum emulator which I writing in rust.
-I develop this project just for fun and for learning the basics of computer
-architecture.
-Licensed under MIT License.
-
-**Watch [this](https://youtu.be/Xho3GWFyP2I) video showcase!**
+RustZX
+===============================
 
 [![RustZX CI](https://github.com/pacmancoder/rustzx/actions/workflows/ci.yml/badge.svg)](https://github.com/pacmancoder/rustzx/actions/workflows/ci.yml)
+
+![logo](assets/logo_small.png)
+
+ZX Spectrum emulator written in Rust
+- Watch [this](https://youtu.be/Xho3GWFyP2I) video showcase (`v0.9.x`)
+- Read [CHANGELOG.md](CHANGELOG.md) for info on the latest version (`v0.11.x`) changes
+
 ## Features
 - Written in pure rust
 - Cross-platform
-- Documented source
 - Full ZX Spectrum 48K and 128K emulation
 - Perfect emulation of Z80 core
 - Highly precise AY chip emulation with Ayumi library
 - Beeper sound emulation
-- Can handle tap, sna files
+- Supported formats: TAP, SNA
 - Fast loading of tap files with standard loader
-- Emulates border
-- Kempston joystick emulation
-- Correct contentons
+- Precise timings
+- Full border emulation
+- Joystick emulation: Kempston
+- Separate `no_std` core library which can be used to port emulator
+  almost anywhere.
+    - Global allocator is still needed, but all dynamic
+       allocations were minimized
+    - All resource-heavy features are configurable via cargo `features`
 
-## Download [v0.9.2]
-Packages are available in github releases.
-**Note:** On linux platforms sdl2 library must be installed
-
-## Compiling
-Before compiling make shure that you have C compiller and CMate to
+## Compiling from the latest master
+1. Sure that you have C compiller and CMake to
 build bundled `sdl2`
-
-Then just install it with cargo
-
+2. Install it with cargo
 ```bash
-cargo install
+cargo install --path ./rustzx
 ```
-For advanced info use `--help` flag
 
 ## How to use
-Here some examples of usage:
 ```bash
-rustzx --help
-rustzx --fastload --tap test.tap
-rustzx -f --128k --AY abc --tap test128.tap
-rustzx --rom tester.rom --scale 3 --volume 50
+rustzx --help # Show help
+rustzx test.tap # Autodetect file type and run in 48K mode
+rustzx --ay test.tap # Run in 48K mode with AY sound chip
+rustzx -m128 --tape test128.tap # Run in 128K mode with tape
+rustzx --rom tester.rom -s3 # Run with custom rom and 3x screen scaling
+rustzx --nofastload test.tap # Run without fast tape loading
 ```
 For loading tape in 48K mode, press `j` then `Ctrl+p` twice, as on real Spectrum.
-You must see `LOAD ""` on emulator's screen. And then press `Enter`.
-If you `--fastload` option before launching, game will be launched, in other
-case press `Insert` to insert tape. `Delete` can be used for ejecting tape from
-tape reader. `--128k` flag launches emulator in 128K mode. For loading tape just
-press `Enter`.
+You should see `LOAD ""` on emulator's screen, then press `Enter` (in 128K mode just press enter).
+In `--nofastload` mode, press `Insert` to play the tape and `Delete` to stop
 
-If you have some audio troubles - use `--latency` flag with bigger samples
-count.
+If you have choppy audio, try `--sound-latency` option with bigger values.
 
 Use keys `F3 - F5` to set speed of emulation - this can be usefull when skipping some boring stuff.
 Use `F6` to display FPS in window title.
@@ -64,13 +58,11 @@ Use `F6` to display FPS in window title.
 ![](screenshots/q.png)
 ![](screenshots/arkanoid.png)
 ![](screenshots/sentinel.png)
-## Log
-Watch [LOG](LOG.md) for details and github issues
-for current plans and help requests.
+
 ## References
-Of course, I used many resources to find out, how to build my first
-emulator in life. So there is a list of useful references, from where I dig most
-information about Z80, ULA and other ZX Spectrum hardware parts:
+Many resources were used to find out, how to buildthis emulator.
+Huge thanks to the following resources which helped to figure out a lot of
+defails about ZX Spectrum.
 - Of course [z80.info](http://www.z80.info/)
     - [Decoding Z80 opcodes](http://www.z80.info/decoding.htm)
     - [Opcodes list](http://www.z80.info/z80code.txt)
@@ -93,6 +85,8 @@ information about Z80, ULA and other ZX Spectrum hardware parts:
 - [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
 
 ## ROM's
-Emulator contains ROM's, created by by Sinclair Research Ltd (now owned by Amstrad plc),
-Amstrad was given permissions for distributing their ROM's with emulators, so they are
-included in source of emulator (mod zx::roms). More about this read [here](https://groups.google.com/forum/?hl=en#!msg/comp.sys.amstrad.8bit/HtpBU2Bzv_U/HhNDSU3MksAJ)
+Emulator contains ROMs, created by by Sinclair Research Ltd (now owned by Amstrad plc),
+Amstrad has [given](https://groups.google.com/forum/?hl=en#!msg/comp.sys.amstrad.8bit/HtpBU2Bzv_U/HhNDSU3MksAJ)
+permission to distribute their ROM's in conjunction with emulators.
+In RustZX these ROMs included in source of the core emulator library `mod rustzx_core::zx::roms`. Embedded roms
+can be opted-out from the core library by disabling feature `embedded-roms`.

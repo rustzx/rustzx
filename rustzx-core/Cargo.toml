@@ -2,7 +2,6 @@
 name = "rustzx-core"
 version = "0.11.0"
 authors = ["Vladyslav Nikonov <mail@pacmancoder.xyz>"]
-publish = false
 description = "ZX Spectum emulator core library"
 repository = "https://github.com/pacmancoder/rustzx"
 keywords = ["emulator", "game", "z80", "no_std"]
