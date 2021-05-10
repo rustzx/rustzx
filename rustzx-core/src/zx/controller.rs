@@ -154,11 +154,10 @@ impl<H: Host> ZXController<H> {
 
     /// Changes key state in controller
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
-        if let Some(row_id) = key.row_id() {
-            self.keyboard[row_id] &= !key.mask;
-            if !pressed {
-                self.keyboard[row_id] |= key.mask;
-            }
+        let row_id = key.row_id();
+        self.keyboard[row_id] &= !key.mask();
+        if !pressed {
+            self.keyboard[row_id] |= key.mask();
         }
     }
 
