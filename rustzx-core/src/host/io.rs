@@ -36,14 +36,4 @@ pub trait LoadableAsset {
 
         Ok(())
     }
-
-    fn read_to_end(&mut self, buf: &mut alloc::vec::Vec<u8>) -> Result<()> {
-        let mut buffer = [0u8; 1024];
-        let mut read_bytes = self.read(&mut buffer)?;
-        while read_bytes != 0 {
-            buf.extend_from_slice(&buffer[0..read_bytes]);
-            read_bytes = self.read(&mut buffer)?;
-        }
-        Ok(())
-    }
 }

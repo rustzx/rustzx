@@ -306,6 +306,16 @@ impl<H: Host> ZXController<H> {
 
     #[cfg(not(all(feature = "sound", feature = "ay")))]
     fn select_ay_reg(&mut self, _: u8) {}
+
+    pub(crate) fn set_border_color(
+        &mut self,
+        #[allow(unused_variables)] clocks: Clocks,
+        color: ZXColor,
+    ) {
+        self.border_color = color;
+        #[cfg(feature = "precise-border")]
+        self.border.set_border(clocks, color);
+    }
 }
 
 impl<H: Host> Z80Bus for ZXController<H> {
@@ -429,9 +439,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         } else if port & 0xC002 == 0x8000 {
             self.write_ay_port(data);
         } else if port & 0x0001 == 0 {
-            self.border_color = ZXColor::from_bits(data & 0x07);
-            #[cfg(feature = "precise-border")]
-            self.border.set_border(self.frame_clocks, self.border_color);
+            self.set_border_color(self.frame_clocks, ZXColor::from_bits(data & 0x07));
             self.mic = data & 0x08 != 0;
             self.ear = data & 0x10 != 0;
             #[cfg(feature = "sound")]
