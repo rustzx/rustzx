@@ -1,16 +1,26 @@
 //! Contains Tape handling type and functions
 
+mod empty;
 mod tap;
+
 // reexport Tap Tape player
+pub use self::empty::Empty;
 pub use self::tap::Tap;
 
-use crate::utils::Clocks;
+use crate::{host::LoadableAsset, utils::Clocks};
 
 use enum_dispatch::enum_dispatch;
 
 #[enum_dispatch(TapeImpl)]
-pub enum ZXTape {
-    Tap(Tap),
+pub enum ZXTape<A: LoadableAsset> {
+    Tap(Tap<A>),
+    Empty(Empty),
+}
+
+impl<A: LoadableAsset> Default for ZXTape<A> {
+    fn default() -> Self {
+        Self::Empty(Empty)
+    }
 }
 
 #[enum_dispatch]

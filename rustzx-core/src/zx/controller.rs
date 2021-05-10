@@ -11,7 +11,7 @@ use crate::{
         keys::ZXKey,
         machine::ZXMachine,
         memory::{Page, RamType, RomType, ZXMemory, PAGE_SIZE},
-        tape::{Tap, TapeImpl, ZXTape},
+        tape::{TapeImpl, ZXTape},
         video::{colors::ZXColor, screen::ZXScreen},
     },
 };
@@ -29,7 +29,7 @@ pub(crate) struct ZXController<H: Host> {
     pub machine: ZXMachine,
     pub memory: ZXMemory,
     pub screen: ZXScreen<H::FrameBuffer>,
-    pub tape: ZXTape,
+    pub tape: ZXTape<H::TapeAsset>,
     #[cfg(feature = "precise-border")]
     pub border: ZXBorder<H::FrameBuffer>,
     pub kempston: Option<KempstonJoy>,
@@ -93,7 +93,7 @@ impl<H: Host> ZXController<H> {
             border_color: ZXColor::Black,
             frame_clocks: Clocks(0),
             passed_frames: 0,
-            tape: Tap::default().into(),
+            tape: Default::default(),
             events: Default::default(),
             mic: false,
             ear: false,
