@@ -1,7 +1,3 @@
-use crate::zx::constants::BORDER_COLS;
-use alloc::{vec, vec::Vec};
-
-/// Immutable type (Builder is not public in outer module)
 pub struct ZXSpecs {
     // frequencies
     pub freq_cpu: usize,
@@ -13,7 +9,6 @@ pub struct ZXSpecs {
     pub clocks_right_border: usize,
     pub clocks_retrace: usize,
     pub clocks_line: usize,
-    pub clocks_line_base: Vec<usize>,
     // some ula clocks
     pub clocks_ula_read_shift: usize,
     pub clocks_ula_read_origin: usize,
@@ -54,7 +49,6 @@ impl ZXSpecsBuilder {
                 clocks_right_border: 0,
                 clocks_retrace: 0,
                 clocks_line: 0,
-                clocks_line_base: vec![],
                 // some ula clocks
                 clocks_ula_read_shift: 0,
                 clocks_ula_read_origin: 0,
@@ -83,19 +77,6 @@ impl ZXSpecsBuilder {
     pub fn build(mut self) -> ZXSpecs {
         self.specs.clocks_frame =
             (self.specs.lines_all + self.specs.lines_vsync) * self.specs.clocks_line;
-        // 4*4 is 4 border columns * 4 clocks per column
-        self.specs.clocks_line_base.push(
-            self.specs.clocks_first_pixel
-                - self.specs.lines_top_border * self.specs.clocks_line
-                - BORDER_COLS * 4,
-        );
-        // + 1 because TStates in calculations may be > frame length (CHECK)
-        let lines_count = self.specs.lines_all + 1;
-        for _ in 1..lines_count {
-            let last = *self.specs.clocks_line_base.last().unwrap();
-            let line_clocks = self.specs.clocks_line;
-            self.specs.clocks_line_base.push(last + line_clocks);
-        }
         self.specs.clocks_ula_read_origin =
             self.specs.clocks_first_pixel + self.specs.clocks_ula_read_shift;
         self.specs.clocks_ula_contention_origin =
