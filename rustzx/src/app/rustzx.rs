@@ -136,7 +136,10 @@ impl RustzxApp {
             // absolute start time
             let frame_start = Instant::now();
             // Emulate all requested frames
-            let cpu_dt = self.emulator.emulate_frames(MAX_FRAME_TIME, &mut stopwatch);
+            let cpu_dt = self
+                .emulator
+                .emulate_frames(MAX_FRAME_TIME, &mut stopwatch)
+                .map_err(|e| anyhow!("Emulation step failed: {}", e))?;
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime

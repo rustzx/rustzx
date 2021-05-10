@@ -1,5 +1,6 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
 use crate::{
+    error::Error,
     host::{Host, HostContext},
     settings::RustzxSettings,
     utils::{screen::bitmap_line_addr, split_word, Clocks},
@@ -49,6 +50,10 @@ pub(crate) struct ZXController<H: Host> {
     ear: bool,
     paging_enabled: bool,
     screen_bank: u8,
+    // Z80 module expected controller implementation without errors,
+    // so we need to store the internal errors manually. For sake of simplicity,
+    // Only last error is saved
+    last_emulation_error: Option<Error>,
 }
 
 impl<H: Host> ZXController<H> {
@@ -99,6 +104,7 @@ impl<H: Host> ZXController<H> {
             ear: false,
             paging_enabled: paging,
             screen_bank,
+            last_emulation_error: None,
         };
 
         #[cfg(feature = "embedded-roms")]
@@ -316,6 +322,10 @@ impl<H: Host> ZXController<H> {
         #[cfg(feature = "precise-border")]
         self.border.set_border(clocks, color);
     }
+
+    pub(crate) fn take_last_emulation_error(&mut self) -> Option<Error> {
+        self.last_emulation_error.take()
+    }
 }
 
 impl<H: Host> Z80Bus for ZXController<H> {
@@ -356,7 +366,9 @@ impl<H: Host> Z80Bus for ZXController<H> {
     /// Cahnges internal state on clocks count change (emualtion processing)
     fn wait_internal(&mut self, clk: Clocks) {
         self.frame_clocks += clk;
-        self.tape.process_clocks(clk);
+        if let Err(e) = self.tape.process_clocks(clk) {
+            self.last_emulation_error = Some(e);
+        }
         let mic = self.tape.current_bit();
         self.mic = mic;
         #[cfg(feature = "sound")]
