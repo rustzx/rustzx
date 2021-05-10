@@ -5,10 +5,11 @@ use crate::{
     error::RomLoadError,
     host::{Host, LoadableAsset, RomFormat, RomSet, Snapshot, Tape},
     settings::RustzxSettings,
-    utils::{EmulationSpeed, Event, EventKind},
+    utils::EmulationSpeed,
     z80::Z80,
     zx::{
         controller::ZXController,
+        events::EmulationEvents,
         joy::kempston::KempstonKey,
         keys::ZXKey,
         tape::{Tap, TapeImpl},
@@ -161,21 +162,12 @@ impl<H: Host> Emulator<H> {
         self.controller.mixer.pop()
     }
 
-    fn process_event(&mut self, event: Event) {
-        let Event { kind: e, time: _ } = event;
-        match e {
-            // Fast tape loading found, use it
-            EventKind::FastTapeLoad if self.controller.tape.can_fast_load() && self.fast_load => {
-                loaders::tap::fast_load_tap(self);
-            }
-            _ => {}
-        }
-    }
-
-    // processes all events, happened at frame emulation cycle
-    fn process_all_events(&mut self) {
-        while let Some(event) = self.controller.pop_event() {
-            self.process_event(event);
+    fn process_events(&mut self, event: EmulationEvents) {
+        if event.contains(EmulationEvents::TAPE_FAST_LOAD_TRIGGER_DETECTED)
+            && self.controller.tape.can_fast_load()
+            && self.fast_load
+        {
+            loaders::tap::fast_load_tap(self);
         }
     }
 
@@ -194,16 +186,15 @@ impl<H: Host> Emulator<H> {
             self.controller.reset_frame_counter();
             'cpu: loop {
                 // Emulation step. if instant event happened then accept in and execute
-                if !self.cpu.emulate(&mut self.controller) {
-                    if let Some(event) = self.controller.pop_event() {
-                        self.process_event(event);
-                    }
+                self.cpu.emulate(&mut self.controller);
+                if !self.controller.events().is_empty() {
+                    self.process_events(self.controller.events());
+                    self.controller.clear_events();
                 }
                 // If speed is defined
                 if let EmulationSpeed::Definite(multiplier) = self.speed {
                     if self.controller.frames_count() >= multiplier {
                         // no more frames
-                        self.controller.clear_events();
                         return stopwatch.measure();
                     };
                 // if speed is maximal.
@@ -220,7 +211,6 @@ impl<H: Host> Emulator<H> {
                 break 'frame;
             }
         }
-        self.controller.clear_events();
         time
     }
 }

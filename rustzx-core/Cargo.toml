@@ -19,6 +19,7 @@ sound = []
 ay = ["ayumi", "sound"]
 
 [dependencies]
+bitflags = "1"
 lazy_static = "1.4"
 displaydoc = { version = "0.2", default-features = false }
 from_variants = "0.6"

@@ -17,10 +17,10 @@ pub struct AppHost;
 
 impl Host for AppHost {
     type Context = AppHostContext;
+    type FrameBuffer = RgbaFrameBuffer;
     type RomSet = FileRomSet;
     type SnapshotAsset = FileAsset;
     type TapeAsset = FileAsset;
-    type FrameBuffer = RgbaFrameBuffer;
 }
 
 pub struct AppHostContext;

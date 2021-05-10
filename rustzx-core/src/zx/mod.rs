@@ -1,6 +1,7 @@
 //! Module with ZX Spectrum related things
 //! One of core platform-independent modules
 pub(crate) mod controller;
+pub(crate) mod events;
 pub(crate) mod memory;
 #[cfg(feature = "embedded-roms")]
 pub(crate) mod roms;

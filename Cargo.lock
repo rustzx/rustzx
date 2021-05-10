@@ -409,6 +409,7 @@ name = "rustzx-core"
 version = "0.11.0"
 dependencies = [
  "ayumi",
+ "bitflags",
  "displaydoc",
  "enum_dispatch",
  "from_variants",
