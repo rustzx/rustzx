@@ -1,9 +1,11 @@
-//! TAP file tape player
+use crate::{
+    error::TapeLoadError,
+    host::{LoadableAsset, SeekFrom},
+    utils::{make_word, Clocks},
+    zx::tape::TapeImpl,
+    Result,
+};
 
-use crate::{host::LoadableAsset, utils::Clocks, zx::tape::TapeImpl, Result};
-use alloc::vec::Vec;
-
-// main constants
 const PILOT_LENGTH: usize = 2168;
 const PILOT_PULSES_HEADER: usize = 8063;
 const PILOT_PULSES_DATA: usize = 3223;
@@ -12,331 +14,263 @@ const SYNC2_LENGTH: usize = 735;
 const BIT_ONE_LENGTH: usize = 1710;
 const BIT_ZERO_LENGTH: usize = 855;
 const PAUSE_LENGTH: usize = 3_500_000;
+const BUFFER_SIZE: usize = 128;
 
-/// state of tape player
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum TapeState {
     Stop,
     Play,
-    Pilot,
+    Pilot { pulses_left: usize },
     Sync,
     NextByte,
-    NextBit,
-    BitHalf(usize),
+    NextBit { mask: u8 },
+    BitHalf { half_bit_delay: usize, mask: u8 },
     Pause,
 }
 
-/// information about block of tape
-#[derive(Clone, Copy)]
-struct BlockInfo {
-    length: usize,
-    pos: usize,
-    end: usize,
-}
-
-// TODO(#53): Eliminate loading a whole file to vector in tap loader
-
 pub struct Tap<A: LoadableAsset> {
-    /// state of tape
+    asset: A,
     state: TapeState,
-    /// previous state
     prev_state: TapeState,
-    /// data of tape
-    data: Vec<u8>,
-    /// fields for pulse making from byte
+    buffer: [u8; BUFFER_SIZE],
+    bufer_offset: usize,
+    block_bytes_read: usize,
+    current_block_size: Option<usize>,
+    tape_ended: bool,
+    // Non-fastload related fields
     curr_bit: bool,
     curr_byte: u8,
-    curr_mask: u8,
-    // pulses left to next state
-    pulse_counter: usize,
-    /// block info
-    block_info: Vec<BlockInfo>,
-    block: usize,
-    pos_in_block: usize,
-    /// between-state timings
     delay: Clocks,
-    acc_clocks: Clocks,
-    asset: A,
 }
 
 impl<A: LoadableAsset> Tap<A> {
-    /// updates internal structure according new tape file
     pub fn from_asset(asset: A) -> Result<Self> {
-        use crate::utils::make_word;
-
-        let mut tap = Self {
+        let tap = Self {
             prev_state: TapeState::Stop,
             state: TapeState::Stop,
-            data: Vec::new(),
             curr_bit: false,
             curr_byte: 0x00,
-            curr_mask: 0x80,
-            pulse_counter: 0,
-            block_info: Vec::new(),
-            block: 0,
-            pos_in_block: 0,
+            buffer: [0u8; BUFFER_SIZE],
+            bufer_offset: 0,
+            block_bytes_read: 0,
+            current_block_size: None,
             delay: Clocks(0),
-            acc_clocks: Clocks(0),
             asset,
+            tape_ended: false,
         };
-
-        let mut buffer = [0u8; 1024];
-        let mut read_bytes = tap.asset.read(&mut buffer)?;
-        while read_bytes != 0 {
-            tap.data.extend_from_slice(&buffer[0..read_bytes]);
-            read_bytes = tap.asset.read(&mut buffer)?;
-        }
-
-        tap.block_info.clear();
-        // get all blocks data
-        let mut p = 0;
-        'blocks: loop {
-            // get length of the block
-            let len = make_word(tap.data[p + 1], tap.data[p]) as usize;
-            // push to vector of blocks
-            tap.block_info.push(BlockInfo {
-                length: len,
-                pos: p + 2,
-                end: p + 2 + len - 1,
-            });
-            // shift pos
-            p += 2 + len;
-            // check bounds
-            if p >= tap.data.len() {
-                break 'blocks;
-            }
-        }
-        tap.reset_state();
-
         Ok(tap)
-    }
-
-    /// resets internal tape state
-    fn reset_state(&mut self) {
-        self.state = TapeState::Stop;
-        self.curr_bit = false;
-        self.curr_byte = 0x00;
-        self.curr_mask = 0x80;
-        self.block = 0;
-        self.pos_in_block = 0;
-        self.delay = Clocks(0);
-        self.acc_clocks = Clocks(0);
     }
 }
 
 impl<A: LoadableAsset> TapeImpl for Tap<A> {
-    /// can autoload only if tape stopped
     fn can_fast_load(&self) -> bool {
         self.state == TapeState::Stop
     }
 
-    /// returns byte of block
-    fn block_byte(&self, offset: usize) -> Option<u8> {
-        if self.block_info.is_empty() {
-            return None;
-        };
-        let block = self.block_info[self.block];
-        if offset < block.length {
-            Some(self.data[block.pos + offset])
-        } else {
-            None
+    fn next_block_byte(&mut self) -> Result<Option<u8>> {
+        if self.tape_ended {
+            return Ok(None);
         }
-    }
 
-    /// switches tape player to next block
-    fn next_block(&mut self) {
-        self.block += 1;
-        // make loop
-        if self.block >= self.block_info.len() {
-            self.block = 0;
+        if let Some(block_size) = self.current_block_size {
+            if self.block_bytes_read >= block_size {
+                return Ok(None);
+            }
+
+            let mut buffer_read_pos = self.block_bytes_read - self.bufer_offset;
+
+            // Read new buffer if required
+            if buffer_read_pos >= BUFFER_SIZE {
+                let bytes_to_read = (block_size - self.bufer_offset - BUFFER_SIZE).min(BUFFER_SIZE);
+                self.asset.read_exact(&mut self.buffer[0..bytes_to_read])?;
+                self.bufer_offset += BUFFER_SIZE;
+                buffer_read_pos = 0;
+            }
+
+            // Check last byte in block
+            if self.block_bytes_read >= block_size {
+                self.current_block_size = None;
+                self.block_bytes_read = 0;
+                return Ok(None);
+            }
+
+            // Perform actual read and advance position
+            let result = self.buffer[buffer_read_pos];
+            self.block_bytes_read += 1;
+            return Ok(Some(result));
         }
-        self.state = TapeState::Stop;
+
+        Ok(None)
     }
 
-    /// resets position in block to 0
-    fn reset_pos_in_block(&mut self) {
-        self.pos_in_block = 0;
+    fn next_block(&mut self) -> Result<bool> {
+        if self.tape_ended {
+            return Ok(false);
+        }
+
+        // Skip leftovers from the previous block
+        while self.next_block_byte()?.is_some() {}
+
+        let mut block_size_buffer = [0u8; 2];
+        if self.asset.read_exact(&mut block_size_buffer).is_err() {
+            self.tape_ended = true;
+            return Ok(false);
+        }
+        let block_size = make_word(block_size_buffer[1], block_size_buffer[0]) as usize;
+        let block_bytes_to_read = block_size.min(BUFFER_SIZE);
+        self.asset
+            .read_exact(&mut self.buffer[0..block_bytes_to_read])?;
+
+        self.bufer_offset = 0;
+        self.block_bytes_read = 0;
+        self.current_block_size = Some(block_size);
+
+        Ok(true)
     }
 
-    /// returns current bit
     fn current_bit(&self) -> bool {
         self.curr_bit
     }
 
-    /// makes internal state change based on clocks count
-    fn process_clocks(&mut self, clocks: Clocks) {
-        // if there are no blocks
-        if self.block_info.is_empty() {
-            return;
-        }
-        // get block info, check bunds
-        let block = if self.block >= self.block_info.len() {
-            self.block_info[0]
-        } else {
-            self.block_info[self.block]
-        };
-        // clocks
-        let clocks = clocks.count();
+    fn process_clocks(&mut self, clocks: Clocks) -> Result<()> {
         if self.state == TapeState::Stop {
-            return;
+            return Ok(());
         }
-        // check delay
+
         if self.delay.count() > 0 {
-            // accumulate clocks for delay
-            self.acc_clocks += clocks;
-            // if enough accumulated clocks then clear delay and drop some accumulated clocks
-            if self.acc_clocks.count() >= self.delay.count() {
-                self.acc_clocks -= self.delay;
+            if clocks > self.delay {
                 self.delay = Clocks(0);
+            } else {
+                self.delay -= clocks;
             }
-            // return anyway, it is delay!
-            return;
-        } else {
-            // clear accumulated clocks
-            self.acc_clocks = Clocks(0);
+            return Ok(());
         }
-        // state machine. Wrapped into the loop for sequental non-clock-consuming state execution
+
         'state_machine: loop {
             match self.state {
-                // Stop state.
                 TapeState::Stop => {
-                    // Tape stopped, return HI bit, set current block pos to zero
-                    self.curr_bit = false;
-                    self.pos_in_block = 0;
-                    // action maked, break state machine
+                    // Reset tape but leave in Stopped state
+                    self.rewind()?;
+                    self.state = TapeState::Stop;
                     break 'state_machine;
                 }
-                // Play state. Starts the tape
                 TapeState::Play => {
-                    // out of range play
-                    if self.block >= self.block_info.len() {
-                        // if play state happened when position is out of range,
-                        // loop will be breaked on next iteration and next block will be with
-                        // number zero
-                        self.block = 0;
+                    if !self.next_block()? {
                         self.state = TapeState::Stop;
                     } else {
-                        // select appropriate pulse count for Pilot sequence
-                        self.pulse_counter = if self.data[block.pos] < 128 {
+                        let first_byte = self
+                            .next_block_byte()?
+                            .ok_or(TapeLoadError::InvalidTapFile)?;
+
+                        // Select appropriate pulse count for Pilot sequence
+                        let pulses_left = if first_byte == 0x00 {
                             PILOT_PULSES_HEADER
                         } else {
                             PILOT_PULSES_DATA
                         };
-                        // so, ok seems to be ok, we can make output bit low
+                        self.curr_byte = first_byte;
                         self.curr_bit = true;
-                        // set delay before next state to one pilot pulse
                         self.delay = Clocks(PILOT_LENGTH);
-                        self.state = TapeState::Pilot;
-                        // break state machine, delay must be emulated
+                        self.state = TapeState::Pilot { pulses_left };
                         break 'state_machine;
                     }
                 }
-                // Pilot pulses
-                TapeState::Pilot => {
-                    // invert bit;
+                TapeState::Pilot { mut pulses_left } => {
                     self.curr_bit = !self.curr_bit;
-                    // one pulse passed
-                    self.pulse_counter -= 1;
-                    if self.pulse_counter > 0 {
-                        // add new delay and break
-                        self.delay = Clocks(PILOT_LENGTH);
-                    } else {
-                        // change state to first sync
-                        self.state = TapeState::Sync;
+                    pulses_left -= 1;
+                    if pulses_left == 0 {
                         self.delay = Clocks(SYNC1_LENGTH);
+                        self.state = TapeState::Sync;
+                    } else {
+                        self.delay = Clocks(PILOT_LENGTH);
+                        self.state = TapeState::Pilot { pulses_left };
                     }
-                    // break anyway for delay
                     break 'state_machine;
                 }
-                // sync pulse
                 TapeState::Sync => {
                     self.curr_bit = !self.curr_bit;
                     self.delay = Clocks(SYNC2_LENGTH);
-                    self.state = TapeState::NextByte;
+                    self.state = TapeState::NextBit { mask: 0x80 };
                     break 'state_machine;
                 }
-                // read next byte
                 TapeState::NextByte => {
-                    // read from most singificant bit
-                    self.curr_mask = 0x80;
-                    self.curr_byte = 0x00;
-                    // break not needed, state doesn't require any time
-                    self.state = TapeState::NextBit;
+                    self.state = if let Some(byte) = self.next_block_byte()? {
+                        self.curr_byte = byte;
+                        TapeState::NextBit { mask: 0x80 }
+                    } else {
+                        TapeState::Pause
+                    }
                 }
-                // next bit
-                TapeState::NextBit => {
-                    // invert bit
+                TapeState::NextBit { mask } => {
                     self.curr_bit = !self.curr_bit;
-                    // depending on bit state select timing and switch to new state
-                    if (self.data[block.pos + self.pos_in_block] & self.curr_mask) == 0 {
+                    if (self.curr_byte & mask) == 0 {
                         self.delay = Clocks(BIT_ZERO_LENGTH);
-                        self.state = TapeState::BitHalf(BIT_ZERO_LENGTH);
+                        self.state = TapeState::BitHalf {
+                            half_bit_delay: BIT_ZERO_LENGTH,
+                            mask,
+                        };
                     } else {
                         self.delay = Clocks(BIT_ONE_LENGTH);
-                        self.state = TapeState::BitHalf(BIT_ONE_LENGTH);
-                        self.curr_byte |= self.curr_mask;
+                        self.state = TapeState::BitHalf {
+                            half_bit_delay: BIT_ONE_LENGTH,
+                            mask,
+                        };
                     };
                     break 'state_machine;
                 }
-                // half of a bit
-                TapeState::BitHalf(pulse_length) => {
-                    // invert bit
+                TapeState::BitHalf {
+                    half_bit_delay,
+                    mut mask,
+                } => {
                     self.curr_bit = !self.curr_bit;
-                    // set timeout same as before
-                    self.delay = Clocks(pulse_length);
-                    // shift right, to the next bit
-                    self.curr_mask >>= 1;
-                    if self.curr_mask == 0 {
-                        self.pos_in_block += 1;
-                        // check if we heve next byte in block
-                        self.state = if self.pos_in_block < block.length {
-                            TapeState::NextByte
-                        } else {
-                            TapeState::Pause
-                        };
+                    self.delay = Clocks(half_bit_delay);
+                    mask >>= 1;
+                    self.state = if mask == 0 {
+                        TapeState::NextByte
                     } else {
-                        // fetch next bit
-                        self.state = TapeState::NextBit;
-                    }
+                        TapeState::NextBit { mask }
+                    };
                     break 'state_machine;
                 }
-                // pause after block
                 TapeState::Pause => {
                     self.curr_bit = !self.curr_bit;
-                    // make delay and go to another block. `Play` state can datermine
-                    // the end of tape
                     self.delay = Clocks(PAUSE_LENGTH);
-                    self.block += 1;
-                    self.pos_in_block = 0;
+                    // Next block or end of the tape
                     self.state = TapeState::Play;
-                    // break directly for delay
                     break 'state_machine;
                 }
             }
         }
+
+        Ok(())
     }
 
-    /// stops tape playback, sets `Stop` state
     fn stop(&mut self) {
         let state = self.state;
         self.prev_state = state;
         self.state = TapeState::Stop;
     }
 
-    /// starts playback
     fn play(&mut self) {
         if self.state == TapeState::Stop {
             if self.prev_state == TapeState::Stop {
                 self.state = TapeState::Play;
             } else {
-                let prev_state = self.prev_state;
-                self.state = prev_state;
+                self.state = self.prev_state;
             }
         }
     }
 
-    /// rewinds tape to start
-    fn rewind(&mut self) {
-        self.reset_state();
+    fn rewind(&mut self) -> Result<()> {
+        self.state = TapeState::Stop;
+        self.curr_bit = false;
+        self.curr_byte = 0x00;
+        self.block_bytes_read = 0;
+        self.bufer_offset = 0;
+        self.current_block_size = None;
+        self.delay = Clocks(0);
+        self.asset.seek(SeekFrom::Start(0))?;
+        self.tape_ended = false;
+        Ok(())
     }
 }

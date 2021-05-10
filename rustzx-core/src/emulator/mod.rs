@@ -162,19 +162,20 @@ impl<H: Host> Emulator<H> {
         self.controller.mixer.pop()
     }
 
-    fn process_events(&mut self, event: EmulationEvents) {
+    fn process_events(&mut self, event: EmulationEvents) -> Result<()> {
         if event.contains(EmulationEvents::TAPE_FAST_LOAD_TRIGGER_DETECTED)
             && self.controller.tape.can_fast_load()
             && self.fast_load
         {
-            loaders::tap::fast_load_tap(self);
+            loaders::tap::fast_load_tap(self)?;
         }
+        Ok(())
     }
 
     /// Emulate frames, maximum in `max_time` time, returns emulation time in nanoseconds
     /// in most cases time is max 1/50 of second, even when using
     /// loader acceleration
-    pub fn emulate_frames<S>(&mut self, max_time: Duration, stopwatch: &mut S) -> Duration
+    pub fn emulate_frames<S>(&mut self, max_time: Duration, stopwatch: &mut S) -> Result<Duration>
     where
         S: Stopwatch,
     {
@@ -187,15 +188,18 @@ impl<H: Host> Emulator<H> {
             'cpu: loop {
                 // Emulation step. if instant event happened then accept in and execute
                 self.cpu.emulate(&mut self.controller);
+                if let Some(e) = self.controller.take_last_emulation_error() {
+                    return Err(e);
+                }
                 if !self.controller.events().is_empty() {
-                    self.process_events(self.controller.events());
+                    self.process_events(self.controller.events())?;
                     self.controller.clear_events();
                 }
                 // If speed is defined
                 if let EmulationSpeed::Definite(multiplier) = self.speed {
                     if self.controller.frames_count() >= multiplier {
                         // no more frames
-                        return stopwatch.measure();
+                        return Ok(stopwatch.measure());
                     };
                 // if speed is maximal.
                 } else {
@@ -211,6 +215,6 @@ impl<H: Host> Emulator<H> {
                 break 'frame;
             }
         }
-        time
+        Ok(time)
     }
 }

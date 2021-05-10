@@ -1,13 +1,9 @@
-//! Contains Tape handling type and functions
-
 mod empty;
 mod tap;
 
-// reexport Tap Tape player
-pub use self::empty::Empty;
-pub use self::tap::Tap;
+pub use self::{empty::Empty, tap::Tap};
 
-use crate::{host::LoadableAsset, utils::Clocks};
+use crate::{host::LoadableAsset, utils::Clocks, Result};
 
 use enum_dispatch::enum_dispatch;
 
@@ -25,28 +21,17 @@ impl<A: LoadableAsset> Default for ZXTape<A> {
 
 #[enum_dispatch]
 pub trait TapeImpl {
-    // -----------------
-    // FAST LOAD SECTION
-    // -----------------
-    /// is this type of tape is allowed to fast load blocks?
     fn can_fast_load(&self) -> bool;
-    /// Returns byte of current block or `None` if offset exceeds block Size
-    fn block_byte(&self, offset: usize) -> Option<u8>;
-    /// Moves tape pointer to next block
-    fn next_block(&mut self);
-    /// Resets relative position in block to zero
-    fn reset_pos_in_block(&mut self);
-    // -----------------
-    //  GENERAL SECTION
-    // -----------------
-    /// Returns current ear bit
+    /// Returns byte of current block or `None` if block has ended
+    fn next_block_byte(&mut self) -> Result<Option<u8>>;
+    /// Loads next block. Retruns false if end of the tape is reached
+    fn next_block(&mut self) -> Result<bool>;
+    /// Returns current tape (`ear`) bit
     fn current_bit(&self) -> bool;
-    /// Makes procession of type in definite time
-    fn process_clocks(&mut self, clocks: Clocks);
-    /// stops tape
+    /// Perform tape processing emulation within `clocks` time limit
+    fn process_clocks(&mut self, clocks: Clocks) -> Result<()>;
     fn stop(&mut self);
-    /// plays tape
     fn play(&mut self);
-    /// rewinds tape
-    fn rewind(&mut self);
+    /// Rewinds tape content to the beginning
+    fn rewind(&mut self) -> Result<()>;
 }

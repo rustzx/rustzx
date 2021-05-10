@@ -5,11 +5,10 @@ use crate::{
     utils::{make_word, Clocks},
     z80::{opcodes, RegName16, Z80Bus, FLAG_CARRY, FLAG_ZERO},
     zx::tape::TapeImpl,
+    Result,
 };
 
-pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) {
-    // resetting tape pos to beginning.
-    emulator.controller.tape.reset_pos_in_block();
+pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) -> Result<()> {
     // So, at current moment we at 0x056C in 48K Rom.
     // AF contains some garbage. so we need to swap if wtih A'F'
     emulator.cpu.regs.swap_af_alt();
@@ -18,20 +17,22 @@ pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) {
     let mut acc = emulator.cpu.regs.get_acc();
     // variable to store resulting flags
     let mut result_flags;
-    // pos relative to block start
-    let mut pos = 0;
     // destination address in RAM
     let mut dest = emulator.cpu.regs.get_reg_16(RegName16::IX);
     // remaining length
     let mut length = emulator.cpu.regs.get_reg_16(RegName16::DE);
     // parity accumulator and current byte (h, l) regs
     let (mut parity_acc, mut current_byte) = (0, 0);
+    // move to next block
+    if !emulator.controller.tape.next_block()? {
+        return Ok(());
+    }
+
     'loader: loop {
         // if we still on block
-        if let Some(byte) = emulator.controller.tape.block_byte(pos) {
+        if let Some(byte) = emulator.controller.tape.next_block_byte()? {
             // set current byte, shift position and do parity check iteration
             current_byte = byte;
-            pos += 1;
             parity_acc ^= current_byte;
             // no bytes left, set A to parity accumulator (works as in ROM)
             // and check parity last time
@@ -98,6 +99,5 @@ pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) {
         );
     }
     emulator.cpu.regs.set_flags(f);
-    // move to next block
-    emulator.controller.tape.next_block();
+    Ok(())
 }

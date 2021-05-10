@@ -1,4 +1,4 @@
-use crate::{utils::Clocks, zx::tape::TapeImpl};
+use crate::{utils::Clocks, zx::tape::TapeImpl, Result};
 
 pub struct Empty;
 
@@ -6,16 +6,28 @@ impl TapeImpl for Empty {
     fn can_fast_load(&self) -> bool {
         false
     }
-    fn block_byte(&self, _offset: usize) -> Option<u8> {
-        Some(0)
+
+    fn next_block_byte(&mut self) -> Result<Option<u8>> {
+        Ok(None)
     }
-    fn next_block(&mut self) {}
-    fn reset_pos_in_block(&mut self) {}
+
+    fn next_block(&mut self) -> Result<bool> {
+        Ok(false)
+    }
+
     fn current_bit(&self) -> bool {
         false
     }
-    fn process_clocks(&mut self, _clocks: Clocks) {}
+
+    fn process_clocks(&mut self, _clocks: Clocks) -> Result<()> {
+        Ok(())
+    }
+
     fn stop(&mut self) {}
+
     fn play(&mut self) {}
-    fn rewind(&mut self) {}
+
+    fn rewind(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
