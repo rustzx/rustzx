@@ -36,7 +36,7 @@ struct BlockInfo {
 
 // TODO(#53): Eliminate loading a whole file to vector in tap loader
 
-pub struct Tap {
+pub struct Tap<A: LoadableAsset> {
     /// state of tape
     state: TapeState,
     /// previous state
@@ -56,11 +56,15 @@ pub struct Tap {
     /// between-state timings
     delay: Clocks,
     acc_clocks: Clocks,
+    asset: A,
 }
 
-impl Default for Tap {
-    fn default() -> Self {
-        Self {
+impl<A: LoadableAsset> Tap<A> {
+    /// updates internal structure according new tape file
+    pub fn from_asset(asset: A) -> Result<Self> {
+        use crate::utils::make_word;
+
+        let mut tap = Self {
             prev_state: TapeState::Stop,
             state: TapeState::Stop,
             data: Vec::new(),
@@ -73,22 +77,14 @@ impl Default for Tap {
             pos_in_block: 0,
             delay: Clocks(0),
             acc_clocks: Clocks(0),
-        }
-    }
-}
-
-impl Tap {
-    /// updates internal structure according new tape file
-    pub fn from_asset(mut asset: impl LoadableAsset) -> Result<Self> {
-        use crate::utils::make_word;
-
-        let mut tap = Self::default();
+            asset,
+        };
 
         let mut buffer = [0u8; 1024];
-        let mut read_bytes = asset.read(&mut buffer)?;
+        let mut read_bytes = tap.asset.read(&mut buffer)?;
         while read_bytes != 0 {
             tap.data.extend_from_slice(&buffer[0..read_bytes]);
-            read_bytes = asset.read(&mut buffer)?;
+            read_bytes = tap.asset.read(&mut buffer)?;
         }
 
         tap.block_info.clear();
@@ -128,7 +124,7 @@ impl Tap {
     }
 }
 
-impl TapeImpl for Tap {
+impl<A: LoadableAsset> TapeImpl for Tap<A> {
     /// can autoload only if tape stopped
     fn can_fast_load(&self) -> bool {
         self.state == TapeState::Stop
