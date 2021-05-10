@@ -2,14 +2,11 @@
 use crate::{
     host::{Host, HostContext},
     settings::RustzxSettings,
-    utils::{
-        events::{Event, EventKind, EventQueue},
-        screen::bitmap_line_addr,
-        split_word, Clocks, InstantFlag,
-    },
+    utils::{screen::bitmap_line_addr, split_word, Clocks},
     z80::Z80Bus,
     zx::{
         constants::{ADDR_LD_BREAK, CANVAS_HEIGHT, CLOCKS_PER_COL},
+        events::EmulationEvents,
         joy::kempston::KempstonJoy,
         keys::ZXKey,
         machine::ZXMachine,
@@ -45,10 +42,7 @@ pub(crate) struct ZXController<H: Host> {
     frame_clocks: Clocks,
     // frames count, which passed during emulation invokation
     passed_frames: usize,
-    // main event queue
-    events: EventQueue,
-    // flag, which signals emulator to break emulation and process last event immediately
-    instant_event: InstantFlag,
+    events: EmulationEvents,
     // audio in
     mic: bool,
     // audio out
@@ -100,8 +94,7 @@ impl<H: Host> ZXController<H> {
             frame_clocks: Clocks(0),
             passed_frames: 0,
             tape: Tap::default().into(),
-            events: EventQueue::default(),
-            instant_event: InstantFlag::new(false),
+            events: Default::default(),
             mic: false,
             ear: false,
             paging_enabled: paging,
@@ -246,19 +239,14 @@ impl<H: Host> ZXController<H> {
         self.mixer.new_frame();
     }
 
-    /// force clears all events
+    /// Clears all detected
     pub fn clear_events(&mut self) {
         self.events.clear();
     }
 
-    /// check events count
-    pub fn no_events(&self) -> bool {
-        self.events.is_empty()
-    }
-
-    /// Returns last event
-    pub fn pop_event(&mut self) -> Option<Event> {
-        self.events.receive_event()
+    /// Returns last events
+    pub fn events(&self) -> EmulationEvents {
+        self.events
     }
 
     /// Returns true if all frame clocks has been passed
@@ -336,9 +324,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
             if addr == ADDR_LD_BREAK {
                 // Add event (Fast tape loading request) it must be executed
                 // by emulator immediately
-                self.events
-                    .send_event(Event::new(EventKind::FastTapeLoad, self.frame_clocks));
-                self.instant_event.set();
+                self.events |= EmulationEvents::TAPE_FAST_LOAD_TRIGGER_DETECTED;
             }
         }
     }
@@ -481,9 +467,4 @@ impl<H: Host> Z80Bus for ZXController<H> {
 
     /// CPU calls when was being halted
     fn halt(&mut self, _: bool) {}
-
-    /// checks instant events
-    fn instant_event(&self) -> bool {
-        self.instant_event.pick()
-    }
 }

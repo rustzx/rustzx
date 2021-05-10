@@ -61,8 +61,6 @@ pub trait Z80Bus {
     fn int_active(&self) -> bool;
     /// Checks nmi signal
     fn nmi_active(&self) -> bool;
-    /// Must return true if devices on bus invoked events
-    fn instant_event(&self) -> bool;
     /// invokes breakpoints check on bus device
     fn pc_callback(&mut self, addr: u16);
 }

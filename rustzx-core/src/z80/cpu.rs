@@ -78,7 +78,7 @@ impl Z80 {
     /// Main emulation step function
     /// return `false` if execution can be continued or true if last event must be executed
     /// instantly
-    pub fn emulate(&mut self, bus: &mut dyn Z80Bus) -> bool {
+    pub fn emulate(&mut self, bus: &mut dyn Z80Bus) {
         // check interrupts
         if !self.skip_interrupt {
             // at first check nmi
@@ -197,11 +197,7 @@ impl Z80 {
             let opcode = Opcode::from_byte(byte1);
             execute_normal(self, bus, opcode, Prefix::None);
         };
-        // check events on bus
-        // if some events found, then signal that emulator must process events before
-        // next cpu step
+        // Allow bus implementation to process pc-based events
         bus.pc_callback(self.regs.get_pc());
-        // return true if events happened
-        bus.instant_event()
     }
 }

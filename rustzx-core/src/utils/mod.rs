@@ -1,12 +1,10 @@
 //! Some emulator-related utils
 
 pub mod clocks;
-pub mod events;
-pub mod instantflag;
 pub mod screen;
 pub mod smallnum;
 
-pub use self::{clocks::*, events::*, instantflag::*, smallnum::*};
+pub use self::{clocks::*, smallnum::*};
 
 #[derive(Copy, Clone)]
 pub enum EmulationSpeed {
