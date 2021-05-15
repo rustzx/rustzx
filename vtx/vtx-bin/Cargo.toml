@@ -1,0 +1,19 @@
+[package]
+name = "vtx-bin"
+description = "VTX sound format toolbox"
+version = "0.1.0"
+authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
+edition = "2018"
+license = "MIT"
+repository = "https://github.com/pacmancoder/rustzx"
+keywords = ["emulator", "ay", "sound", "vtx"]
+
+[[bin]]
+name = "vtx"
+path = "src/main.rs"
+
+[dependencies]
+vtx = { version = "0.1", path = ".." }
+structopt = "0.3"
+wav = "1"
+anyhow = "1"

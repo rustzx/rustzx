@@ -1,7 +1,7 @@
 [package]
 name = "rustzx"
 version = "0.11.0"
-authors = ["Vladyslav Nikonov <mail@pacmancoder.xyz>"]
+authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 description = "ZX Spectum emulator"
 repository = "https://github.com/pacmancoder/rustzx"
 readme = "../README.md"
