@@ -1,2 +1,2 @@
 [workspace]
-members = ["rustzx-core", "rustzx"]
+members = ["rustzx-core", "rustzx", "vtx", "vtx/vtx-bin"]
