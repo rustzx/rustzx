@@ -7,7 +7,7 @@ RustZX
 
 ZX Spectrum emulator written in Rust
 - Watch [this](https://youtu.be/Xho3GWFyP2I) video showcase (`v0.9.x`)
-- Read [CHANGELOG.md](CHANGELOG.md) for info on the latest version (`v0.11.x`) changes
+- Read [CHANGELOG.md](CHANGELOG.md) for info on the latest version changes
 
 ## Features
 - Written in pure rust

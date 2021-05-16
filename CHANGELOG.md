@@ -1,7 +1,8 @@
-### RustZX v0.11
-Authors:
-- Vladyslav Nikonov (@pacmancoder)
+### RustZX v0.12
+- **[Feature]** Now using rust-only AY sound chip library (`aym`) instead of `libayumi` C library
+- **[Feature]** Added vtx sound format parsing/playback library `vtx`
 
+### RustZX v0.11
 Changes:
 - **[Feature]** Separated project to `rustzx` application and `no_std`-capable `rustzx-core` crate
 - **[Feature]** Updated CLI
@@ -22,19 +23,19 @@ Changes:
     - Eliminated a lot of not redundant code
     - Made groundwork for a future emulator features
 
-### RustZX v0.9
-Authors:
-- Konstantin Mochalov (@kolen)
+Contributors:
+- Vladyslav Nikonov (@pacmancoder)
 
+### RustZX v0.9
 Changes:
 - **[Feature]** Drag-n-drop support for TAP and SNA files
 - **[Refactoring]** Multiple small refactoring changes
 - **[Dependencies]** Updated `sdl` crate
 
-### Pre-pelease
-Authors:
-- Vladyslav Nikonov (@pacmancoder)
+Contributors:
+- Konstantin Mochalov (@kolen)
 
+### Pre-pelease
 Changes:
 - **[19.08.2016]** RustzxApp and RustzxSettings refactoring
 - **[18.08.2016]** Moved sound, video, event to sdl lib.
@@ -76,3 +77,6 @@ Changes:
 - **[11.03.2016]** Serious code reorganization
 - **[06.03.2016]** All Z80 instruction groups have been implemented! :tada:
 - **[02.02.2016]** First commit
+
+Contributors:
+- Vladyslav Nikonov (@pacmancoder)
