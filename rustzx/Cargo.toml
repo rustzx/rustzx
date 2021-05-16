@@ -13,7 +13,7 @@ edition = "2018"
 
 [dependencies]
 sdl2 = { version = "0.34", features = ["unsafe_textures", "bundled", "static-link"] }
-rustzx-core = { path =  "../rustzx-core", features = ["full"] }
+rustzx-core = { version = "0.11", path =  "../rustzx-core", features = ["full"] }
 log = "0.4"
 anyhow = "1"
 structopt = "0.3"

@@ -40,12 +40,13 @@ impl ZXMixer {
     pub fn new(
         use_beeper: bool,
         #[cfg(feature = "ay")] use_ay: bool,
+        #[cfg(feature = "ay")] ay_mode: ZXAYMode,
         sample_rate: usize,
     ) -> ZXMixer {
         ZXMixer {
             beeper: ZXBeeper::default(),
             #[cfg(feature = "ay")]
-            ay: ZXAyChip::new(sample_rate, ZXAYMode::Mono),
+            ay: ZXAyChip::new(sample_rate, ay_mode),
             ring_buffer: VecDeque::with_capacity(sample_rate),
             last_pos: 0,
             last_sample: SoundSample::new(0.0, 0.0),

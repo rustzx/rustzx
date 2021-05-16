@@ -50,11 +50,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
-name = "ayumi"
-version = "0.1.2"
-source = "git+https://github.com/pacmancoder/rust-ayumi.git?rev=9e57902#9e57902c3cf31973ddc5865542c5a3a33cccd08f"
+name = "aym"
+version = "0.1.0"
 dependencies = [
- "gcc",
+ "libm",
+ "num-traits",
 ]
 
 [[package]]
@@ -319,12 +319,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gcc"
-version = "0.3.55"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f5f3913fa0bfe7ee1fd8248b6b9f42a5af4b9d65ec2dd2c3c26132b950ecfc2"
-
-[[package]]
 name = "generic-array"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -375,6 +369,12 @@ name = "libc"
 version = "0.2.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9385f66bf6105b241aa65a61cb923ef20efc665cb9f9bb50ac2f0c4b7f378d41"
+
+[[package]]
+name = "libm"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7d73b3f436185384286bd8098d17ec07c9a7d2388a6599f824d8502b529702a"
 
 [[package]]
 name = "log"
@@ -533,7 +533,7 @@ dependencies = [
 name = "rustzx-core"
 version = "0.11.0"
 dependencies = [
- "ayumi",
+ "aym",
  "bitflags",
  "displaydoc",
  "enum_dispatch",
@@ -745,7 +745,7 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 name = "vtx"
 version = "0.1.0"
 dependencies = [
- "ayumi",
+ "aym",
  "byteorder",
  "delharc",
  "expect-test",

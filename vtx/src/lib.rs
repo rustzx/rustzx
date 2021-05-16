@@ -18,20 +18,7 @@ pub const AY_REGISTER_COUNT: usize = 14;
 pub const R13_NO_CHANGE_VALUE: u8 = 0xFF;
 
 /// Stereo configuration
-///
-/// `Both` - Played on both channels
-/// `Left` - Played only on left channel
-/// `Right` - Played only on right channel
-///
-/// | Mode | A     | B     | C     |
-/// | ---- | ----- | ----- | ----- |
-/// | Mono | Both  | Both  | Both  |
-/// | ABC  | Left  | Both  | Right |
-/// | ACB  | Left  | Right | Both  |
-/// | BAC  | Both  | Left  | Right |
-/// | BCA  | Right | Left  | Both  |
-/// | CAB  | Both  | Right | Left  |
-/// | CBA  | Right | Both  | Left  |
+/// See [aym::AyMode] documentation for more info
 #[derive(Debug, num_derive::FromPrimitive)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum Stereo {
@@ -45,6 +32,7 @@ pub enum Stereo {
 }
 
 /// Sound chip type
+/// See [aym::SoundChip] documentation for more info
 #[derive(Debug)]
 pub enum SoundChip {
     AY,

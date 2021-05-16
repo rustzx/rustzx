@@ -1,0 +1,13 @@
+[package]
+name = "aym"
+version = "0.1.0"
+description = "AY/YM sound chip emulation library"
+authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
+license = "MIT"
+edition = "2018"
+keywords = ["ay", "sound", "emulator", "no_std"]
+repository = "https://github.com/pacmancoder/rustzx"
+
+[dependencies]
+num-traits = { version = "0.2", default-features = false }
+libm = "0.2"

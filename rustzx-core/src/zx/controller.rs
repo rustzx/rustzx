@@ -123,10 +123,10 @@ impl<H: Host> ZXController<H> {
             settings.beeper_enabled,
             #[cfg(feature = "ay")]
             settings.ay_enabled,
+            #[cfg(feature = "ay")]
+            settings.ay_mode,
             settings.sound_sample_rate,
         );
-        #[cfg(feature = "ay")]
-        mixer.ay.mode(settings.ay_mode);
         mixer.volume(settings.sound_volume as f64 / 200.0);
         mixer
     }

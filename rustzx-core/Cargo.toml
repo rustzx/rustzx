@@ -15,7 +15,7 @@ without-ay = ["sound", "precise-border", "embedded-roms"]
 precise-border = []
 embedded-roms = []
 sound = []
-ay = ["ayumi", "sound"]
+ay = ["aym", "sound"]
 
 [dependencies]
 bitflags = "1"
@@ -23,4 +23,4 @@ lazy_static = "1"
 displaydoc = { version = "0.2", default-features = false }
 from_variants = "0.6"
 enum_dispatch = "0.3"
-ayumi = { git = "https://github.com/pacmancoder/rust-ayumi.git", rev = "9e57902", optional = true }
+aym = { version = "0.1", path = "../aym", optional = true}
