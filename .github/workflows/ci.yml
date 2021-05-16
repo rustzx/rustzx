@@ -38,12 +38,12 @@ jobs:
         with:
           command: build
           args: --release --workspace --all-features --verbose
-      - name: rustzx-core build - Minimal
+      - name: Build(rustzx-core) - Minimal
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --release -p rustzx-core --verbose
-      - name: rustzx-core - Without AY
+      - name: Build(rustzx-core) - Without AY
         uses: actions-rs/cargo@v1
         with:
           command: build
