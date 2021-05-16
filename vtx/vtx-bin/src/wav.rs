@@ -1,7 +1,6 @@
-use std::usize;
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, path::PathBuf, usize};
 use structopt::StructOpt;
-use vtx::{player::Player, Vtx};
+use vtx::{player::PrecisePlayer, Vtx};
 
 #[derive(StructOpt)]
 pub struct ConvertWav {
@@ -31,7 +30,7 @@ impl ConvertWav {
         println!("Tracker: {}", vtx.tracker);
         println!("Comment: {}", vtx.comment);
 
-        let mut player = Player::new(vtx, SAMPLE_RATE, true);
+        let mut player = PrecisePlayer::new(vtx, SAMPLE_RATE, true);
 
         let mut buffer = vec![0i16; CHUNK_SIZE];
         let mut pos = 0;

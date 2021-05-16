@@ -32,7 +32,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: -- -D warnings
+          args: --workspace --all-features -- -D warnings
       - name: Build
         uses: actions-rs/cargo@v1
         with:
@@ -52,4 +52,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --verbose
+          args: --workspace --all-features --verbose

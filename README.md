@@ -14,7 +14,7 @@ ZX Spectrum emulator written in Rust
 - Cross-platform
 - Full ZX Spectrum 48K and 128K emulation
 - Perfect emulation of Z80 core
-- Highly precise AY chip emulation with Ayumi library
+- Highly precise AY chip emulation
 - Beeper sound emulation
 - Supported formats: TAP, SNA
 - Fast loading of tap files with standard loader
