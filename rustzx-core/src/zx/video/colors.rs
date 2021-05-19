@@ -39,6 +39,21 @@ impl ZXColor {
     }
 }
 
+impl From<ZXColor> for u8 {
+    fn from(color: ZXColor) -> Self {
+        match color {
+            ZXColor::Black => 0,
+            ZXColor::Blue => 1,
+            ZXColor::Red => 2,
+            ZXColor::Purple => 3,
+            ZXColor::Green => 4,
+            ZXColor::Cyan => 5,
+            ZXColor::Yellow => 6,
+            ZXColor::White => 7,
+        }
+    }
+}
+
 /// ZX Spectrum attribute structure
 /// It contains information about ink, paper color,
 /// flash attribute and brightness

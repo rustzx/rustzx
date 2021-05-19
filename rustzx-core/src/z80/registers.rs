@@ -464,6 +464,11 @@ impl Regs {
         self.a
     }
 
+    /// Returns alt accumulator
+    pub fn get_acc_alt(&self) -> u8 {
+        self.a_alt
+    }
+
     /// Changes accumulator
     pub fn set_acc(&mut self, value: u8) -> u8 {
         self.a = value;
@@ -479,6 +484,11 @@ impl Regs {
     /// Returns F
     pub fn get_flags(&self) -> u8 {
         self.f
+    }
+
+    /// Returns alt F
+    pub fn get_flags_alt(&self) -> u8 {
+        self.f_alt
     }
 
     /// Returns I
@@ -520,6 +530,16 @@ impl Regs {
         self.c
     }
 
+    /// Returns D
+    pub fn get_d(&self) -> u8 {
+        self.d
+    }
+
+    /// Returns E
+    pub fn get_e(&self) -> u8 {
+        self.e
+    }
+
     /// Returns H
     pub fn get_h(&self) -> u8 {
         self.h
@@ -527,6 +547,36 @@ impl Regs {
 
     /// Returns L
     pub fn get_l(&self) -> u8 {
+        self.l
+    }
+
+    /// Returns alt B
+    pub fn get_b_alt(&self) -> u8 {
+        self.b_alt
+    }
+
+    /// Returns alt C
+    pub fn get_c_alt(&self) -> u8 {
+        self.c_alt
+    }
+
+    /// Returns alt D
+    pub fn get_d_alt(&self) -> u8 {
+        self.d_alt
+    }
+
+    /// Returns alt E
+    pub fn get_e_alt(&self) -> u8 {
+        self.e_alt
+    }
+
+    /// Returns alt H
+    pub fn get_h_alt(&self) -> u8 {
+        self.h
+    }
+
+    /// Returns alt L
+    pub fn get_l_alt(&self) -> u8 {
         self.l
     }
 

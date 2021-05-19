@@ -18,9 +18,8 @@ pub enum Event {
     ChangeSpeed(EmulationSpeed),
     InsertTape,
     StopTape,
-    // QuickSave,
-    // QuickLoad,
-    // Pause,
+    QuickSave,
+    QuickLoad,
     OpenFile(PathBuf),
     Exit,
 }

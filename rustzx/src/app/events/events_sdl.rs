@@ -123,7 +123,8 @@ impl EventDevice for EventsSdl {
                         if state {
                             if let Some(code) = scancode {
                                 match code {
-                                    // speed control
+                                    Scancode::F1 => Some(Event::QuickSave),
+                                    Scancode::F2 => Some(Event::QuickLoad),
                                     Scancode::F3 => {
                                         Some(Event::ChangeSpeed(EmulationSpeed::Definite(1)))
                                     }
@@ -131,9 +132,7 @@ impl EventDevice for EventsSdl {
                                         Some(Event::ChangeSpeed(EmulationSpeed::Definite(2)))
                                     }
                                     Scancode::F5 => Some(Event::ChangeSpeed(EmulationSpeed::Max)),
-                                    // debug info control
                                     Scancode::F6 => Some(Event::SwitchDebug),
-                                    // tape control
                                     Scancode::Insert => Some(Event::InsertTape),
                                     Scancode::Delete => Some(Event::StopTape),
                                     _ => None,

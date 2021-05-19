@@ -1,9 +1,10 @@
 //! Platform-independent high-level Emulator interaction module
 mod loaders;
+mod snapshot;
 
 use crate::{
     error::RomLoadError,
-    host::{Host, LoadableAsset, RomFormat, RomSet, Snapshot, Tape},
+    host::{Host, LoadableAsset, RomFormat, RomSet, Snapshot, SnapshotRecorder, Tape},
     settings::RustzxSettings,
     utils::EmulationSpeed,
     z80::Z80,
@@ -94,7 +95,13 @@ impl<H: Host> Emulator<H> {
 
     pub fn load_snapshot(&mut self, snapshot: Snapshot<H::SnapshotAsset>) -> Result<()> {
         match snapshot {
-            Snapshot::Sna(asset) => loaders::sna::load_sna(self, asset),
+            Snapshot::Sna(asset) => snapshot::sna::load(self, asset),
+        }
+    }
+
+    pub fn save_snapshot(&mut self, recorder: SnapshotRecorder<H::SnapshotRecorder>) -> Result<()> {
+        match recorder {
+            SnapshotRecorder::Sna(recorder) => snapshot::sna::save(self, recorder),
         }
     }
 

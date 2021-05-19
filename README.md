@@ -19,11 +19,12 @@ ZX Spectrum emulator written in Rust
 - Perfect emulation of Z80 core
 - Highly precise AY chip emulation
 - Beeper sound emulation
-- Supported formats: TAP, SNA
+- Supported formats: TAP, SNA (both 48K and 128K version)
 - Fast loading of tap files with standard loader
 - Precise timings
 - Full border emulation
 - Joystick emulation: Kempston
+- Quick save/load
 - Separate `no_std` core library which can be used to port emulator
   almost anywhere.
     - Global allocator is still needed, but all dynamic
@@ -53,8 +54,15 @@ In `--nofastload` mode, press `Insert` to play the tape and `Delete` to stop
 
 If you have choppy audio, try `--sound-latency` option with bigger values.
 
-Use keys `F3 - F5` to set speed of emulation - this can be usefull when skipping some boring stuff.
-Use `F6` to display FPS in window title.
+## Default key bindings:
+- `F1` - quick save
+- `F2` - quick load
+- `F3` - set normal emulation speed
+- `F4` - set 2x emulation speed
+- `F5` - max possible emulation speed
+- `F6` - enable debug info
+- `Insert` - start tape
+- `Delete` stop tape
 
 ## Screenshots
 ![](screenshots/rain.png)

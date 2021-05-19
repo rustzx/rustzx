@@ -50,6 +50,7 @@ pub(crate) struct ZXController<H: Host> {
     ear: bool,
     paging_enabled: bool,
     screen_bank: u8,
+    current_port_7ffd: u8,
     // Z80 module expected controller implementation without errors,
     // so we need to store the internal errors manually. For sake of simplicity,
     // Only last error is saved
@@ -104,6 +105,7 @@ impl<H: Host> ZXController<H> {
             ear: false,
             paging_enabled: paging,
             screen_bank,
+            current_port_7ffd: 0,
             last_emulation_error: None,
         };
 
@@ -268,10 +270,11 @@ impl<H: Host> ZXController<H> {
         self.frame_clocks
     }
 
-    fn write_7ffd(&mut self, val: u8) {
+    pub fn write_7ffd(&mut self, val: u8) {
         if !self.paging_enabled {
             return;
         }
+        self.current_port_7ffd = val;
         // remap top 16K of the ram
         self.memory.remap(3, Page::Ram(val & 0x07));
         // third block is not pageable
@@ -285,6 +288,10 @@ impl<H: Host> ZXController<H> {
         if val & 0x20 != 0 {
             self.paging_enabled = false;
         }
+    }
+
+    pub fn read_7ffd(&self) -> u8 {
+        self.current_port_7ffd
     }
 
     #[cfg(all(feature = "sound", feature = "ay"))]
@@ -325,6 +332,24 @@ impl<H: Host> ZXController<H> {
 
     pub(crate) fn take_last_emulation_error(&mut self) -> Option<Error> {
         self.last_emulation_error.take()
+    }
+
+    pub(crate) fn refresh_memory_dependent_devices(&mut self) {
+        match self.machine {
+            ZXMachine::Sinclair48K => {
+                for (idx, data) in self.memory.ram_page_data(0).iter().enumerate() {
+                    self.screen.update(idx as u16, 0, *data);
+                }
+            }
+            ZXMachine::Sinclair128K => {
+                for (idx, data) in self.memory.ram_page_data(5).iter().enumerate() {
+                    self.screen.update(idx as u16, 5, *data);
+                }
+                for (idx, data) in self.memory.ram_page_data(7).iter().enumerate() {
+                    self.screen.update(idx as u16, 6, *data);
+                }
+            }
+        }
     }
 }
 

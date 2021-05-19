@@ -147,6 +147,15 @@ impl ZXMemory {
         &mut self.ram[shift..shift + PAGE_SIZE]
     }
 
+    /// Returns slice to ram page
+    pub fn ram_page_data(&self, page: u8) -> &[u8] {
+        if (page as usize + 1) * PAGE_SIZE > self.ram.len() {
+            panic!("[ERROR] Ram page {} does not exists!", page);
+        }
+        let shift = page as usize * PAGE_SIZE;
+        &self.ram[shift..shift + PAGE_SIZE]
+    }
+
     /// Dumps current address space
     pub fn dump(&self) -> Vec<u8> {
         let mut out = Vec::new();

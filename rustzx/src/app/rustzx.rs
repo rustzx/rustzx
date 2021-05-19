@@ -9,17 +9,19 @@ use crate::{
         sound::{SoundDevice, SoundSdl},
         video::{Rect, TextureInfo, VideoDevice, VideoSdl},
     },
-    host::{self, AppHost, AppHostContext, DetectedFileKind},
+    host::{self, AppHost, AppHostContext, DetectedFileKind, FileAsset},
 };
 use anyhow::anyhow;
 use rustzx_core::{
+    host::SnapshotRecorder,
     zx::constants::{
         CANVAS_HEIGHT, CANVAS_WIDTH, CANVAS_X, CANVAS_Y, FPS, SCREEN_HEIGHT, SCREEN_WIDTH,
     },
     Emulator, Stopwatch,
 };
 use std::{
-    path::Path,
+    fs::{self, File},
+    path::{Path, PathBuf},
     thread,
     time::{Duration, Instant},
 };
@@ -75,6 +77,7 @@ pub struct RustzxApp {
     tex_border: TextureInfo,
     tex_canvas: TextureInfo,
     scale: u32,
+    settings: Settings,
 }
 
 impl RustzxApp {
@@ -110,6 +113,8 @@ impl RustzxApp {
                 .map_err(|e| anyhow!("Emulator failed to load tape: {}", e))?;
         }
 
+        let file_autodetect = settings.file_autodetect.clone();
+
         let mut app = RustzxApp {
             emulator,
             snd,
@@ -118,9 +123,10 @@ impl RustzxApp {
             tex_border,
             tex_canvas,
             scale,
+            settings,
         };
 
-        if let Some(file) = settings.file_autodetect.as_ref() {
+        if let Some(file) = file_autodetect.as_ref() {
             app.load_file_autodetect(file)?;
         }
 
@@ -200,6 +206,8 @@ impl RustzxApp {
                     Event::InsertTape => self.emulator.play_tape(),
                     Event::StopTape => self.emulator.stop_tape(),
                     Event::OpenFile(path) => self.load_file_autodetect(&path)?,
+                    Event::QuickSave => self.quick_save()?,
+                    Event::QuickLoad => self.quick_load()?,
                 }
             }
             // how long emulation iteration was
@@ -239,5 +247,49 @@ impl RustzxApp {
             }
         }
         Ok(())
+    }
+
+    fn quick_save(&mut self) -> anyhow::Result<()> {
+        let new_path = self.last_quick_snapshot_path();
+        let prev_path = self.prev_quick_snapshot_path();
+
+        if new_path.exists() {
+            if prev_path.exists() {
+                fs::remove_file(&prev_path)?;
+            }
+            fs::rename(&new_path, &prev_path)?;
+        }
+
+        let recorder = SnapshotRecorder::Sna(FileAsset::from(File::create(new_path)?));
+        self.emulator
+            .save_snapshot(recorder)
+            .map_err(|e| anyhow!("Failed to save qick snapshot: {}", e))?;
+        Ok(())
+    }
+
+    fn quick_load(&mut self) -> anyhow::Result<()> {
+        let last_snapshot_path = self.last_quick_snapshot_path();
+        if !last_snapshot_path.exists() {
+            log::warn!("Quick snapshot was not found");
+            return Ok(());
+        }
+        self.emulator
+            .load_snapshot(host::load_snapshot(&last_snapshot_path)?)
+            .map_err(|e| anyhow!("Emulator failed to load quick snapshot: {}", e))?;
+        Ok(())
+    }
+
+    fn last_quick_snapshot_path(&self) -> PathBuf {
+        if let Some(path) = self.settings.file_autodetect.as_ref() {
+            return path.with_extension(".rustzx.last.sna");
+        }
+        Path::new("default.rustzx.last.sna").to_owned()
+    }
+
+    fn prev_quick_snapshot_path(&self) -> PathBuf {
+        if let Some(path) = self.settings.file_autodetect.as_ref() {
+            return path.with_extension(".rustzx.prev.sna");
+        }
+        Path::new("default.rustzx.prev.sna").to_owned()
     }
 }

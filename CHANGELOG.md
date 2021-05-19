@@ -1,3 +1,8 @@
+### RustZX v0.13
+- **[Feature]** Added support for ZX Spectrum 128K SNA variant
+- **[Feature]** Implemented quick save/load
+- **[Fix]** Fixed missing screen update after SNA loading
+
 ### RustZX v0.12
 - **[Feature]** Now using rust-only AY sound chip library (`aym`) instead of `libayumi` C library
 - **[Feature]** Added vtx sound format parsing/playback library `vtx`
