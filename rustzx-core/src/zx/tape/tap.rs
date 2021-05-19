@@ -1,6 +1,6 @@
 use crate::{
     error::TapeLoadError,
-    host::{LoadableAsset, SeekFrom},
+    host::{LoadableAsset, SeekFrom, SeekableAsset},
     utils::{make_word, Clocks},
     zx::tape::TapeImpl,
     Result,
@@ -28,7 +28,7 @@ enum TapeState {
     Pause,
 }
 
-pub struct Tap<A: LoadableAsset> {
+pub struct Tap<A: LoadableAsset + SeekableAsset> {
     asset: A,
     state: TapeState,
     prev_state: TapeState,
@@ -43,7 +43,7 @@ pub struct Tap<A: LoadableAsset> {
     delay: Clocks,
 }
 
-impl<A: LoadableAsset> Tap<A> {
+impl<A: LoadableAsset + SeekableAsset> Tap<A> {
     pub fn from_asset(asset: A) -> Result<Self> {
         let tap = Self {
             prev_state: TapeState::Stop,
@@ -62,7 +62,7 @@ impl<A: LoadableAsset> Tap<A> {
     }
 }
 
-impl<A: LoadableAsset> TapeImpl for Tap<A> {
+impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
     fn can_fast_load(&self) -> bool {
         self.state == TapeState::Stop
     }

@@ -3,17 +3,21 @@ mod tap;
 
 pub use self::{empty::Empty, tap::Tap};
 
-use crate::{host::LoadableAsset, utils::Clocks, Result};
+use crate::{
+    host::{LoadableAsset, SeekableAsset},
+    utils::Clocks,
+    Result,
+};
 
 use enum_dispatch::enum_dispatch;
 
 #[enum_dispatch(TapeImpl)]
-pub enum ZXTape<A: LoadableAsset> {
+pub enum ZXTape<A: LoadableAsset + SeekableAsset> {
     Tap(Tap<A>),
     Empty(Empty),
 }
 
-impl<A: LoadableAsset> Default for ZXTape<A> {
+impl<A: LoadableAsset + SeekableAsset> Default for ZXTape<A> {
     fn default() -> Self {
         Self::Empty(Empty)
     }

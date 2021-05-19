@@ -3,7 +3,7 @@ mod io;
 
 use anyhow::{anyhow, bail, Context};
 use frame_buffer::{FrameBufferContext, RgbaFrameBuffer};
-use io::FileAsset;
+pub use io::FileAsset;
 use rustzx_core::{
     host::{FrameBuffer, Host, HostContext, RomFormat, RomSet, Snapshot, Tape},
     zx::machine::ZXMachine,
@@ -20,6 +20,7 @@ impl Host for AppHost {
     type FrameBuffer = RgbaFrameBuffer;
     type RomSet = FileRomSet;
     type SnapshotAsset = FileAsset;
+    type SnapshotRecorder = FileAsset;
     type TapeAsset = FileAsset;
 }
 

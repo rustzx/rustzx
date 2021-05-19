@@ -2,11 +2,15 @@ mod frame_buffer;
 mod io;
 
 pub use frame_buffer::{FrameBuffer, FrameBufferSource};
-pub use io::{LoadableAsset, SeekFrom};
+pub use io::{DataRecorder, LoadableAsset, SeekFrom, SeekableAsset};
 
 pub enum Snapshot<LoadableAssetImpl: LoadableAsset> {
     Sna(LoadableAssetImpl),
     // TODO(#55): Implement SLT snapshot format support
+}
+
+pub enum SnapshotRecorder<DataRecorderImpl: DataRecorder> {
+    Sna(DataRecorderImpl),
 }
 
 pub enum Tape<LoadableAssetImpl: LoadableAsset> {
@@ -36,9 +40,11 @@ pub trait Host {
     /// context objects for host-defined emulator parts construction (e.g. FrameBuffers)
     type Context: HostContext<Self>;
     /// File-like type implementation for tape loading
-    type TapeAsset: LoadableAsset;
+    type TapeAsset: LoadableAsset + SeekableAsset;
     /// File-like type implementation for snapshot loading
-    type SnapshotAsset: LoadableAsset;
+    type SnapshotAsset: LoadableAsset + SeekableAsset;
+    /// Type for writing snapshot data
+    type SnapshotRecorder: DataRecorder;
     /// File-like type implementation for rom loading
     type RomSet: RomSet;
     /// Frame buffer implementation

@@ -40,3 +40,13 @@ pub enum IntMode {
     IM1,
     IM2,
 }
+
+impl From<IntMode> for u8 {
+    fn from(mode: IntMode) -> Self {
+        match mode {
+            IntMode::IM0 => 0,
+            IntMode::IM1 => 1,
+            IntMode::IM2 => 2,
+        }
+    }
+}
