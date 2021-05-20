@@ -1,8 +1,6 @@
 //! VTX sound format parsing library
 //!
 //! See sources of `vtx-bin` crate for usage example
-#![allow(dead_code)]
-
 pub mod player;
 
 use byteorder::{LittleEndian, ReadBytesExt};

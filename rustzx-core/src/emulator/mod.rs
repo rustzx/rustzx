@@ -4,7 +4,10 @@ mod snapshot;
 
 use crate::{
     error::RomLoadError,
-    host::{Host, LoadableAsset, RomFormat, RomSet, Snapshot, SnapshotRecorder, Tape},
+    host::{
+        DataRecorder, Host, LoadableAsset, RomFormat, RomSet, SeekableAsset, Snapshot,
+        SnapshotRecorder, Tape,
+    },
     settings::RustzxSettings,
     utils::EmulationSpeed,
     z80::Z80,
@@ -21,6 +24,8 @@ use crate::{
 
 #[cfg(feature = "sound")]
 use crate::zx::sound::sample::SoundSample;
+#[cfg(feature = "autoload")]
+use crate::{host::BufferCursor, zx::machine::ZXMachine};
 
 use core::time::Duration;
 
@@ -46,7 +51,7 @@ impl<H: Host> Emulator<H> {
     /// `settings` - emulator settings
     pub fn new(settings: RustzxSettings, context: H::Context) -> Result<Self> {
         let speed = settings.emulation_speed;
-        let fast_load = settings.tape_fastload;
+        let fast_load = settings.tape_fastload_enabled;
         #[cfg(feature = "sound")]
         let sound_enabled = settings.sound_enabled;
 
@@ -93,13 +98,19 @@ impl<H: Host> Emulator<H> {
         }
     }
 
-    pub fn load_snapshot(&mut self, snapshot: Snapshot<H::SnapshotAsset>) -> Result<()> {
+    pub fn load_snapshot<A>(&mut self, snapshot: Snapshot<A>) -> Result<()>
+    where
+        A: LoadableAsset + SeekableAsset,
+    {
         match snapshot {
             Snapshot::Sna(asset) => snapshot::sna::load(self, asset),
         }
     }
 
-    pub fn save_snapshot(&mut self, recorder: SnapshotRecorder<H::SnapshotRecorder>) -> Result<()> {
+    pub fn save_snapshot<R>(&mut self, recorder: SnapshotRecorder<R>) -> Result<()>
+    where
+        R: DataRecorder,
+    {
         match recorder {
             SnapshotRecorder::Sna(recorder) => snapshot::sna::save(self, recorder),
         }
@@ -110,6 +121,16 @@ impl<H: Host> Emulator<H> {
             Tape::Tap(asset) => {
                 self.controller.tape = Tap::from_asset(asset)?.into();
             }
+        }
+
+        #[cfg(feature = "autoload")]
+        if self.settings.autoload_enabled {
+            let snapshot = match self.settings.machine {
+                ZXMachine::Sinclair48K => &snapshot::autoload::tape::SNAPSHOT_SNA_48K,
+                ZXMachine::Sinclair128K => &snapshot::autoload::tape::SNAPSHOT_SNA_128K,
+            };
+
+            self.load_snapshot(Snapshot::Sna(BufferCursor::new(snapshot)))?;
         }
 
         Ok(())

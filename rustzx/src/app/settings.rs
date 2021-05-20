@@ -22,6 +22,10 @@ pub struct Settings {
     /// Disable fast tape loading
     #[structopt(long = "nofastload")]
     pub disable_fastload: bool,
+    /// Disable automatic tape loading via placing emulator to tape load state immediately
+    /// after launch
+    #[structopt(long = "noautoload")]
+    pub disable_autoload: bool,
     /// Set windows scale for emulator. Can be set as decimal non-zero value. Defaults to 2
     #[structopt(short, long, default_value = "2", parse(try_from_str = scale_from_str))]
     pub scale: usize,
@@ -145,8 +149,8 @@ impl Settings {
         RustzxSettings {
             machine: self.machine,
             emulation_speed: self.speed,
-            tape_fastload: !self.disable_fastload,
-            enable_kempston: !self.disable_kempston,
+            tape_fastload_enabled: !self.disable_fastload,
+            kempston_enabled: !self.disable_kempston,
             ay_mode: self.ay_mode,
             ay_enabled,
             beeper_enabled: !self.disable_beeper,
@@ -154,6 +158,7 @@ impl Settings {
             sound_volume: 100,
             load_default_rom: self.rom.is_none(),
             sound_sample_rate: self.sound_sample_rate,
+            autoload_enabled: !self.disable_autoload,
         }
     }
 }

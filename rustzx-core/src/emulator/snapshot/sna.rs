@@ -26,7 +26,11 @@ const SNA_PAGINATED_PAGED_BANK_ADDRESS: u16 = 0xFFFF;
 const SNA_48K_RAM_PAGES_COUNT: u8 = 3;
 
 /// SNA snapshot loading function
-pub fn load<H: Host>(emulator: &mut Emulator<H>, mut asset: H::SnapshotAsset) -> Result<()> {
+pub fn load<H, A>(emulator: &mut Emulator<H>, mut asset: A) -> Result<()>
+where
+    H: Host,
+    A: LoadableAsset + SeekableAsset,
+{
     let size = asset.seek(SeekFrom::End(0))?;
     asset.seek(SeekFrom::Start(0))?;
 
@@ -172,7 +176,11 @@ impl<'a, H: Host> Drop for ScopedSnapshotState<'a, H> {
     }
 }
 
-pub fn save<H: Host>(emulator: &mut Emulator<H>, mut recorder: H::SnapshotRecorder) -> Result<()> {
+pub fn save<H, R>(emulator: &mut Emulator<H>, mut recorder: R) -> Result<()>
+where
+    H: Host,
+    R: DataRecorder,
+{
     let state = ScopedSnapshotState::enter(emulator);
     let ScopedSnapshotState { emulator, is_48k } = &state;
 

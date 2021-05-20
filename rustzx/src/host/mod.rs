@@ -19,8 +19,6 @@ impl Host for AppHost {
     type Context = AppHostContext;
     type FrameBuffer = RgbaFrameBuffer;
     type RomSet = FileRomSet;
-    type SnapshotAsset = FileAsset;
-    type SnapshotRecorder = FileAsset;
     type TapeAsset = FileAsset;
 }
 

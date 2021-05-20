@@ -6,8 +6,8 @@ use crate::zx::sound::ay::ZXAYMode;
 pub struct RustzxSettings {
     pub machine: ZXMachine,
     pub emulation_speed: EmulationSpeed,
-    pub tape_fastload: bool,
-    pub enable_kempston: bool,
+    pub tape_fastload_enabled: bool,
+    pub kempston_enabled: bool,
     #[cfg(all(feature = "sound", feature = "ay"))]
     pub ay_mode: ZXAYMode,
     #[cfg(all(feature = "sound", feature = "ay"))]
@@ -22,4 +22,6 @@ pub struct RustzxSettings {
     pub sound_sample_rate: usize,
     #[cfg(feature = "embedded-roms")]
     pub load_default_rom: bool,
+    #[cfg(feature = "autoload")]
+    pub autoload_enabled: bool,
 }

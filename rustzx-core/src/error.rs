@@ -17,6 +17,8 @@ pub enum IoError {
     UnexpectedEof,
     /// Sink unexpectedly refused to write more bytes
     WriteZero,
+    /// Seek operation was performed with offset before beginning of the asset
+    SeekBeforeStart,
     /// Host-provided asset implementation failed
     HostAssetImplFailed,
 }

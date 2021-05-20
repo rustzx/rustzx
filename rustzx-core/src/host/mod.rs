@@ -4,6 +4,8 @@ mod io;
 pub use frame_buffer::{FrameBuffer, FrameBufferSource};
 pub use io::{DataRecorder, LoadableAsset, SeekFrom, SeekableAsset};
 
+pub use io::BufferCursor;
+
 pub enum Snapshot<LoadableAssetImpl: LoadableAsset> {
     Sna(LoadableAssetImpl),
     // TODO(#55): Implement SLT snapshot format support
@@ -41,10 +43,6 @@ pub trait Host {
     type Context: HostContext<Self>;
     /// File-like type implementation for tape loading
     type TapeAsset: LoadableAsset + SeekableAsset;
-    /// File-like type implementation for snapshot loading
-    type SnapshotAsset: LoadableAsset + SeekableAsset;
-    /// Type for writing snapshot data
-    type SnapshotRecorder: DataRecorder;
     /// File-like type implementation for rom loading
     type RomSet: RomSet;
     /// Frame buffer implementation
