@@ -3,7 +3,10 @@
 mod events_sdl;
 
 use rustzx_core::{
-    zx::{joy::kempston::KempstonKey, keys::ZXKey},
+    zx::{
+        joy::kempston::KempstonKey,
+        keys::{CompoundKey, ZXKey},
+    },
     EmulationSpeed,
 };
 use std::path::PathBuf;
@@ -13,6 +16,7 @@ pub use events_sdl::EventsSdl;
 // Event type
 pub enum Event {
     GameKey(ZXKey, bool),
+    CompoundKey(CompoundKey, bool),
     Kempston(KempstonKey, bool),
     SwitchDebug,
     ChangeSpeed(EmulationSpeed),

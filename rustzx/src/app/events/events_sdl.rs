@@ -2,7 +2,10 @@
 use super::{Event, EventDevice};
 use crate::{app::settings::Settings, backends::SDL_CONTEXT};
 use rustzx_core::{
-    zx::{joy::kempston::KempstonKey, keys::ZXKey},
+    zx::{
+        joy::kempston::KempstonKey,
+        keys::{CompoundKey, ZXKey},
+    },
     EmulationSpeed,
 };
 use sdl2::{event::Event as SdlEvent, keyboard::Scancode, EventPump};
@@ -10,19 +13,23 @@ use sdl2::{event::Event as SdlEvent, keyboard::Scancode, EventPump};
 /// Represents SDL Envets bakend
 pub struct EventsSdl {
     event_pump: EventPump,
+    kempston_disabled: bool,
 }
 
 impl EventsSdl {
     /// constructs new event backend from setttigs/
     /// Settings will be used in future for key bindings sittings
-    pub fn new(_settings: &Settings) -> EventsSdl {
+    pub fn new(settings: &Settings) -> EventsSdl {
         // init event system
         let mut pump = None;
         SDL_CONTEXT.with(|sdl| {
             pump = sdl.borrow_mut().event_pump().ok();
         });
         if let Some(pump) = pump {
-            EventsSdl { event_pump: pump }
+            EventsSdl {
+                event_pump: pump,
+                kempston_disabled: settings.disable_kempston,
+            }
         } else {
             panic!("[ERROR] Sdl event pump init error");
         }
@@ -83,8 +90,25 @@ impl EventsSdl {
         }
     }
 
+    fn scancode_to_compound_key(&self, scancode: Option<Scancode>) -> Option<CompoundKey> {
+        match scancode? {
+            Scancode::Up => Some(CompoundKey::ArrowUp),
+            Scancode::Down => Some(CompoundKey::ArrowDown),
+            Scancode::Left => Some(CompoundKey::ArrowLeft),
+            Scancode::Right => Some(CompoundKey::ArrowDown),
+            Scancode::CapsLock => Some(CompoundKey::CapsLock),
+            Scancode::Backspace => Some(CompoundKey::Delete),
+            Scancode::End => Some(CompoundKey::Break),
+            _ => None,
+        }
+    }
+
     /// returns kempston key form scancode of None if not found
     fn scancode_to_joy(&self, scancode: Option<Scancode>) -> Option<KempstonKey> {
+        if self.kempston_disabled {
+            return None;
+        }
+
         match scancode? {
             Scancode::LAlt | Scancode::RAlt => Some(KempstonKey::Fire),
             Scancode::Up => Some(KempstonKey::Up),
@@ -113,11 +137,13 @@ impl EventDevice for EventsSdl {
                         _ => unreachable!(),
                     };
                     if let Some(key) = self.scancode_to_zxkey(scancode) {
-                        // if zx spectrum key found
                         Some(Event::GameKey(key, state))
                     } else if let Some(key) = self.scancode_to_joy(scancode) {
-                        // of kempston key found
+                        // Kempston has higher priority than compound keys, therefore it will
+                        // overlay arrow keys by default
                         Some(Event::Kempston(key, state))
+                    } else if let Some(key) = self.scancode_to_compound_key(scancode) {
+                        Some(Event::CompoundKey(key, state))
                     } else {
                         // if speial keys are used
                         if state {

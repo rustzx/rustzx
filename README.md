@@ -24,6 +24,7 @@ ZX Spectrum emulator written in Rust
 - Precise timings
 - Full border emulation
 - Joystick emulation: Kempston
+- Extended 128K keys emulation (arrows, backspace, caps lock)
 - Quick save/load
 - Separate `no_std` core library which can be used to port emulator
   almost anywhere.
@@ -62,7 +63,12 @@ If you have choppy audio, try `--sound-latency` option with bigger values.
 - `F5` - max possible emulation speed
 - `F6` - enable debug info
 - `Insert` - start tape
-- `Delete` stop tape
+- `Delete`- stop tape
+- `End` - break command
+- `Caps Lock` - caps lock command
+- `Backspace` - celete
+- `<Arrows>` - Kempston joystick or 128K arrow keys if `--nokempston` specified
+- `Alt` - Kempston fire
 
 ## Screenshots
 ![](screenshots/rain.png)

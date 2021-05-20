@@ -9,7 +9,7 @@ use crate::{
         constants::{ADDR_LD_BREAK, CANVAS_HEIGHT, CLOCKS_PER_COL},
         events::EmulationEvents,
         joy::kempston::KempstonJoy,
-        keys::ZXKey,
+        keys::{CompoundKey, ZXKey},
         machine::ZXMachine,
         memory::{Page, RamType, RomType, ZXMemory, PAGE_SIZE},
         tape::{TapeImpl, ZXTape},
@@ -37,6 +37,8 @@ pub(crate) struct ZXController<H: Host> {
     #[cfg(feature = "sound")]
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
+    pub keyboard_extended: [u8; 8],
+    pub caps_shift_modifier_mask: u32,
     // current border color
     pub border_color: ZXColor,
     // clocls count from frame start
@@ -96,6 +98,8 @@ impl<H: Host> ZXController<H> {
             #[cfg(feature = "sound")]
             mixer,
             keyboard: [0xFF; 8],
+            keyboard_extended: [0xFF; 8],
+            caps_shift_modifier_mask: 0,
             border_color: ZXColor::Black,
             frame_clocks: Clocks(0),
             passed_frames: 0,
@@ -166,6 +170,28 @@ impl<H: Host> ZXController<H> {
         self.keyboard[row_id] &= !key.mask();
         if !pressed {
             self.keyboard[row_id] |= key.mask();
+        }
+    }
+
+    pub fn send_compound_key(&mut self, key: CompoundKey, pressed: bool) {
+        let mut dummy_modifier_mask = 0;
+        let modifier_mask = match key.modifier_key() {
+            ZXKey::Shift => &mut self.caps_shift_modifier_mask,
+            _ => &mut dummy_modifier_mask,
+        };
+        let primary_key = key.primary_key();
+        let modifier_key = key.modifier_key();
+
+        if pressed {
+            *modifier_mask |= key.modifier_mask();
+            self.keyboard_extended[primary_key.row_id()] &= !primary_key.mask();
+            self.keyboard_extended[modifier_key.row_id()] &= !modifier_key.mask();
+        } else {
+            *modifier_mask &= !key.modifier_mask();
+            if *modifier_mask == 0 {
+                self.keyboard_extended[modifier_key.row_id()] |= modifier_key.mask();
+            }
+            self.keyboard_extended[primary_key.row_id()] |= primary_key.mask();
         }
     }
 
@@ -441,7 +467,8 @@ impl<H: Host> Z80Bus for ZXController<H> {
             for n in 0..8 {
                 // if bit of row reset
                 if ((h >> n) & 0x01) == 0 {
-                    tmp &= self.keyboard[n];
+                    let keyboard_byte = self.keyboard[n] & self.keyboard_extended[n];
+                    tmp &= keyboard_byte;
                 }
             }
             // invert bit 6 if mic_hw active;
