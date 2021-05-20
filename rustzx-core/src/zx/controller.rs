@@ -73,7 +73,7 @@ impl<H: Host> ZXController<H> {
                 screen_bank = 5;
             }
         };
-        let kempston = if settings.enable_kempston {
+        let kempston = if settings.kempston_enabled {
             Some(KempstonJoy::default())
         } else {
             None

@@ -15,6 +15,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    env:
+      RUSTFLAGS: -D warnings
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -43,11 +45,6 @@ jobs:
         with:
           command: build
           args: --release -p rustzx-core --verbose
-      - name: Build(rustzx-core) - Without AY
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release -p rustzx-core --features without-ay --verbose
       - name: Test
         uses: actions-rs/cargo@v1
         with:

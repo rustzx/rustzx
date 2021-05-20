@@ -10,12 +10,12 @@ edition = "2018"
 
 [features]
 default = []
-full = ["ay", "precise-border", "embedded-roms"]
-without-ay = ["sound", "precise-border", "embedded-roms"]
+full = ["ay", "precise-border", "embedded-roms", "autoload"]
 precise-border = []
 embedded-roms = []
 sound = []
 ay = ["aym", "sound"]
+autoload = []
 
 [dependencies]
 bitflags = "1"
