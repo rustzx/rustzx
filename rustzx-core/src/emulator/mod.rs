@@ -15,7 +15,7 @@ use crate::{
         controller::ZXController,
         events::EmulationEvents,
         joy::kempston::KempstonKey,
-        keys::ZXKey,
+        keys::{CompoundKey, ZXKey},
         tape::{Tap, TapeImpl},
         video::colors::ZXColor,
     },
@@ -177,6 +177,10 @@ impl<H: Host> Emulator<H> {
 
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
         self.controller.send_key(key, pressed);
+    }
+
+    pub fn send_compound_key(&mut self, key: CompoundKey, pressed: bool) {
+        self.controller.send_compound_key(key, pressed);
     }
 
     pub fn send_kempston_key(&mut self, key: KempstonKey, state: bool) {

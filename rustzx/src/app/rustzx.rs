@@ -203,6 +203,9 @@ impl RustzxApp {
                     Event::Kempston(key, state) => {
                         self.emulator.send_kempston_key(key, state);
                     }
+                    Event::CompoundKey(key, state) => {
+                        self.emulator.send_compound_key(key, state);
+                    }
                     Event::InsertTape => self.emulator.play_tape(),
                     Event::StopTape => self.emulator.stop_tape(),
                     Event::OpenFile(path) => self.load_file_autodetect(&path)?,

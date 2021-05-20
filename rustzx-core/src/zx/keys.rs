@@ -22,6 +22,51 @@ pub enum ZXKey {
     Space, SymShift, M, N, B,
 }
 
+#[derive(Clone, Copy)]
+pub enum CompoundKey {
+    ArrowLeft,
+    ArrowRight,
+    ArrowUp,
+    ArrowDown,
+    CapsLock,
+    Delete,
+    Break,
+}
+
+impl CompoundKey {
+    /// This mask is required to implement logic to keep
+    /// modifier key pressed while one of the compound
+    /// keys were released, but one of them is still
+    /// pressed, therefore modifier should be unchanged
+    pub(crate) fn modifier_mask(self) -> u32 {
+        match self {
+            CompoundKey::ArrowLeft => 0x00000001,
+            CompoundKey::ArrowRight => 0x00000002,
+            CompoundKey::ArrowUp => 0x00000004,
+            CompoundKey::ArrowDown => 0x00000008,
+            CompoundKey::CapsLock => 0x00000010,
+            CompoundKey::Delete => 0x00000020,
+            CompoundKey::Break => 0x00000040,
+        }
+    }
+
+    pub(crate) fn modifier_key(self) -> ZXKey {
+        ZXKey::Shift
+    }
+
+    pub(crate) fn primary_key(self) -> ZXKey {
+        match self {
+            CompoundKey::ArrowLeft => ZXKey::N5,
+            CompoundKey::ArrowRight => ZXKey::N8,
+            CompoundKey::ArrowUp => ZXKey::N7,
+            CompoundKey::ArrowDown => ZXKey::N6,
+            CompoundKey::CapsLock => ZXKey::N2,
+            CompoundKey::Delete => ZXKey::N0,
+            CompoundKey::Break => ZXKey::Space,
+        }
+    }
+}
+
 impl ZXKey {
     pub(crate) fn row_id(self) -> usize {
         match self.half_port() {
