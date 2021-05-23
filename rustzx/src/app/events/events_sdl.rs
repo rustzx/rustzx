@@ -8,17 +8,29 @@ use rustzx_core::{
             sinclair::{SinclairJoyNum, SinclairKey},
         },
         keys::{CompoundKey, ZXKey},
+        mouse::kempston::{KempstonMouseButton, KempstonMouseWheelDirection},
     },
     EmulationSpeed,
 };
-use sdl2::{event::Event as SdlEvent, keyboard::Scancode, EventPump};
+use sdl2::{
+    event::Event as SdlEvent,
+    keyboard::Scancode,
+    mouse::{MouseButton, MouseUtil},
+    EventPump,
+};
 
 /// Represents SDL Envets bakend
 pub struct EventsSdl {
     event_pump: EventPump,
+    mouse: MouseUtil,
     kempston_enabled: bool,
-
+    mouse_enabled: bool,
+    mouse_locked: bool,
+    screen_scale: usize,
+    mouse_sensitivity: usize,
     enable_joy_keyaboard_layer: bool,
+    mouse_x_counter: i32,
+    mouse_y_counter: i32,
 }
 
 impl EventsSdl {
@@ -26,18 +38,44 @@ impl EventsSdl {
     /// Settings will be used in future for key bindings sittings
     pub fn new(settings: &Settings) -> EventsSdl {
         // init event system
-        let mut pump = None;
-        SDL_CONTEXT.with(|sdl| {
-            pump = sdl.borrow_mut().event_pump().ok();
+        let (event_pump, mouse) = SDL_CONTEXT.with(|sdl| {
+            let context = sdl.borrow_mut();
+            let pump = context
+                .event_pump()
+                .expect("[ERROR] Sdl event pump init error");
+
+            let mouse = context.mouse();
+
+            (pump, mouse)
         });
-        if let Some(pump) = pump {
-            EventsSdl {
-                event_pump: pump,
-                kempston_enabled: !settings.disable_kempston,
-                enable_joy_keyaboard_layer: false,
-            }
-        } else {
-            panic!("[ERROR] Sdl event pump init error");
+
+        EventsSdl {
+            event_pump,
+            mouse,
+            mouse_enabled: settings.enable_mouse,
+            mouse_locked: false,
+            kempston_enabled: !settings.disable_kempston,
+            screen_scale: settings.scale,
+            enable_joy_keyaboard_layer: false,
+            mouse_sensitivity: settings.mouse_sensitivity,
+            mouse_x_counter: 0,
+            mouse_y_counter: 0,
+        }
+    }
+
+    fn lock_mouse(&mut self) {
+        if self.mouse_enabled {
+            self.mouse.set_relative_mouse_mode(true);
+            self.mouse.show_cursor(false);
+            self.mouse_locked = true;
+        }
+    }
+
+    fn unlock_mouse(&mut self) {
+        if self.mouse_enabled {
+            self.mouse.set_relative_mouse_mode(false);
+            self.mouse.show_cursor(true);
+            self.mouse_locked = false;
         }
     }
 
@@ -188,6 +226,10 @@ impl EventsSdl {
                 }
                 Scancode::Insert => Some(Event::InsertTape),
                 Scancode::Delete => Some(Event::StopTape),
+                Scancode::Escape => {
+                    self.unlock_mouse();
+                    None
+                }
                 _ => None,
             }
         } else {
@@ -220,6 +262,70 @@ impl EventDevice for EventsSdl {
                         .or_else(|| self.scancode_to_zxkey_event(scancode, pressed))
                         .or_else(|| self.scancode_to_compound_key_event(scancode, pressed))
                 }
+                SdlEvent::MouseMotion { xrel, yrel, .. } => {
+                    // Change of direction  requires counter reset to elimiate lag
+                    if self.mouse_x_counter.signum() != xrel.signum() {
+                        self.mouse_x_counter = xrel;
+                    } else {
+                        self.mouse_x_counter += xrel;
+                    }
+                    if self.mouse_y_counter.signum() != yrel.signum() {
+                        self.mouse_y_counter = yrel;
+                    } else {
+                        self.mouse_y_counter += yrel;
+                    }
+
+                    // Depending on sensitivity, diffent distance is required to move
+                    // kempston mouse
+                    let ticks_to_move =
+                        sensitivity_to_mouse_counter_ticks(self.mouse_sensitivity) as i32;
+                    let xshift = self.mouse_x_counter / ticks_to_move;
+                    let yshift = self.mouse_y_counter / ticks_to_move;
+                    let xrem = self.mouse_x_counter % ticks_to_move;
+                    let yrem = self.mouse_y_counter % ticks_to_move;
+                    if xshift != 0 {
+                        self.mouse_x_counter = xrem;
+                    }
+                    if yshift != 0 {
+                        self.mouse_y_counter = yrem;
+                    }
+
+                    if self.mouse_locked {
+                        let x = xshift.clamp(i8::MIN as i32, i8::MAX as i32) as i8;
+                        let y = yshift.clamp(i8::MIN as i32, i8::MAX as i32) as i8;
+                        Some(Event::MouseMove { x, y })
+                    } else {
+                        None
+                    }
+                }
+                SdlEvent::MouseButtonDown { mouse_btn, .. } => {
+                    self.lock_mouse();
+                    if self.mouse_locked {
+                        sdl_mouse_button_to_kempston(mouse_btn)
+                            .map(|button| Event::MouseButton(button, true))
+                    } else {
+                        None
+                    }
+                }
+                SdlEvent::MouseButtonUp { mouse_btn, .. } => {
+                    if self.mouse_locked {
+                        sdl_mouse_button_to_kempston(mouse_btn)
+                            .map(|button| Event::MouseButton(button, false))
+                    } else {
+                        None
+                    }
+                }
+                SdlEvent::MouseWheel { y, .. } => {
+                    if self.mouse_locked {
+                        if y > 0 {
+                            Some(Event::MouseWheel(KempstonMouseWheelDirection::Up))
+                        } else {
+                            Some(Event::MouseWheel(KempstonMouseWheelDirection::Down))
+                        }
+                    } else {
+                        None
+                    }
+                }
                 SdlEvent::DropFile { filename, .. } => Some(Event::OpenFile(filename.into())),
                 _ => None,
             }
@@ -227,4 +333,21 @@ impl EventDevice for EventsSdl {
             None
         }
     }
+}
+
+fn sdl_mouse_button_to_kempston(button: MouseButton) -> Option<KempstonMouseButton> {
+    match button {
+        MouseButton::Left => Some(KempstonMouseButton::Left),
+        MouseButton::Right => Some(KempstonMouseButton::Right),
+        MouseButton::Middle => Some(KempstonMouseButton::Middle),
+        MouseButton::X1 => Some(KempstonMouseButton::Additional),
+        _ => None,
+    }
+}
+
+fn sensitivity_to_mouse_counter_ticks(sensitivity: usize) -> usize {
+    const MIN_MOUSE_SENSITIVITY: usize = 1;
+    const MAX_MOUSE_SENSITIVITY: usize = 100;
+
+    MAX_MOUSE_SENSITIVITY / sensitivity.clamp(MIN_MOUSE_SENSITIVITY, MAX_MOUSE_SENSITIVITY)
 }

@@ -9,6 +9,7 @@ use rustzx_core::{
             sinclair::{SinclairJoyNum, SinclairKey},
         },
         keys::{CompoundKey, ZXKey},
+        mouse::kempston::{KempstonMouseButton, KempstonMouseWheelDirection},
     },
     EmulationSpeed,
 };
@@ -22,6 +23,9 @@ pub enum Event {
     CompoundKey(CompoundKey, bool),
     Kempston(KempstonKey, bool),
     Sinclair(SinclairJoyNum, SinclairKey, bool),
+    MouseMove { x: i8, y: i8 },
+    MouseButton(KempstonMouseButton, bool),
+    MouseWheel(KempstonMouseWheelDirection),
     SwitchFrameTrace,
     ChangeJoyKeyboardLayer(bool),
     ChangeSpeed(EmulationSpeed),

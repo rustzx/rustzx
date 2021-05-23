@@ -23,7 +23,8 @@ ZX Spectrum emulator written in Rust
 - Fast loading of tap files with standard loader
 - Precise timings
 - Full border emulation
-- Joystick emulation: Kempston
+- Joystick emulation: Kempston, Sinclair
+- Kempston mouse emulation
 - Extended 128K keys emulation (arrows, backspace, caps lock)
 - Quick save/load
 - Separate `no_std` core library which can be used to port emulator
@@ -48,6 +49,7 @@ rustzx --ay test.tap # Run in 48K mode with AY sound chip
 rustzx -m128 --tape test128.tap # Run in 128K mode with tape
 rustzx --rom tester.rom -s3 # Run with custom rom and 3x screen scaling
 rustzx --nofastload test.tap # Run without fast tape loading
+rustzx --mouse test.tap # Run with Kempston mouse support
 ```
 For loading tape in 48K mode, press `j` then `Ctrl+p` twice, as on real Spectrum.
 You should see `LOAD ""` on emulator's screen, then press `Enter` (in 128K mode just press enter).
@@ -69,6 +71,7 @@ If you have choppy audio, try `--sound-latency` option with bigger values.
 - `Caps Lock` - caps lock command
 - `Backspace` - delete
 - `<Arrows>` - 128K arrow keys
+- `Esc` - unlock mouse (if `--mouse` is used)
 
 ## In joy keyboard layer mode (F9)
 - `<Arrows>` - Kempston joy *arrows*

@@ -11,6 +11,8 @@ pub mod constants;
 pub mod joy;
 pub mod keys;
 pub mod machine;
+pub mod mouse;
+
 #[cfg(feature = "sound")]
 pub mod sound;
 pub mod video;

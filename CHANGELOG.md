@@ -1,6 +1,10 @@
 ### RustZX v0.13
-- **[Feature]** Added support for ZX Spectrum 128K SNA variant
-- **[Feature]** Implemented quick save/load
+- **[Feature]** Support for ZX Spectrum 128K SNA variant
+- **[Feature]** Quick save/load (`F1`/`F2` keys) via SNA
+- **[Feature]** Sinclair joysticks support
+- **[Feature]** Separate joystick keyboard layout (press `F9` to activate)
+- **[Feature]** Kempston mouse support (`--mouse`)
+- **[Fix]** Fixed invalid kempston joystick port
 - **[Fix]** Fixed missing screen update after SNA loading
 
 ### RustZX v0.12

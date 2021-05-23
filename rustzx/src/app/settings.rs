@@ -29,11 +29,17 @@ pub struct Settings {
     /// Set windows scale for emulator. Can be set as decimal non-zero value. Defaults to 2
     #[structopt(short, long, default_value = "2", parse(try_from_str = scale_from_str))]
     pub scale: usize,
-    /// Disable kempston joy support. In enabled, arrow and `Alt` keys are bound by default
-    /// to the kempston joy.
+    /// Disable kempston joy support. If enabled, arrow and `Alt` keys are bound by default
+    /// to the kempston joy
     #[structopt(long = "nokempston")]
     pub disable_kempston: bool,
-    /// Set AY-3-8910 sound chip mode. Can be set to `mono`, `abc`(stereo) or `acb`(stereo).
+    /// Enables kempston mouse support. If enabled, locks mouse in application
+    #[structopt(long = "mouse")]
+    pub enable_mouse: bool,
+    /// Sets mouse sensitivity [1..=100]. Defaults to 20
+    #[structopt(long = "mouse-sensitivity", default_value = "20")]
+    pub mouse_sensitivity: usize,
+    /// Set AY-3-8910 sound chip mode. Can be set to `mono`, `abc`(stereo) or `acb`(stereo)
     /// Defaults to `abc`
     #[structopt(long, default_value = "abc", parse(try_from_str = ay_mode_from_str))]
     /// Disable AY-3-8910 chip support
@@ -151,6 +157,7 @@ impl Settings {
             emulation_speed: self.speed,
             tape_fastload_enabled: !self.disable_fastload,
             kempston_enabled: !self.disable_kempston,
+            mouse_enabled: self.enable_mouse,
             ay_mode: self.ay_mode,
             ay_enabled,
             beeper_enabled: !self.disable_beeper,

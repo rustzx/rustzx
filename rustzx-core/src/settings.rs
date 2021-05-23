@@ -8,6 +8,7 @@ pub struct RustzxSettings {
     pub emulation_speed: EmulationSpeed,
     pub tape_fastload_enabled: bool,
     pub kempston_enabled: bool,
+    pub mouse_enabled: bool,
     #[cfg(all(feature = "sound", feature = "ay"))]
     pub ay_mode: ZXAYMode,
     #[cfg(all(feature = "sound", feature = "ay"))]
