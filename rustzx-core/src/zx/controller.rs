@@ -15,6 +15,7 @@ use crate::{
         keys::{CompoundKey, ZXKey},
         machine::ZXMachine,
         memory::{Page, RamType, RomType, ZXMemory, PAGE_SIZE},
+        mouse::kempston::{KempstonMouse, KempstonMouseButton, KempstonMouseWheelDirection},
         tape::{TapeImpl, ZXTape},
         video::{colors::ZXColor, screen::ZXScreen},
     },
@@ -37,6 +38,7 @@ pub(crate) struct ZXController<H: Host> {
     #[cfg(feature = "precise-border")]
     pub border: ZXBorder<H::FrameBuffer>,
     pub kempston: Option<KempstonJoy>,
+    pub mouse: Option<KempstonMouse>,
     #[cfg(feature = "sound")]
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
@@ -79,8 +81,15 @@ impl<H: Host> ZXController<H> {
                 screen_bank = 5;
             }
         };
+
         let kempston = if settings.kempston_enabled {
             Some(KempstonJoy::default())
+        } else {
+            None
+        };
+
+        let mouse = if settings.mouse_enabled {
+            Some(KempstonMouse::default())
         } else {
             None
         };
@@ -99,6 +108,7 @@ impl<H: Host> ZXController<H> {
             #[cfg(feature = "precise-border")]
             border,
             kempston,
+            mouse,
             #[cfg(feature = "sound")]
             mixer,
             keyboard: [0xFF; 8],
@@ -206,6 +216,24 @@ impl<H: Host> ZXController<H> {
                 self.keyboard_extended[modifier_key.row_id()] |= modifier_key.mask();
             }
             self.keyboard_extended[primary_key.row_id()] |= primary_key.mask();
+        }
+    }
+
+    pub fn send_mouse_button(&mut self, button: KempstonMouseButton, pressed: bool) {
+        if let Some(mouse) = &mut self.mouse {
+            mouse.send_button(button, pressed);
+        }
+    }
+
+    pub fn send_mouse_wheel(&mut self, dir: KempstonMouseWheelDirection) {
+        if let Some(mouse) = &mut self.mouse {
+            mouse.send_wheel(dir);
+        }
+    }
+
+    pub fn send_mouse_pos_diff(&mut self, x: i8, y: i8) {
+        if let Some(mouse) = &mut self.mouse {
+            mouse.send_pos_diff(x, y);
         }
     }
 
@@ -386,7 +414,7 @@ impl<H: Host> ZXController<H> {
                     self.screen.update(idx as u16, 5, *data);
                 }
                 for (idx, data) in self.memory.ram_page_data(7).iter().enumerate() {
-                    self.screen.update(idx as u16, 6, *data);
+                    self.screen.update(idx as u16, 7, *data);
                 }
             }
         }
@@ -492,14 +520,16 @@ impl<H: Host> Z80Bus for ZXController<H> {
             }
             // 5 and 7 unused
             tmp
+        } else if self.mouse.is_some() && (port & 0x0121 == 0x0001) {
+            self.mouse.as_ref().unwrap().buttons_port
+        } else if self.mouse.is_some() && (port & 0x0521 == 0x0101) {
+            self.mouse.as_ref().unwrap().x_pos_port
+        } else if self.mouse.is_some() && (port & 0x0521 == 0x0501) {
+            self.mouse.as_ref().unwrap().y_pos_port
         } else if port & 0xC002 == 0xC000 {
             self.read_ay_port()
-        } else if self.kempston.is_some() && (port & 0x0020 == 0) {
-            if let Some(ref joy) = self.kempston {
-                joy.read()
-            } else {
-                unreachable!()
-            }
+        } else if self.kempston.is_some() && (port & 0x00E0 == 0) {
+            self.kempston.as_ref().unwrap().read()
         } else {
             self.floating_bus_value()
         };

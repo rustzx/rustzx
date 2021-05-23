@@ -202,7 +202,7 @@ impl RustzxApp {
             );
             self.video.end();
             // check all events
-            if let Some(event) = self.events.pop_event() {
+            while let Some(event) = self.events.pop_event() {
                 match event {
                     Event::Exit => {
                         break 'emulator;
@@ -229,6 +229,15 @@ impl RustzxApp {
                     }
                     Event::CompoundKey(key, state) => {
                         self.emulator.send_compound_key(key, state);
+                    }
+                    Event::MouseMove { x, y } => {
+                        self.emulator.send_mouse_pos(x, y);
+                    }
+                    Event::MouseButton(buton, pressed) => {
+                        self.emulator.send_mouse_button(buton, pressed);
+                    }
+                    Event::MouseWheel(direction) => {
+                        self.emulator.send_mouse_wheel(direction);
                     }
                     Event::InsertTape => self.emulator.play_tape(),
                     Event::StopTape => self.emulator.stop_tape(),

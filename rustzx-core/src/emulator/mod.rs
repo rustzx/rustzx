@@ -19,6 +19,7 @@ use crate::{
             sinclair::{SinclairJoyNum, SinclairKey},
         },
         keys::{CompoundKey, ZXKey},
+        mouse::kempston::{KempstonMouseButton, KempstonMouseWheelDirection},
         tape::{Tap, TapeImpl},
         video::colors::ZXColor,
     },
@@ -194,6 +195,18 @@ impl<H: Host> Emulator<H> {
 
     pub fn send_sinclair_key(&mut self, num: SinclairJoyNum, key: SinclairKey, pressed: bool) {
         self.controller.send_sinclair_key(num, key, pressed);
+    }
+
+    pub fn send_mouse_button(&mut self, button: KempstonMouseButton, pressed: bool) {
+        self.controller.send_mouse_button(button, pressed);
+    }
+
+    pub fn send_mouse_wheel(&mut self, dir: KempstonMouseWheelDirection) {
+        self.controller.send_mouse_wheel(dir);
+    }
+
+    pub fn send_mouse_pos(&mut self, x: i8, y: i8) {
+        self.controller.send_mouse_pos_diff(x, y);
     }
 
     #[cfg(feature = "sound")]
