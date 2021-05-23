@@ -4,7 +4,10 @@ mod events_sdl;
 
 use rustzx_core::{
     zx::{
-        joy::kempston::KempstonKey,
+        joy::{
+            kempston::KempstonKey,
+            sinclair::{SinclairJoyNum, SinclairKey},
+        },
         keys::{CompoundKey, ZXKey},
     },
     EmulationSpeed,
@@ -15,10 +18,12 @@ pub use events_sdl::EventsSdl;
 
 // Event type
 pub enum Event {
-    GameKey(ZXKey, bool),
+    ZXKey(ZXKey, bool),
     CompoundKey(CompoundKey, bool),
     Kempston(KempstonKey, bool),
-    SwitchDebug,
+    Sinclair(SinclairJoyNum, SinclairKey, bool),
+    SwitchFrameTrace,
+    ChangeJoyKeyboardLayer(bool),
     ChangeSpeed(EmulationSpeed),
     InsertTape,
     StopTape,

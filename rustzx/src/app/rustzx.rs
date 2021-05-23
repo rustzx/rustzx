@@ -78,6 +78,9 @@ pub struct RustzxApp {
     tex_canvas: TextureInfo,
     scale: u32,
     settings: Settings,
+
+    enable_frame_trace: bool,
+    enable_joy_keyaboard_layer: bool,
 }
 
 impl RustzxApp {
@@ -124,17 +127,34 @@ impl RustzxApp {
             tex_canvas,
             scale,
             settings,
+            enable_frame_trace: cfg!(debug_assertions),
+            enable_joy_keyaboard_layer: false,
         };
 
         if let Some(file) = file_autodetect.as_ref() {
             app.load_file_autodetect(file)?;
         }
 
+        app.update_window_title();
+
         Ok(app)
     }
 
+    fn update_window_title(&mut self) {
+        let mut title = format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+
+        if self.enable_joy_keyaboard_layer {
+            title.push_str(" [JOY]");
+        }
+
+        if self.enable_frame_trace {
+            title.push_str(" [FRAME_TRACE]");
+        }
+
+        self.video.set_title(&title);
+    }
+
     pub fn start(&mut self) -> anyhow::Result<()> {
-        let mut debug = false;
         let scale = self.scale;
         let mut stopwatch = InstantStopwatch::default();
         'emulator: loop {
@@ -187,21 +207,25 @@ impl RustzxApp {
                     Event::Exit => {
                         break 'emulator;
                     }
-                    Event::GameKey(key, state) => {
+                    Event::ZXKey(key, state) => {
                         self.emulator.send_key(key, state);
                     }
-                    Event::SwitchDebug => {
-                        debug = !debug;
-                        if !debug {
-                            self.video
-                                .set_title(&format!("RustZX v{}", env!("CARGO_PKG_VERSION")));
-                        }
+                    Event::SwitchFrameTrace => {
+                        self.enable_frame_trace = !self.enable_frame_trace;
+                        self.update_window_title();
+                    }
+                    Event::ChangeJoyKeyboardLayer(value) => {
+                        self.enable_joy_keyaboard_layer = value;
+                        self.update_window_title();
                     }
                     Event::ChangeSpeed(speed) => {
                         self.emulator.set_speed(speed);
                     }
                     Event::Kempston(key, state) => {
                         self.emulator.send_kempston_key(key, state);
+                    }
+                    Event::Sinclair(num, key, state) => {
+                        self.emulator.send_sinclair_key(num, key, state);
                     }
                     Event::CompoundKey(key, state) => {
                         self.emulator.send_compound_key(key, state);
@@ -223,12 +247,12 @@ impl RustzxApp {
             // get exceed clocks and use them on next iteration
             let frame_dt = frame_start.elapsed();
             // change window header
-            if debug {
-                self.video.set_title(&format!(
+            if self.enable_frame_trace {
+                log::trace!(
                     "CPU: {:7.3}ms; FRAME:{:7.3}ms",
                     cpu_dt.as_millis(),
                     frame_dt.as_millis()
-                ));
+                );
             }
         }
         Ok(())
