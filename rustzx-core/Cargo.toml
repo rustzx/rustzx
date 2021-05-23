@@ -23,4 +23,4 @@ lazy_static = "1"
 displaydoc = { version = "0.2", default-features = false }
 from_variants = "0.6"
 enum_dispatch = "0.3"
-aym = { version = "0.1", path = "../aym", optional = true}
+aym = { version = "0.1.1", path = "../aym", optional = true}

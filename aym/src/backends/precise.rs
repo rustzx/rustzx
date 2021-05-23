@@ -7,12 +7,12 @@ const DC_FILTER_SIZE: usize = 1024;
 
 #[derive(Default)]
 struct ToneChannel {
-    tone_period: usize,
-    tone_counter: usize,
+    tone_period: u16,
+    tone_counter: u16,
     tone: usize,
-    t_off: usize,
-    n_off: usize,
-    e_on: usize,
+    tone_off_bit: usize,
+    noise_off_bit: usize,
+    envelope_enabled: bool,
     volume: usize,
     pan_left: f64,
     pan_right: f64,
@@ -46,27 +46,34 @@ impl Default for DcFilter {
 /// Uses f64 for computations.
 pub struct AymPrecise {
     channels: [ToneChannel; TONE_CHANNELS],
-    noise_period: usize,
-    noise_counter: usize,
+
+    noise_period: u16,
+    noise_counter: u16,
     noise: usize,
-    envelope_counter: usize,
-    envelope_period: usize,
+
+    envelope_counter: u16,
+    envelope_period: u16,
     envelope_shape: usize,
     envelope_segment: usize,
     envelope: usize,
+
     dac_table: &'static [f64; 32],
     step: f64,
     x: f64,
     interpolator_left: Interpolator,
     interpolator_right: Interpolator,
+
     fir_left: [f64; FIR_SIZE * 2],
     fir_right: [f64; FIR_SIZE * 2],
     fir_index: usize,
+
     dc_left: DcFilter,
     dc_right: DcFilter,
     dc_index: usize,
+
     left: f64,
     right: f64,
+
     registers: [u8; AY_REGISTER_COUNT],
     dc_filter: bool,
 }
@@ -200,28 +207,33 @@ impl AymPrecise {
         }
     }
 
-    fn set_tone(&mut self, index: usize, period: usize) {
+    fn set_tone(&mut self, index: usize, period: u16) {
         let period = period & 0xFFF;
-        self.channels[index].tone_period = (period == 0) as usize | period;
+        self.channels[index].tone_period = (period == 0) as u16 | period;
     }
 
-    fn set_noise(&mut self, period: usize) {
+    fn set_noise(&mut self, period: u16) {
         self.noise_period = period & 0x1F;
     }
 
-    fn set_mixer(&mut self, index: usize, t_off: usize, n_off: usize, e_on: usize) {
-        self.channels[index].t_off = t_off & 1;
-        self.channels[index].n_off = n_off & 1;
-        self.channels[index].e_on = e_on;
+    fn set_mixer(
+        &mut self,
+        index: usize,
+        tone_enable: bool,
+        noise_enable: bool,
+        envelope_enabled: bool,
+    ) {
+        self.channels[index].tone_off_bit = (!tone_enable) as usize;
+        self.channels[index].noise_off_bit = (!noise_enable) as usize;
+        self.channels[index].envelope_enabled = envelope_enabled;
     }
 
     fn set_volume(&mut self, index: usize, volume: usize) {
         self.channels[index].volume = volume & 0x0F;
     }
 
-    fn set_envelope(&mut self, period: usize) {
-        let period = period & 0xFFFF;
-        self.envelope_period = (period == 0) as usize | period;
+    fn set_envelope(&mut self, period: u16) {
+        self.envelope_period = (period == 0) as u16 | period;
     }
 
     fn set_envelope_shape(&mut self, shape: usize) {
@@ -343,13 +355,14 @@ impl AymPrecise {
         self.left = 0.0;
         self.right = 0.0;
         for i in 0..TONE_CHANNELS {
-            let mut out =
-                (self.update_tone(i) | self.channels[i].t_off) & (noise | self.channels[i].n_off);
-            out *= if self.channels[i].e_on != 0 {
+            let mut out = (self.update_tone(i) | self.channels[i].tone_off_bit)
+                & (noise | self.channels[i].noise_off_bit);
+            out *= if self.channels[i].envelope_enabled {
                 envelope
             } else {
                 self.channels[i].volume * 2 + 1
             };
+            assert!(out < 32);
             self.left += self.dac_table[out] * self.channels[i].pan_left;
             self.right += self.dac_table[out] * self.channels[i].pan_right;
         }
@@ -358,6 +371,8 @@ impl AymPrecise {
 
 #[allow(clippy::excessive_precision)]
 fn decimate(x: &mut [f64]) -> f64 {
+    assert!(x.len() >= FIR_SIZE);
+
     let y = -0.0000046183113992051936 * (x[1] + x[191])
         + -0.00001117761640887225 * (x[2] + x[190])
         + -0.000018610264502005432 * (x[3] + x[189])
@@ -494,58 +509,58 @@ impl AymBackend for AymPrecise {
         let r = self.registers;
 
         match address {
-            0 | 1 => self.set_tone(0, u16::from_le_bytes([r[0], r[1] & 0x0f]) as usize),
-            2 | 3 => self.set_tone(1, u16::from_le_bytes([r[2], r[3] & 0x0f]) as usize),
-            4 | 5 => self.set_tone(2, u16::from_le_bytes([r[4], r[5] & 0x0f]) as usize),
-            6 => self.set_noise((r[6] & 0x1f) as usize),
+            0 | 1 => self.set_tone(0, u16::from_le_bytes([r[0], r[1] & 0x0f])),
+            2 | 3 => self.set_tone(1, u16::from_le_bytes([r[2], r[3] & 0x0f])),
+            4 | 5 => self.set_tone(2, u16::from_le_bytes([r[4], r[5] & 0x0f])),
+            6 => self.set_noise((r[6] & 0x1f) as u16),
             7 => {
                 self.set_mixer(
                     0,
-                    ((r[7] & 0x01) != 0) as usize,
-                    ((r[7] & 0x08) != 0) as usize,
-                    ((r[8] & 0x10) != 0) as usize,
+                    (r[7] & 0x01) == 0,
+                    (r[7] & 0x08) == 0,
+                    (r[8] & 0x10) != 0,
                 );
                 self.set_mixer(
                     1,
-                    ((r[7] & 0x02) != 0) as usize,
-                    ((r[7] & 0x10) != 0) as usize,
-                    ((r[9] & 0x10) != 0) as usize,
+                    (r[7] & 0x02) == 0,
+                    (r[7] & 0x10) == 0,
+                    (r[9] & 0x10) != 0,
                 );
                 self.set_mixer(
                     2,
-                    ((r[7] & 0x04) != 0) as usize,
-                    ((r[7] & 0x20) != 0) as usize,
-                    ((r[10] & 0x10) != 0) as usize,
+                    (r[7] & 0x04) == 0,
+                    (r[7] & 0x20) == 0,
+                    (r[10] & 0x10) != 0,
                 );
             }
             8 => {
                 self.set_mixer(
                     0,
-                    ((r[7] & 0x01) != 0) as usize,
-                    ((r[7] & 0x08) != 0) as usize,
-                    ((r[8] & 0x10) != 0) as usize,
+                    (r[7] & 0x01) == 0,
+                    (r[7] & 0x08) == 0,
+                    (r[8] & 0x10) != 0,
                 );
                 self.set_volume(0, (r[8] & 0x0F) as usize);
             }
             9 => {
                 self.set_mixer(
                     1,
-                    ((r[7] & 0x02) != 0) as usize,
-                    ((r[7] & 0x10) != 0) as usize,
-                    ((r[9] & 0x10) != 0) as usize,
+                    (r[7] & 0x02) == 0,
+                    (r[7] & 0x10) == 0,
+                    (r[9] & 0x10) != 0,
                 );
                 self.set_volume(1, (r[9] & 0x0F) as usize);
             }
             10 => {
                 self.set_mixer(
                     2,
-                    ((r[7] & 0x04) != 0) as usize,
-                    ((r[7] & 0x20) != 0) as usize,
-                    ((r[10] & 0x10) != 0) as usize,
+                    (r[7] & 0x04) == 0,
+                    (r[7] & 0x20) == 0,
+                    (r[10] & 0x10) != 0,
                 );
                 self.set_volume(2, (r[10] & 0x0F) as usize);
             }
-            11 | 12 => self.set_envelope(u16::from_le_bytes([r[11], r[12]]) as usize),
+            11 | 12 => self.set_envelope(u16::from_le_bytes([r[11], r[12]])),
             13 => self.set_envelope_shape((r[13] & 0x0F) as usize),
             _ => unreachable!(),
         }
