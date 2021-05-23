@@ -14,7 +14,10 @@ use crate::{
     zx::{
         controller::ZXController,
         events::EmulationEvents,
-        joy::kempston::KempstonKey,
+        joy::{
+            kempston::KempstonKey,
+            sinclair::{SinclairJoyNum, SinclairKey},
+        },
         keys::{CompoundKey, ZXKey},
         tape::{Tap, TapeImpl},
         video::colors::ZXColor,
@@ -183,10 +186,14 @@ impl<H: Host> Emulator<H> {
         self.controller.send_compound_key(key, pressed);
     }
 
-    pub fn send_kempston_key(&mut self, key: KempstonKey, state: bool) {
+    pub fn send_kempston_key(&mut self, key: KempstonKey, pressed: bool) {
         if let Some(joy) = &mut self.controller.kempston {
-            joy.key(key, state);
+            joy.key(key, pressed);
         }
+    }
+
+    pub fn send_sinclair_key(&mut self, num: SinclairJoyNum, key: SinclairKey, pressed: bool) {
+        self.controller.send_sinclair_key(num, key, pressed);
     }
 
     #[cfg(feature = "sound")]

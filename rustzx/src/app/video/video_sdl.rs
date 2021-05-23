@@ -32,11 +32,7 @@ impl VideoSdl {
                 SCREEN_HEIGHT * settings.scale,
             );
             let window = video
-                .window(
-                    &format!("RustZX v{}", env!("CARGO_PKG_VERSION")),
-                    width as u32,
-                    height as u32,
-                )
+                .window("RustZX", width as u32, height as u32)
                 .position_centered()
                 .opengl()
                 .build()

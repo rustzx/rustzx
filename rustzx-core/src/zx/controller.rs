@@ -8,7 +8,10 @@ use crate::{
     zx::{
         constants::{ADDR_LD_BREAK, CANVAS_HEIGHT, CLOCKS_PER_COL},
         events::EmulationEvents,
-        joy::kempston::KempstonJoy,
+        joy::{
+            kempston::KempstonJoy,
+            sinclair::{self, SinclairJoyNum, SinclairKey},
+        },
         keys::{CompoundKey, ZXKey},
         machine::ZXMachine,
         memory::{Page, RamType, RomType, ZXMemory, PAGE_SIZE},
@@ -38,6 +41,7 @@ pub(crate) struct ZXController<H: Host> {
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
     pub keyboard_extended: [u8; 8],
+    pub keyboard_sinclair: [u8; 8],
     pub caps_shift_modifier_mask: u32,
     // current border color
     pub border_color: ZXColor,
@@ -99,6 +103,7 @@ impl<H: Host> ZXController<H> {
             mixer,
             keyboard: [0xFF; 8],
             keyboard_extended: [0xFF; 8],
+            keyboard_sinclair: [0xFF; 8],
             caps_shift_modifier_mask: 0,
             border_color: ZXColor::Black,
             frame_clocks: Clocks(0),
@@ -166,11 +171,20 @@ impl<H: Host> ZXController<H> {
 
     /// Changes key state in controller
     pub fn send_key(&mut self, key: ZXKey, pressed: bool) {
-        let row_id = key.row_id();
-        self.keyboard[row_id] &= !key.mask();
-        if !pressed {
-            self.keyboard[row_id] |= key.mask();
+        if pressed {
+            self.keyboard[key.row_id()] &= !key.mask();
+            return;
         }
+        self.keyboard[key.row_id()] |= key.mask();
+    }
+
+    pub fn send_sinclair_key(&mut self, num: SinclairJoyNum, key: SinclairKey, pressed: bool) {
+        let key = sinclair::sinclair_event_to_zx_key(key, num);
+        if pressed {
+            self.keyboard_sinclair[key.row_id()] &= !key.mask();
+            return;
+        }
+        self.keyboard_sinclair[key.row_id()] |= key.mask();
     }
 
     pub fn send_compound_key(&mut self, key: CompoundKey, pressed: bool) {
@@ -467,7 +481,8 @@ impl<H: Host> Z80Bus for ZXController<H> {
             for n in 0..8 {
                 // if bit of row reset
                 if ((h >> n) & 0x01) == 0 {
-                    let keyboard_byte = self.keyboard[n] & self.keyboard_extended[n];
+                    let keyboard_byte =
+                        self.keyboard[n] & self.keyboard_extended[n] & self.keyboard_sinclair[n];
                     tmp &= keyboard_byte;
                 }
             }

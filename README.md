@@ -61,14 +61,22 @@ If you have choppy audio, try `--sound-latency` option with bigger values.
 - `F3` - set normal emulation speed
 - `F4` - set 2x emulation speed
 - `F5` - max possible emulation speed
-- `F6` - enable debug info
+- `F6` - enable frame trace info
+- `F9` - enable kempston/sinclair joy keyboard layer
 - `Insert` - start tape
 - `Delete`- stop tape
 - `End` - break command
 - `Caps Lock` - caps lock command
-- `Backspace` - celete
-- `<Arrows>` - Kempston joystick or 128K arrow keys if `--nokempston` specified
-- `Alt` - Kempston fire
+- `Backspace` - delete
+- `<Arrows>` - 128K arrow keys
+
+## In joy keyboard layer mode (F9)
+- `<Arrows>` - Kempston joy *arrows*
+- `Alt` - Kempston *fire*
+- `WASD`- Siclair Joy 1 *arrows*
+- `Caps Lock` - Sinclair Joy 1 *fire*
+- `IJKL`- Siclair Joy 2 *arrows*
+- `Enter` - Sinclair Joy 2 *fire*
 
 ## Screenshots
 ![](screenshots/rain.png)
