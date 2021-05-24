@@ -11,10 +11,23 @@ env:
 
 jobs:
   build:
+    name: "Build (${{ matrix.os }}-${{ matrix.arch }})"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-20.04
+            os_name: linux
+            executable_suffix: ""
+            arch: amd64
+          - os: windows-2019
+            os_name: windows
+            executable_suffix: ".exe"
+            arch: amd64
+          - os: macos-10.15
+            os_name: macos
+            executable_suffix: ""
+            arch: amd64
     env:
       RUSTFLAGS: -D warnings
     steps:
@@ -50,3 +63,10 @@ jobs:
         with:
           command: test
           args: --workspace --all-features --verbose
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: "rustzx-bin-${{ matrix.os_name }}-${{ matrix.arch }}"
+          path: |
+            target/release/rustzx${{ matrix.executable_suffix }}
+            target/release/vtx${{ matrix.executable_suffix }}
