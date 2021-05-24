@@ -1,6 +1,6 @@
 [package]
 name = "vtx"
-version = "0.1.0"
+version = "0.1.1"
 description = "VTX sound format parsing and playback library"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 edition = "2018"
