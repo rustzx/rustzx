@@ -1,7 +1,6 @@
 use crate::{
     opcodes::BlockDir,
     tables::{lookup8_r12, HALF_CARRY_SUB_TABLE, PARITY_TABLE, SZF3F5_TABLE},
-    utils::bool_to_u8,
     RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN,
     FLAG_SUB, FLAG_ZERO, Z80,
 };
@@ -30,11 +29,11 @@ pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     // reset affected flags
     flags &= !(FLAG_SUB | FLAG_HALF_CARRY | FLAG_PV | FLAG_F3 | FLAG_F5);
     // set PV if bc != 0
-    flags |= bool_to_u8(bc != 0) * FLAG_PV;
+    flags |= (bc != 0) as u8 * FLAG_PV;
     let src_plus_a = src.wrapping_add(cpu.regs.get_acc());
     // bit 1 for F5 and bit 3 for F3
-    flags |= bool_to_u8(src_plus_a & 0x08 != 0) * FLAG_F3;
-    flags |= bool_to_u8(src_plus_a & 0x02 != 0) * FLAG_F5;
+    flags |= (src_plus_a & 0x08 != 0) as u8 * FLAG_F3;
+    flags |= (src_plus_a & 0x02 != 0) as u8 * FLAG_F5;
     cpu.regs.set_flags(flags);
     // Clocks: <4 + 4> + 3 + 3 + 2 = 16
 }
@@ -57,8 +56,8 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) -> bo
     // flags, only carry unaffected
     let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
     flags |= FLAG_SUB;
-    flags |= bool_to_u8(bc != 0) * FLAG_PV;
-    flags |= bool_to_u8(tmp == 0) * FLAG_ZERO;
+    flags |= (bc != 0) as u8 * FLAG_PV;
+    flags |= (tmp == 0) as u8 * FLAG_ZERO;
     flags |= tmp & FLAG_SIGN;
     let lookup = lookup8_r12(acc, src, tmp);
     let half_borrow = HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
@@ -68,8 +67,8 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) -> bo
     } else {
         tmp
     };
-    flags |= bool_to_u8((tmp2 & 0x08) != 0) * FLAG_F3;
-    flags |= bool_to_u8((tmp2 & 0x02) != 0) * FLAG_F5;
+    flags |= ((tmp2 & 0x08) != 0) as u8 * FLAG_F3;
+    flags |= ((tmp2 & 0x02) != 0) as u8 * FLAG_F5;
     cpu.regs.set_flags(flags);
     // Clocks: <4 + 4> + 3 + 5 = 16
     tmp == 0 // return comarison result
@@ -92,7 +91,7 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     // as in dec b
     flags |= SZF3F5_TABLE[b as usize];
     // 7 bit from input value
-    flags |= bool_to_u8((src & 0x80) != 0) * FLAG_SUB;
+    flags |= ((src & 0x80) != 0) as u8 * FLAG_SUB;
     // get C reg and modify it according to instruction type
     let c = match dir {
         BlockDir::Inc => cpu.regs.get_reg_8(RegName8::C).wrapping_add(1),
@@ -100,7 +99,7 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     };
     // k_carry from (HL) + ( C (+ or -) 1) & 0xFF
     let (k, k_carry) = c.overflowing_add(src);
-    flags |= bool_to_u8(k_carry) * (FLAG_CARRY | FLAG_HALF_CARRY);
+    flags |= k_carry as u8 * (FLAG_CARRY | FLAG_HALF_CARRY);
     // Parity of (k & 7) xor B is PV flag
     flags |= PARITY_TABLE[((k & 0x07) ^ b) as usize];
     cpu.regs.set_flags(flags);
@@ -123,10 +122,10 @@ pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     // as in dec b
     flags |= SZF3F5_TABLE[b as usize];
     // 7 bit of output value [(HL)]
-    flags |= bool_to_u8((src & 0x80) != 0) * FLAG_SUB;
+    flags |= ((src & 0x80) != 0) as u8 * FLAG_SUB;
     // temporary k is L + (HL)
     let (k, k_carry) = l.overflowing_add(src);
-    flags |= bool_to_u8(k_carry) * (FLAG_CARRY | FLAG_HALF_CARRY);
+    flags |= k_carry as u8 * (FLAG_CARRY | FLAG_HALF_CARRY);
     // Parity of (k & 7) xor B is PV flag
     flags |= PARITY_TABLE[((k & 0x07) ^ b) as usize];
     cpu.regs.set_flags(flags);

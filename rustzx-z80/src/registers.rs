@@ -1,7 +1,7 @@
 //! Module which contains Z80 registers implementation
 use crate::{
     smallnum::{U2, U3},
-    utils::{make_word, split_word, word_displacement},
+    utils::word_displacement,
     Prefix,
 };
 use core::fmt;
@@ -249,23 +249,23 @@ impl Regs {
             RegName16::PC => self.pc,
             RegName16::SP => self.sp,
             _ => {
-                let (h, l) = match index {
-                    RegName16::AF => (self.a, self.f),
-                    RegName16::BC => (self.b, self.c),
-                    RegName16::DE => (self.d, self.e),
-                    RegName16::HL => (self.h, self.l),
-                    RegName16::IX => (self.ixh, self.ixl),
-                    RegName16::IY => (self.iyh, self.iyl),
+                let word_bytes_le = match index {
+                    RegName16::AF => [self.f, self.a],
+                    RegName16::BC => [self.c, self.b],
+                    RegName16::DE => [self.e, self.d],
+                    RegName16::HL => [self.l, self.h],
+                    RegName16::IX => [self.ixl, self.ixh],
+                    RegName16::IY => [self.iyl, self.iyh],
                     _ => unreachable!(),
                 };
-                make_word(h, l)
+                u16::from_le_bytes(word_bytes_le)
             }
         }
     }
 
     /// Changes value of 16-bit register
     pub fn set_reg_16(&mut self, index: RegName16, value: u16) -> u16 {
-        let (h, l) = split_word(value);
+        let [l, h] = value.to_le_bytes();
         match index {
             RegName16::PC => self.pc = value,
             RegName16::SP => self.sp = value,
@@ -354,27 +354,27 @@ impl Regs {
 
     /// Returns af
     pub fn get_af(&self) -> u16 {
-        make_word(self.a, self.f)
+        u16::from_le_bytes([self.f, self.a])
     }
 
     /// Returns bc
     pub fn get_bc(&self) -> u16 {
-        make_word(self.b, self.c)
+        u16::from_le_bytes([self.c, self.b])
     }
 
     /// Returns ix
     pub fn get_ix(&self) -> u16 {
-        make_word(self.ixh, self.ixl)
+        u16::from_le_bytes([self.ixl, self.ixh])
     }
 
     /// Returns iy
     pub fn get_iy(&self) -> u16 {
-        make_word(self.iyh, self.iyl)
+        u16::from_le_bytes([self.iyl, self.iyh])
     }
 
     /// Changes AF
     pub fn set_af(&mut self, value: u16) -> u16 {
-        let (a, f) = split_word(value);
+        let [f, a] = value.to_le_bytes();
         self.a = a;
         self.f = f;
         value
@@ -382,7 +382,7 @@ impl Regs {
 
     /// Changes BC
     pub fn set_bc(&mut self, value: u16) -> u16 {
-        let (b, c) = split_word(value);
+        let [c, b] = value.to_le_bytes();
         self.b = b;
         self.c = c;
         value
@@ -390,12 +390,12 @@ impl Regs {
 
     /// Returns HL
     pub fn get_hl(&self) -> u16 {
-        make_word(self.h, self.l)
+        u16::from_le_bytes([self.l, self.h])
     }
 
     /// Changes HL
     pub fn set_hl(&mut self, value: u16) -> u16 {
-        let (h, l) = split_word(value);
+        let [l, h] = value.to_le_bytes();
         self.h = h;
         self.l = l;
         value
@@ -403,12 +403,12 @@ impl Regs {
 
     /// Returns DE
     pub fn get_de(&self) -> u16 {
-        make_word(self.d, self.e)
+        u16::from_le_bytes([self.e, self.d])
     }
 
     /// Changes DE
     pub fn set_de(&mut self, value: u16) -> u16 {
-        let (d, e) = split_word(value);
+        let [e, d] = value.to_le_bytes();
         self.d = d;
         self.e = e;
         value
@@ -416,7 +416,7 @@ impl Regs {
 
     /// Changes IX
     pub fn set_ix(&mut self, value: u16) -> u16 {
-        let (ixh, ixl) = split_word(value);
+        let [ixl, ixh] = value.to_le_bytes();
         self.ixh = ixh;
         self.ixl = ixl;
         value
@@ -424,7 +424,7 @@ impl Regs {
 
     /// Changes IY
     pub fn set_iy(&mut self, value: u16) -> u16 {
-        let (iyh, iyl) = split_word(value);
+        let [iyl, iyh] = value.to_le_bytes();
         self.iyh = iyh;
         self.iyl = iyl;
         value

@@ -8,7 +8,6 @@ use crate::{
         lookup16_r12, lookup8_r12, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE, OVERFLOW_ADD_TABLE,
         OVERFLOW_SUB_TABLE, SZF3F5_TABLE, SZPF3F5_TABLE,
     },
-    utils::bool_to_u8,
     Flag, IntMode, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_PV, FLAG_SUB, FLAG_ZERO, Z80,
 };
 
@@ -55,7 +54,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                 // [0b0ppq010]
                 U3::N2 => {
                     bus.wait_loop(cpu.regs.get_ir(), 7);
-                    let prev_carry = bool_to_u8(cpu.regs.get_flag(Flag::Carry)) as u16;
+                    let prev_carry = cpu.regs.get_flag(Flag::Carry) as u16;
                     let operand = cpu.regs.get_reg_16(RegName16::from_u2_sp(opcode.p));
                     let hl = cpu.regs.get_hl();
                     let mut flags = 0u8;
@@ -82,10 +81,10 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                         }
                     }
                     // set flags
-                    flags |= bool_to_u8(result > 0xFFFF) * FLAG_CARRY;
+                    flags |= (result > 0xFFFF) as u8 * FLAG_CARRY;
                     flags |= SZF3F5_TABLE[((result >> 8) as u8) as usize];
                     flags &= !FLAG_ZERO;
-                    flags |= bool_to_u8((result as u16) == 0) * FLAG_ZERO;
+                    flags |= ((result as u16) == 0) as u8 * FLAG_ZERO;
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_hl(result as u16);
                     // Clocks 4 + 4 + 7 = 15
@@ -114,8 +113,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                     flags |= SZF3F5_TABLE[result as usize];
                     let lookup = lookup8_r12(0, acc, result);
                     flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
-                    flags |= bool_to_u8(acc == 0x80) * FLAG_PV;
-                    flags |= bool_to_u8(acc != 0x00) * FLAG_CARRY;
+                    flags |= (acc == 0x80) as u8 * FLAG_PV;
+                    flags |= (acc != 0x00) as u8 * FLAG_CARRY;
                     cpu.regs.set_flags(flags);
                 }
                 // RETN, RETI
@@ -160,7 +159,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             cpu.regs.set_acc(i);
                             let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
                             flags |= SZF3F5_TABLE[i as usize];
-                            flags |= bool_to_u8(iff2) * FLAG_PV;
+                            flags |= iff2 as u8 * FLAG_PV;
                             cpu.regs.set_flags(flags);
                         }
                         // LD A, R
@@ -171,7 +170,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             cpu.regs.set_acc(r);
                             let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
                             flags |= SZF3F5_TABLE[r as usize];
-                            flags |= bool_to_u8(iff2) * FLAG_PV;
+                            flags |= iff2 as u8 * FLAG_PV;
                             cpu.regs.set_flags(flags);
                         }
                         // RRD
