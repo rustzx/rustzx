@@ -1,9 +1,10 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
+use rustzx_z80::Clocks;
 use crate::{
     error::Error,
     host::{Host, HostContext},
     settings::RustzxSettings,
-    utils::{screen::bitmap_line_addr, split_word, Clocks},
+    utils::screen::bitmap_line_addr,
     z80::Z80Bus,
     zx::{
         constants::{ADDR_LD_BREAK, CANVAS_HEIGHT, CLOCKS_PER_COL},
@@ -502,7 +503,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         self.io_contention_first(port);
         self.io_contention_last(port);
         // find out what we need to do
-        let (h, _) = split_word(port);
+        let [_, h] = port.to_le_bytes();
         let output = if port & 0x0001 == 0 {
             // ULA port
             let mut tmp: u8 = 0xFF;

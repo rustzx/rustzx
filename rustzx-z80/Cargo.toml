@@ -1,0 +1,12 @@
+[package]
+name = "rustzx-z80"
+version = "0.1.0"
+authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
+description = "Z80 CPU emulator library"
+repository = "https://github.com/pacmancoder/rustzx"
+keywords = ["emulator", "z80", "no_std"]
+license = "MIT"
+edition = "2018"
+
+[dependencies]
+lazy_static = { version = "1", features = ["spin_no_std"] }

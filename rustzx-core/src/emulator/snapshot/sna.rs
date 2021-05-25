@@ -1,8 +1,8 @@
+use rustzx_z80::Clocks;
 use crate::{
     emulator::Emulator,
     error::IoError,
     host::{DataRecorder, Host, LoadableAsset, SeekFrom, SeekableAsset},
-    utils::{make_word, split_word, Clocks},
     z80::{
         opcodes::{execute_pop_16, execute_push_16},
         RegName16,
@@ -46,20 +46,20 @@ where
     // i-reg
     emulator.cpu.regs.set_i(header[0]);
     // alt-regs
-    emulator.cpu.regs.set_hl(make_word(header[2], header[1]));
-    emulator.cpu.regs.set_de(make_word(header[4], header[3]));
-    emulator.cpu.regs.set_bc(make_word(header[6], header[5]));
+    emulator.cpu.regs.set_hl(u16::from_le_bytes([header[1], header[2]]));
+    emulator.cpu.regs.set_de(u16::from_le_bytes([header[3], header[4]]));
+    emulator.cpu.regs.set_bc(u16::from_le_bytes([header[5], header[6]]));
     emulator.cpu.regs.exx();
     // af'
-    emulator.cpu.regs.set_af(make_word(header[8], header[7]));
+    emulator.cpu.regs.set_af(u16::from_le_bytes([header[7], header[8]]));
     emulator.cpu.regs.swap_af_alt();
     // regs
-    emulator.cpu.regs.set_hl(make_word(header[10], header[9]));
-    emulator.cpu.regs.set_de(make_word(header[12], header[11]));
-    emulator.cpu.regs.set_bc(make_word(header[14], header[13]));
+    emulator.cpu.regs.set_hl(u16::from_le_bytes([header[9], header[10]]));
+    emulator.cpu.regs.set_de(u16::from_le_bytes([header[11], header[12]]));
+    emulator.cpu.regs.set_bc(u16::from_le_bytes([header[13], header[14]]));
     // index regs
-    emulator.cpu.regs.set_iy(make_word(header[16], header[15]));
-    emulator.cpu.regs.set_ix(make_word(header[18], header[17]));
+    emulator.cpu.regs.set_iy(u16::from_le_bytes([header[15], header[16]]));
+    emulator.cpu.regs.set_ix(u16::from_le_bytes([header[17], header[18]]));
     // iff2, iff1
     let iff = (header[19] & SNA_IFF2_BIT_MASK) != 0;
     emulator.cpu.regs.set_iff1(iff);
@@ -67,9 +67,9 @@ where
     // r
     emulator.cpu.regs.set_r(header[20]);
     // af
-    emulator.cpu.regs.set_af(make_word(header[22], header[21]));
+    emulator.cpu.regs.set_af(u16::from_le_bytes([header[21], header[22]]));
     // sp
-    emulator.cpu.regs.set_sp(make_word(header[24], header[23]));
+    emulator.cpu.regs.set_sp(u16::from_le_bytes([header[23], header[24]]));
     // interrupt mode
     emulator.cpu.set_im(header[25] & SNA_INTERRUPT_MODE_MASK);
     // Border color
@@ -82,7 +82,7 @@ where
         let mut tmp = [0u8; SNA_128K_SECONDARY_HEADER_SIZE];
         asset.seek(SeekFrom::Start(SNA_128K_SECONDARY_HEADER_OFFSET))?;
         asset.read_exact(&mut tmp)?;
-        emulator.cpu.regs.set_pc(make_word(tmp[1], tmp[0]));
+        emulator.cpu.regs.set_pc(u16::from_le_bytes([header[0], header[1]]));
         let port_7ffd = tmp[2];
         let _trdos_paged = tmp[3];
         // This will alsto setup required memory map before banks restore
@@ -203,10 +203,10 @@ where
     header[12] = emulator.cpu.regs.get_d();
     header[13] = emulator.cpu.regs.get_c();
     header[14] = emulator.cpu.regs.get_b();
-    let (iyh, iyl) = split_word(emulator.cpu.regs.get_iy());
+    let [iyl, iyh] = emulator.cpu.regs.get_iy().to_le_bytes();
     header[15] = iyl;
     header[16] = iyh;
-    let (ixh, ixl) = split_word(emulator.cpu.regs.get_ix());
+    let [ixl, ixh] = emulator.cpu.regs.get_ix().to_le_bytes();
     header[17] = ixl;
     header[18] = ixh;
     // iff2
@@ -219,7 +219,7 @@ where
     header[21] = emulator.cpu.regs.get_flags();
     header[22] = emulator.cpu.regs.get_acc();
     // SP
-    let (sph, spl) = split_word(emulator.cpu.regs.get_sp());
+    let [spl, sph] = emulator.cpu.regs.get_sp().to_le_bytes();
     header[23] = spl;
     header[24] = sph;
     // Interrupt mode
@@ -254,7 +254,7 @@ where
         }
 
         // PC, 7ffd, trdos
-        let (pch, pcl) = split_word(emulator.cpu.regs.get_pc());
+        let [pcl, pch] = emulator.cpu.regs.get_pc().to_le_bytes();
         let port_7ffd = emulator.controller.read_7ffd();
         let trdos_paged = 0x00;
         recorder.write_all(&[pcl, pch, port_7ffd, trdos_paged])?;

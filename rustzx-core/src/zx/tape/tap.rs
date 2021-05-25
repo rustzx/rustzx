@@ -1,7 +1,7 @@
+use rustzx_z80::Clocks;
 use crate::{
     error::TapeLoadError,
     host::{LoadableAsset, SeekFrom, SeekableAsset},
-    utils::{make_word, Clocks},
     zx::tape::TapeImpl,
     Result,
 };
@@ -116,7 +116,7 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
             self.tape_ended = true;
             return Ok(false);
         }
-        let block_size = make_word(block_size_buffer[1], block_size_buffer[0]) as usize;
+        let block_size = u16::from_le_bytes(block_size_buffer) as usize;
         let block_bytes_to_read = block_size.min(BUFFER_SIZE);
         self.asset
             .read_exact(&mut self.buffer[0..block_bytes_to_read])?;

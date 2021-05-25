@@ -1,11 +1,12 @@
 mod empty;
 mod tap;
 
-pub use self::{empty::Empty, tap::Tap};
+pub use empty::Empty;
+pub use tap::Tap;
 
+use rustzx_z80::Clocks;
 use crate::{
     host::{LoadableAsset, SeekableAsset},
-    utils::Clocks,
     Result,
 };
 

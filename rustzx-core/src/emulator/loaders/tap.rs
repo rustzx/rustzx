@@ -1,8 +1,8 @@
 // emulator
+use rustzx_z80::Clocks;
 use crate::{
     emulator::Emulator,
     host::Host,
-    utils::{make_word, Clocks},
     z80::{opcodes, RegName16, Z80Bus, FLAG_CARRY, FLAG_ZERO},
     zx::tape::TapeImpl,
     Result,
@@ -85,7 +85,7 @@ pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) -> Result<()> {
     emulator
         .cpu
         .regs
-        .set_hl(make_word(parity_acc, current_byte));
+        .set_hl(u16::from_le_bytes([current_byte, parity_acc]));
     emulator.cpu.regs.set_acc(acc);
     // set new flag, if something changed
     if let Some(new_flags) = result_flags {

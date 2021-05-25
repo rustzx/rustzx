@@ -1,5 +1,9 @@
-use super::split_word;
-use crate::zx::constants::{ATTR_BASE_REL, ATTR_COLS, ATTR_MAX_REL, CANVAS_HEIGHT};
+use crate::zx::constants::{
+    ATTR_BASE_REL,
+    ATTR_COLS,
+    ATTR_MAX_REL,
+    CANVAS_HEIGHT
+};
 
 /// Encode line number to read memory address
 pub fn bitmap_line_addr(line: usize) -> u16 {
@@ -11,7 +15,7 @@ pub fn bitmap_line_addr(line: usize) -> u16 {
 /// Get pixel id from address
 pub fn bitmap_line_rel(addr: u16) -> usize {
     assert!(addr < ATTR_BASE_REL);
-    let (h, l) = split_word(addr);
+    let [l, h] = addr.to_le_bytes();
     // 0 0 0 Y7 Y6 Y2 Y1 Y0 | Y5 Y4 Y3 X4 X3 X2 X1 X0
     // extract lowest 5 bits as x coordinate base
     let y = (h & 0x07) | ((l >> 2) & 0x38) | ((h << 3) & 0xC0);
@@ -21,7 +25,7 @@ pub fn bitmap_line_rel(addr: u16) -> usize {
 /// get bitmap column from address
 pub fn bitmap_col_rel(addr: u16) -> usize {
     assert!(addr < ATTR_BASE_REL);
-    let (_, l) = split_word(addr);
+    let [l, _] = addr.to_le_bytes();
     // extract lowest 5 bits as x coordinate base
     (l & 0x1F) as usize
 }
