@@ -7,6 +7,3 @@ repository = "https://github.com/pacmancoder/rustzx"
 keywords = ["emulator", "z80", "no_std"]
 license = "MIT"
 edition = "2018"
-
-[dependencies]
-lazy_static = { version = "1", features = ["spin_no_std"] }
