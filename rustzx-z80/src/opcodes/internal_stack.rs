@@ -1,11 +1,10 @@
 use crate::{
-    Clocks,
     utils::{make_word, split_word},
     RegName16, Z80Bus, Z80,
 };
 
 /// Pushes 16 bit value to the stack. Clocks count using for each byte write
-pub fn execute_push_16(cpu: &mut Z80, bus: &mut dyn Z80Bus, reg: RegName16, clk: Clocks) {
+pub fn execute_push_16(cpu: &mut Z80, bus: &mut dyn Z80Bus, reg: RegName16, clk: usize) {
     // h then l
     let (h, l) = split_word(cpu.regs.get_reg_16(reg));
     bus.write(cpu.regs.dec_sp(1), h, clk);
@@ -13,7 +12,7 @@ pub fn execute_push_16(cpu: &mut Z80, bus: &mut dyn Z80Bus, reg: RegName16, clk:
 }
 
 /// Pops 16 bit value from the stack. Clocks count using for each byte read
-pub fn execute_pop_16(cpu: &mut Z80, bus: &mut dyn Z80Bus, reg: RegName16, clk: Clocks) {
+pub fn execute_pop_16(cpu: &mut Z80, bus: &mut dyn Z80Bus, reg: RegName16, clk: usize) {
     let (h, l);
     l = bus.read(cpu.regs.get_sp(), clk);
     cpu.regs.inc_sp(1);

@@ -1,10 +1,10 @@
 use crate::{
     smallnum::U3,
-    utils::bool_to_u8,
     tables::{
-        lookup8_r12, F3F5_TABLE, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE,
-        OVERFLOW_ADD_TABLE, OVERFLOW_SUB_TABLE, PARITY_TABLE,
+        lookup8_r12, F3F5_TABLE, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE, OVERFLOW_ADD_TABLE,
+        OVERFLOW_SUB_TABLE, PARITY_TABLE,
     },
+    utils::bool_to_u8,
     Flag, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
 };
 

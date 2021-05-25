@@ -1,6 +1,5 @@
 //! Contains ZXSpectrum border implementation
 
-use rustzx_z80::Clocks;
 use crate::{
     host::{FrameBuffer, FrameBufferSource},
     zx::{
@@ -70,7 +69,7 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
     /// ULA draws 2 pixels per TState.
     /// This function helps to determine pixel, which will be rendered at specific time
     /// and bool value, which signals end of frame
-    fn next_border_pixel(&self, clocks: Clocks) -> (usize, usize, bool) {
+    fn next_border_pixel(&self, clocks: usize) -> (usize, usize, bool) {
         let specs = self.machine.specs();
         // begining of the first line (first pixel timing minus border lines
         // minus left border columns)
@@ -79,11 +78,11 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
             - BORDER_COLS * CLOCKS_PER_COL
             + specs.clocks_ula_beam_shift;
         // return first pixel pos
-        if clocks.count() < clocks_origin {
+        if clocks < clocks_origin {
             return (0, 0, false);
         }
         // get clocks relative to first pixel
-        let clocks = clocks.count() - clocks_origin;
+        let clocks = clocks - clocks_origin;
         let mut line = clocks / specs.clocks_line as usize;
         // so, next pixel will be current + 2
         let mut pixel = ((clocks % specs.clocks_line as usize) + 1) * PIXELS_PER_CLOCK as usize;
@@ -132,7 +131,7 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
     }
 
     /// changes color of border
-    pub fn set_border(&mut self, clocks: Clocks, color: ZXColor) {
+    pub fn set_border(&mut self, clocks: usize, color: ZXColor) {
         // border updated during frame
         self.border_changed = true;
         let (line, pixel, frame_end) = self.next_border_pixel(clocks);

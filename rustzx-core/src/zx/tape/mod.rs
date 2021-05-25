@@ -4,7 +4,6 @@ mod tap;
 pub use empty::Empty;
 pub use tap::Tap;
 
-use rustzx_z80::Clocks;
 use crate::{
     host::{LoadableAsset, SeekableAsset},
     Result,
@@ -34,7 +33,7 @@ pub trait TapeImpl {
     /// Returns current tape (`ear`) bit
     fn current_bit(&self) -> bool;
     /// Perform tape processing emulation within `clocks` time limit
-    fn process_clocks(&mut self, clocks: Clocks) -> Result<()>;
+    fn process_clocks(&mut self, clocks: usize) -> Result<()>;
     fn stop(&mut self);
     fn play(&mut self);
     /// Rewinds tape content to the beginning

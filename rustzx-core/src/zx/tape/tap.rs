@@ -1,4 +1,3 @@
-use rustzx_z80::Clocks;
 use crate::{
     error::TapeLoadError,
     host::{LoadableAsset, SeekFrom, SeekableAsset},
@@ -40,7 +39,7 @@ pub struct Tap<A: LoadableAsset + SeekableAsset> {
     // Non-fastload related fields
     curr_bit: bool,
     curr_byte: u8,
-    delay: Clocks,
+    delay: usize,
 }
 
 impl<A: LoadableAsset + SeekableAsset> Tap<A> {
@@ -54,7 +53,7 @@ impl<A: LoadableAsset + SeekableAsset> Tap<A> {
             bufer_offset: 0,
             block_bytes_read: 0,
             current_block_size: None,
-            delay: Clocks(0),
+            delay: 0,
             asset,
             tape_ended: false,
         };
@@ -132,14 +131,14 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
         self.curr_bit
     }
 
-    fn process_clocks(&mut self, clocks: Clocks) -> Result<()> {
+    fn process_clocks(&mut self, clocks: usize) -> Result<()> {
         if self.state == TapeState::Stop {
             return Ok(());
         }
 
-        if self.delay.count() > 0 {
+        if self.delay > 0 {
             if clocks > self.delay {
-                self.delay = Clocks(0);
+                self.delay = 0;
             } else {
                 self.delay -= clocks;
             }
@@ -170,7 +169,7 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
                         };
                         self.curr_byte = first_byte;
                         self.curr_bit = true;
-                        self.delay = Clocks(PILOT_LENGTH);
+                        self.delay = PILOT_LENGTH;
                         self.state = TapeState::Pilot { pulses_left };
                         break 'state_machine;
                     }
@@ -179,17 +178,17 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
                     self.curr_bit = !self.curr_bit;
                     pulses_left -= 1;
                     if pulses_left == 0 {
-                        self.delay = Clocks(SYNC1_LENGTH);
+                        self.delay = SYNC1_LENGTH;
                         self.state = TapeState::Sync;
                     } else {
-                        self.delay = Clocks(PILOT_LENGTH);
+                        self.delay = PILOT_LENGTH;
                         self.state = TapeState::Pilot { pulses_left };
                     }
                     break 'state_machine;
                 }
                 TapeState::Sync => {
                     self.curr_bit = !self.curr_bit;
-                    self.delay = Clocks(SYNC2_LENGTH);
+                    self.delay = SYNC2_LENGTH;
                     self.state = TapeState::NextBit { mask: 0x80 };
                     break 'state_machine;
                 }
@@ -204,13 +203,13 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
                 TapeState::NextBit { mask } => {
                     self.curr_bit = !self.curr_bit;
                     if (self.curr_byte & mask) == 0 {
-                        self.delay = Clocks(BIT_ZERO_LENGTH);
+                        self.delay = BIT_ZERO_LENGTH;
                         self.state = TapeState::BitHalf {
                             half_bit_delay: BIT_ZERO_LENGTH,
                             mask,
                         };
                     } else {
-                        self.delay = Clocks(BIT_ONE_LENGTH);
+                        self.delay = BIT_ONE_LENGTH;
                         self.state = TapeState::BitHalf {
                             half_bit_delay: BIT_ONE_LENGTH,
                             mask,
@@ -223,7 +222,7 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
                     mut mask,
                 } => {
                     self.curr_bit = !self.curr_bit;
-                    self.delay = Clocks(half_bit_delay);
+                    self.delay = half_bit_delay;
                     mask >>= 1;
                     self.state = if mask == 0 {
                         TapeState::NextByte
@@ -234,7 +233,7 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
                 }
                 TapeState::Pause => {
                     self.curr_bit = !self.curr_bit;
-                    self.delay = Clocks(PAUSE_LENGTH);
+                    self.delay = PAUSE_LENGTH;
                     // Next block or end of the tape
                     self.state = TapeState::Play;
                     break 'state_machine;
@@ -268,7 +267,7 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
         self.block_bytes_read = 0;
         self.bufer_offset = 0;
         self.current_block_size = None;
-        self.delay = Clocks(0);
+        self.delay = 0;
         self.asset.seek(SeekFrom::Start(0))?;
         self.tape_ended = false;
         Ok(())

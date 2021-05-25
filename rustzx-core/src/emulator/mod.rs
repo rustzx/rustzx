@@ -10,7 +10,6 @@ use crate::{
     },
     settings::RustzxSettings,
     utils::EmulationSpeed,
-    z80::Z80,
     zx::{
         controller::ZXController,
         events::EmulationEvents,
@@ -25,6 +24,7 @@ use crate::{
     },
     Result,
 };
+use rustzx_z80::Z80;
 
 #[cfg(feature = "sound")]
 use crate::zx::sound::sample::SoundSample;

@@ -1,9 +1,4 @@
-use crate::zx::constants::{
-    ATTR_BASE_REL,
-    ATTR_COLS,
-    ATTR_MAX_REL,
-    CANVAS_HEIGHT
-};
+use crate::zx::constants::{ATTR_BASE_REL, ATTR_COLS, ATTR_MAX_REL, CANVAS_HEIGHT};
 
 /// Encode line number to read memory address
 pub fn bitmap_line_addr(line: usize) -> u16 {

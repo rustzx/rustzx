@@ -1,9 +1,8 @@
 //! Z80 CPU module
 
 use crate::{
-    Clocks,
-    utils::make_word,
     opcodes::{execute_bits, execute_extended, execute_normal, execute_push_16, Opcode},
+    utils::make_word,
     IntMode, Prefix, RegName16, Regs, Z80Bus,
 };
 
@@ -35,7 +34,7 @@ impl Default for Z80 {
 impl Z80 {
     /// Reads byte from memory and increments PC
     #[inline]
-    pub fn fetch_byte(&mut self, bus: &mut dyn Z80Bus, clk: Clocks) -> u8 {
+    pub fn fetch_byte(&mut self, bus: &mut dyn Z80Bus, clk: usize) -> u8 {
         let addr = self.regs.get_pc();
         self.regs.inc_pc(1);
         bus.read(addr, clk)
@@ -43,7 +42,7 @@ impl Z80 {
 
     /// Reads word from memory and increments PC twice
     #[inline]
-    pub fn fetch_word(&mut self, bus: &mut dyn Z80Bus, clk: Clocks) -> u16 {
+    pub fn fetch_word(&mut self, bus: &mut dyn Z80Bus, clk: usize) -> u16 {
         let (hi_addr, lo_addr);
         lo_addr = self.regs.get_pc();
         let lo = bus.read(lo_addr, clk);
@@ -89,11 +88,11 @@ impl Z80 {
                     self.regs.inc_pc(1);
                 }
                 // push pc and set pc to 0x0066 ( pleace PC on bus ?)
-                bus.wait_loop(self.regs.get_pc(), Clocks(5));
+                bus.wait_loop(self.regs.get_pc(), 5);
                 // reset iff1
                 self.regs.set_iff1(false);
                 // 3 x 2 clocks consumed
-                execute_push_16(self, bus, RegName16::PC, Clocks(3));
+                execute_push_16(self, bus, RegName16::PC, 3);
                 self.regs.set_pc(0x0066);
                 self.regs.inc_r(1);
             // 5 + 3 + 3 = 11 clocks
@@ -112,26 +111,26 @@ impl Z80 {
                     // execute instruction on the bus
                     IntMode::IM0 => {
                         // for zx spectrum same as IM1
-                        execute_push_16(self, bus, RegName16::PC, Clocks(3));
+                        execute_push_16(self, bus, RegName16::PC, 3);
                         self.regs.set_pc(0x0038);
-                        bus.wait_internal(Clocks(7));
+                        bus.wait_internal(7);
                     }
                     // push pc and jump to 0x0038
                     IntMode::IM1 => {
-                        execute_push_16(self, bus, RegName16::PC, Clocks(3));
+                        execute_push_16(self, bus, RegName16::PC, 3);
                         self.regs.set_pc(0x0038);
-                        bus.wait_internal(Clocks(7));
+                        bus.wait_internal(7);
                         // 3 + 3 + 7 = 13 clocks
                     }
                     // jump using interrupt vector
                     IntMode::IM2 => {
-                        execute_push_16(self, bus, RegName16::PC, Clocks(3));
+                        execute_push_16(self, bus, RegName16::PC, 3);
                         // build interrupt vector
                         let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00)
                             | ((bus.read_interrupt() as u16) & 0x00FF);
-                        let addr = bus.read_word(addr, Clocks(3));
+                        let addr = bus.read_word(addr, 3);
                         self.regs.set_pc(addr);
-                        bus.wait_internal(Clocks(7));
+                        bus.wait_internal(7);
                         // 3 + 3 + 3 + 3 + 7 = 19 clocks
                     }
                 }
@@ -147,7 +146,7 @@ impl Z80 {
             tmp
         } else {
             self.regs.inc_r(1);
-            self.fetch_byte(bus, Clocks(4))
+            self.fetch_byte(bus, 4)
         };
         let prefix_hi = Prefix::from_byte(byte1);
         // if prefix finded
@@ -156,7 +155,7 @@ impl Z80 {
                 // may double-prefixed
                 prefix_single @ Prefix::DD | prefix_single @ Prefix::FD => {
                     // next byte, prefix or opcode
-                    let byte2 = self.fetch_byte(bus, Clocks(4));
+                    let byte2 = self.fetch_byte(bus, 4);
                     self.regs.inc_r(1);
                     let prefix_lo = Prefix::from_byte(byte2);
                     // if second prefix finded
@@ -184,7 +183,7 @@ impl Z80 {
                 // ED-prefixed
                 Prefix::ED => {
                     // next byte, prefix or opcode
-                    let byte2 = self.fetch_byte(bus, Clocks(4));
+                    let byte2 = self.fetch_byte(bus, 4);
                     self.regs.inc_r(1);
                     let opcode = Opcode::from_byte(byte2);
                     execute_extended(self, bus, opcode);

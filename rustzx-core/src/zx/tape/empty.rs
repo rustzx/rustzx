@@ -1,4 +1,3 @@
-use rustzx_z80::Clocks;
 use crate::{zx::tape::TapeImpl, Result};
 
 pub struct Empty;
@@ -20,7 +19,7 @@ impl TapeImpl for Empty {
         false
     }
 
-    fn process_clocks(&mut self, _clocks: Clocks) -> Result<()> {
+    fn process_clocks(&mut self, _clocks: usize) -> Result<()> {
         Ok(())
     }
 

@@ -1,14 +1,13 @@
-use rustzx_z80::Clocks;
 use crate::{
     emulator::Emulator,
     error::IoError,
     host::{DataRecorder, Host, LoadableAsset, SeekFrom, SeekableAsset},
-    z80::{
-        opcodes::{execute_pop_16, execute_push_16},
-        RegName16,
-    },
     zx::{machine::ZXMachine, video::colors::ZXColor},
     Result,
+};
+use rustzx_z80::{
+    opcodes::{execute_pop_16, execute_push_16},
+    RegName16,
 };
 
 const SNA_HEADER_SIZE: usize = 27;
@@ -46,20 +45,47 @@ where
     // i-reg
     emulator.cpu.regs.set_i(header[0]);
     // alt-regs
-    emulator.cpu.regs.set_hl(u16::from_le_bytes([header[1], header[2]]));
-    emulator.cpu.regs.set_de(u16::from_le_bytes([header[3], header[4]]));
-    emulator.cpu.regs.set_bc(u16::from_le_bytes([header[5], header[6]]));
+    emulator
+        .cpu
+        .regs
+        .set_hl(u16::from_le_bytes([header[1], header[2]]));
+    emulator
+        .cpu
+        .regs
+        .set_de(u16::from_le_bytes([header[3], header[4]]));
+    emulator
+        .cpu
+        .regs
+        .set_bc(u16::from_le_bytes([header[5], header[6]]));
     emulator.cpu.regs.exx();
     // af'
-    emulator.cpu.regs.set_af(u16::from_le_bytes([header[7], header[8]]));
+    emulator
+        .cpu
+        .regs
+        .set_af(u16::from_le_bytes([header[7], header[8]]));
     emulator.cpu.regs.swap_af_alt();
     // regs
-    emulator.cpu.regs.set_hl(u16::from_le_bytes([header[9], header[10]]));
-    emulator.cpu.regs.set_de(u16::from_le_bytes([header[11], header[12]]));
-    emulator.cpu.regs.set_bc(u16::from_le_bytes([header[13], header[14]]));
+    emulator
+        .cpu
+        .regs
+        .set_hl(u16::from_le_bytes([header[9], header[10]]));
+    emulator
+        .cpu
+        .regs
+        .set_de(u16::from_le_bytes([header[11], header[12]]));
+    emulator
+        .cpu
+        .regs
+        .set_bc(u16::from_le_bytes([header[13], header[14]]));
     // index regs
-    emulator.cpu.regs.set_iy(u16::from_le_bytes([header[15], header[16]]));
-    emulator.cpu.regs.set_ix(u16::from_le_bytes([header[17], header[18]]));
+    emulator
+        .cpu
+        .regs
+        .set_iy(u16::from_le_bytes([header[15], header[16]]));
+    emulator
+        .cpu
+        .regs
+        .set_ix(u16::from_le_bytes([header[17], header[18]]));
     // iff2, iff1
     let iff = (header[19] & SNA_IFF2_BIT_MASK) != 0;
     emulator.cpu.regs.set_iff1(iff);
@@ -67,22 +93,30 @@ where
     // r
     emulator.cpu.regs.set_r(header[20]);
     // af
-    emulator.cpu.regs.set_af(u16::from_le_bytes([header[21], header[22]]));
+    emulator
+        .cpu
+        .regs
+        .set_af(u16::from_le_bytes([header[21], header[22]]));
     // sp
-    emulator.cpu.regs.set_sp(u16::from_le_bytes([header[23], header[24]]));
+    emulator
+        .cpu
+        .regs
+        .set_sp(u16::from_le_bytes([header[23], header[24]]));
     // interrupt mode
     emulator.cpu.set_im(header[25] & SNA_INTERRUPT_MODE_MASK);
     // Border color
-    emulator.controller.set_border_color(
-        Clocks(0),
-        ZXColor::from_bits(header[26] & SNA_BORDER_COLOR_MASK),
-    );
+    emulator
+        .controller
+        .set_border_color(0, ZXColor::from_bits(header[26] & SNA_BORDER_COLOR_MASK));
     if is_128k {
         // PC, 7ffd port, trdos pagination status
         let mut tmp = [0u8; SNA_128K_SECONDARY_HEADER_SIZE];
         asset.seek(SeekFrom::Start(SNA_128K_SECONDARY_HEADER_OFFSET))?;
         asset.read_exact(&mut tmp)?;
-        emulator.cpu.regs.set_pc(u16::from_le_bytes([header[0], header[1]]));
+        emulator
+            .cpu
+            .regs
+            .set_pc(u16::from_le_bytes([header[0], header[1]]));
         let port_7ffd = tmp[2];
         let _trdos_paged = tmp[3];
         // This will alsto setup required memory map before banks restore
@@ -130,7 +164,7 @@ where
             &mut emulator.cpu,
             &mut emulator.controller,
             RegName16::PC,
-            Clocks(0),
+            0,
         );
     }
 
@@ -155,7 +189,7 @@ impl<'a, H: Host> ScopedSnapshotState<'a, H> {
                 &mut emulator.cpu,
                 &mut emulator.controller,
                 RegName16::PC,
-                Clocks(0),
+                0,
             );
         }
 
@@ -170,7 +204,7 @@ impl<'a, H: Host> Drop for ScopedSnapshotState<'a, H> {
                 &mut self.emulator.cpu,
                 &mut self.emulator.controller,
                 RegName16::PC,
-                Clocks(0),
+                0,
             );
         }
     }
