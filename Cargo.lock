@@ -548,9 +548,6 @@ dependencies = [
 [[package]]
 name = "rustzx-z80"
 version = "0.1.0"
-dependencies = [
- "lazy_static",
-]
 
 [[package]]
 name = "sdl2"
