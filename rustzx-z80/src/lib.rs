@@ -12,5 +12,10 @@ mod smallnum;
 mod tables;
 mod utils;
 
-// Bring nested types and functions to current scope
-pub use self::{bus::*, common_types::*, cpu::*, registers::*};
+pub use bus::Z80Bus;
+pub use common_types::IntMode;
+pub use cpu::Z80;
+pub use registers::{
+    Condition, Flag, RegName16, RegName8, Regs, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY,
+    FLAG_PV, FLAG_SIGN, FLAG_SUB, FLAG_ZERO,
+};

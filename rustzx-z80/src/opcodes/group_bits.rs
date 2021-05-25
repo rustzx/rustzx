@@ -1,10 +1,10 @@
 use crate::{
+    common_types::Prefix,
     opcodes::{execute_rot, BitOperand8, Opcode},
     smallnum::U2,
     tables::F3F5_TABLE,
     utils::word_displacement,
-    Prefix, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN,
-    FLAG_ZERO, Z80,
+    RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN, FLAG_ZERO, Z80,
 };
 
 /// Instruction group which operatis with bits
