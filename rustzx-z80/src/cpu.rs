@@ -1,11 +1,10 @@
 //! Z80 CPU module
 
 use crate::{
-    utils::{make_word, Clocks},
-    z80::{
-        opcodes::{execute_bits, execute_extended, execute_normal, execute_push_16, Opcode},
-        IntMode, Prefix, RegName16, Regs, Z80Bus,
-    },
+    Clocks,
+    utils::make_word,
+    opcodes::{execute_bits, execute_extended, execute_normal, execute_push_16, Opcode},
+    IntMode, Prefix, RegName16, Regs, Z80Bus,
 };
 
 /// Z80 Processor struct

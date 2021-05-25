@@ -3,7 +3,7 @@
 // Allow outer modules to use ZXSpecs struct, but not construct
 mod specs;
 
-use crate::utils::Clocks;
+use rustzx_z80::Clocks;
 use lazy_static::lazy_static;
 use specs::ZXSpecsBuilder;
 

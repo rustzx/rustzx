@@ -1,10 +1,10 @@
 //! Module describes ZX Spectrum screen
 //! *block* - is 8x1 pxels stripe.
+use rustzx_z80::Clocks;
 use crate::{
     host::{FrameBuffer, FrameBufferSource},
     utils::{
         screen::{attr_col_rel, attr_row_rel, bitmap_col_rel, bitmap_line_rel},
-        Clocks,
     },
     zx::{
         constants::{

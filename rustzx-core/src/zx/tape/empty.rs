@@ -1,4 +1,5 @@
-use crate::{utils::Clocks, zx::tape::TapeImpl, Result};
+use rustzx_z80::Clocks;
+use crate::{zx::tape::TapeImpl, Result};
 
 pub struct Empty;
 

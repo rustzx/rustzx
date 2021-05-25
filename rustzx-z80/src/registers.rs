@@ -1,7 +1,8 @@
 //! Module which contains Z80 registers implementation
 use crate::{
-    utils::{make_word, split_word, word_displacement, U2, U3},
-    z80::Prefix,
+    smallnum::{U2, U3},
+    utils::{make_word, split_word, word_displacement},
+    Prefix,
 };
 use core::fmt;
 

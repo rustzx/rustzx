@@ -1,6 +1,13 @@
 use crate::{
-    utils::{bool_to_u8, Clocks, U3},
-    z80::{opcodes::BitOperand8, tables::SZPF3F5_TABLE, Flag, Z80Bus, FLAG_CARRY, Z80},
+    Clocks,
+    smallnum::U3,
+    utils::bool_to_u8,
+    opcodes::BitOperand8,
+    tables::SZPF3F5_TABLE,
+    Flag,
+    Z80Bus,
+    FLAG_CARRY,
+    Z80,
 };
 
 /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)

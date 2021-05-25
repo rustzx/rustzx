@@ -51,16 +51,6 @@ impl Stopwatch for InstantStopwatch {
     }
 }
 
-/// converts nanoseconds  to miliseconds
-fn ns_to_ms(ns: u64) -> f64 {
-    ns as f64 / 1_000_000f64
-}
-
-/// converts miliseconds to nanoseconds
-fn ms_to_ns(s: f64) -> u64 {
-    (s * 1_000_000_f64) as u64
-}
-
 /// returns frame length from given `fps`
 fn frame_length(fps: usize) -> Duration {
     Duration::from_millis((1000_f64 / fps as f64) as u64)

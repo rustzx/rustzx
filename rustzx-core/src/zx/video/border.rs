@@ -1,13 +1,14 @@
 //! Contains ZXSpectrum border implementation
-use super::colors::{ZXBrightness, ZXColor};
+
+use rustzx_z80::Clocks;
 use crate::{
     host::{FrameBuffer, FrameBufferSource},
-    utils::Clocks,
     zx::{
         constants::{
             BORDER_COLS, BORDER_ROWS, CLOCKS_PER_COL, PIXELS_PER_CLOCK, SCREEN_HEIGHT, SCREEN_WIDTH,
         },
         machine::ZXMachine,
+        video::colors::{ZXBrightness, ZXColor},
     },
 };
 

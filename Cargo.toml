@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "rustzx-z80",
     "rustzx-core",
     "rustzx",
     "vtx",
