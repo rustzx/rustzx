@@ -1,11 +1,9 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
-use rustzx_z80::Clocks;
 use crate::{
     error::Error,
     host::{Host, HostContext},
     settings::RustzxSettings,
     utils::screen::bitmap_line_addr,
-    z80::Z80Bus,
     zx::{
         constants::{ADDR_LD_BREAK, CANVAS_HEIGHT, CLOCKS_PER_COL},
         events::EmulationEvents,
@@ -21,6 +19,7 @@ use crate::{
         video::{colors::ZXColor, screen::ZXScreen},
     },
 };
+use rustzx_z80::Z80Bus;
 
 #[cfg(feature = "embedded-roms")]
 use crate::zx::roms;
@@ -49,7 +48,7 @@ pub(crate) struct ZXController<H: Host> {
     // current border color
     pub border_color: ZXColor,
     // clocls count from frame start
-    frame_clocks: Clocks,
+    frame_clocks: usize,
     // frames count, which passed during emulation invokation
     passed_frames: usize,
     events: EmulationEvents,
@@ -117,7 +116,7 @@ impl<H: Host> ZXController<H> {
             keyboard_sinclair: [0xFF; 8],
             caps_shift_modifier_mask: 0,
             border_color: ZXColor::Black,
-            frame_clocks: Clocks(0),
+            frame_clocks: 0,
             passed_frames: 0,
             tape: Default::default(),
             events: Default::default(),
@@ -155,7 +154,7 @@ impl<H: Host> ZXController<H> {
 
     /// returns current frame emulation pos in percents
     fn frame_pos(&self) -> f64 {
-        let val = self.frame_clocks.count() as f64 / self.machine.specs().clocks_frame as f64;
+        let val = self.frame_clocks as f64 / self.machine.specs().clocks_frame as f64;
         if val > 1.0 {
             1.0
         } else {
@@ -242,10 +241,10 @@ impl<H: Host> ZXController<H> {
     fn floating_bus_value(&self) -> u8 {
         let specs = self.machine.specs();
         let clocks = self.frame_clocks;
-        if clocks.count() < specs.clocks_first_pixel + 2 {
+        if clocks < specs.clocks_first_pixel + 2 {
             return 0xFF;
         }
-        let clocks = clocks.count() - (specs.clocks_first_pixel + 2);
+        let clocks = clocks - (specs.clocks_first_pixel + 2);
         let row = clocks / specs.clocks_line;
         let clocks = clocks % specs.clocks_line;
         let col = (clocks / 8) * 2 + (clocks % 8) / 2;
@@ -270,7 +269,7 @@ impl<H: Host> ZXController<H> {
     }
 
     /// make contention + wait some clocks
-    fn do_contention_and_wait(&mut self, wait_time: Clocks) {
+    fn do_contention_and_wait(&mut self, wait_time: usize) {
         let contention = self.machine.contention_clocks(self.frame_clocks);
         self.wait_internal(contention + wait_time);
     }
@@ -289,19 +288,19 @@ impl<H: Host> ZXController<H> {
         if self.addr_is_contended(port) {
             self.do_contention();
         };
-        self.wait_internal(Clocks(1));
+        self.wait_internal(1);
     }
 
     /// Returns late IO contention clocks
     fn io_contention_last(&mut self, port: u16) {
         if self.machine.port_is_contended(port) {
-            self.do_contention_and_wait(Clocks(2));
+            self.do_contention_and_wait(2);
         } else if self.addr_is_contended(port) {
-            self.do_contention_and_wait(Clocks(1));
-            self.do_contention_and_wait(Clocks(1));
+            self.do_contention_and_wait(1);
+            self.do_contention_and_wait(1);
             self.do_contention();
         } else {
-            self.wait_internal(Clocks(2));
+            self.wait_internal(2);
         }
     }
 
@@ -335,7 +334,7 @@ impl<H: Host> ZXController<H> {
     }
 
     /// Returns current clocks from frame start
-    pub fn clocks(&self) -> Clocks {
+    pub fn clocks(&self) -> usize {
         self.frame_clocks
     }
 
@@ -391,7 +390,7 @@ impl<H: Host> ZXController<H> {
 
     pub(crate) fn set_border_color(
         &mut self,
-        #[allow(unused_variables)] clocks: Clocks,
+        #[allow(unused_variables)] clocks: usize,
         color: ZXColor,
     ) {
         self.border_color = color;
@@ -458,7 +457,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
     }
 
     /// Cahnges internal state on clocks count change (emualtion processing)
-    fn wait_internal(&mut self, clk: Clocks) {
+    fn wait_internal(&mut self, clk: usize) {
         self.frame_clocks += clk;
         if let Err(e) = self.tape.process_clocks(clk) {
             self.last_emulation_error = Some(e);
@@ -472,14 +471,14 @@ impl<H: Host> Z80Bus for ZXController<H> {
             self.mixer.process(pos);
         }
         self.screen.process_clocks(self.frame_clocks);
-        if self.frame_clocks.count() >= self.machine.specs().clocks_frame {
+        if self.frame_clocks >= self.machine.specs().clocks_frame {
             self.new_frame();
             self.passed_frames += 1;
         }
     }
 
     // wait with memory request pin active
-    fn wait_mreq(&mut self, addr: u16, clk: Clocks) {
+    fn wait_mreq(&mut self, addr: u16, clk: usize) {
         match self.machine {
             ZXMachine::Sinclair48K | ZXMachine::Sinclair128K => {
                 // contention in low 16k RAM
@@ -492,7 +491,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
     }
 
     /// wait without memory request pin active
-    fn wait_no_mreq(&mut self, addr: u16, clk: Clocks) {
+    fn wait_no_mreq(&mut self, addr: u16, clk: usize) {
         // only for 48 K!
         self.wait_mreq(addr, clk);
     }
@@ -535,7 +534,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
             self.floating_bus_value()
         };
         // add one clock after operation
-        self.wait_internal(Clocks(1));
+        self.wait_internal(1);
         output
     }
 
@@ -560,7 +559,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         // last contention after byte write
         self.io_contention_last(port);
         // add one clock after operation
-        self.wait_internal(Clocks(1));
+        self.wait_internal(1);
     }
 
     /// value, requested during `INT0` interrupt
@@ -570,7 +569,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
 
     /// checks system maskable interrupt pin state
     fn int_active(&self) -> bool {
-        self.frame_clocks.count() % self.machine.specs().clocks_frame
+        self.frame_clocks % self.machine.specs().clocks_frame
             < self.machine.specs().interrupt_length
     }
 

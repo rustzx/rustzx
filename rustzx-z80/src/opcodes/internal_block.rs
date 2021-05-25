@@ -1,20 +1,19 @@
 use crate::{
-    Clocks,
-    utils::bool_to_u8,
     opcodes::BlockDir,
     tables::{lookup8_r12, HALF_CARRY_SUB_TABLE, PARITY_TABLE, SZF3F5_TABLE},
-    RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY, FLAG_PV,
-    FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
+    utils::bool_to_u8,
+    RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN,
+    FLAG_SUB, FLAG_ZERO, Z80,
 };
 
 /// ldi or ldd instruction
 pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     // read (HL)
-    let src = bus.read(cpu.regs.get_hl(), Clocks(3));
+    let src = bus.read(cpu.regs.get_hl(), 3);
     let bc = cpu.regs.dec_reg_16(RegName16::BC, 1);
     // write (HL) to (DE)
-    bus.write(cpu.regs.get_de(), src, Clocks(3));
-    bus.wait_loop(cpu.regs.get_de(), Clocks(2));
+    bus.write(cpu.regs.get_de(), src, 3);
+    bus.wait_loop(cpu.regs.get_de(), 2);
     // inc or dec HL and DE
     match dir {
         BlockDir::Inc => {
@@ -43,8 +42,8 @@ pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
 /// cpi or cpd instruction
 pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) -> bool {
     // read (HL)
-    let src = bus.read(cpu.regs.get_hl(), Clocks(3));
-    bus.wait_loop(cpu.regs.get_hl(), Clocks(5));
+    let src = bus.read(cpu.regs.get_hl(), 3);
+    bus.wait_loop(cpu.regs.get_hl(), 5);
     // move pointer
     match dir {
         BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL, 1),
@@ -78,10 +77,10 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) -> bo
 
 /// ini or ind instruction
 pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
-    bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
+    bus.wait_no_mreq(cpu.regs.get_ir(), 1);
     // get from port and write to memory
     let src = bus.read_io(cpu.regs.get_bc());
-    bus.write(cpu.regs.get_hl(), src, Clocks(3));
+    bus.write(cpu.regs.get_hl(), src, 3);
     // dec counter
     let b = cpu.regs.dec_reg_8(RegName8::B, 1);
     // move pointer
@@ -109,9 +108,9 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
 
 /// outi or outd instruction
 pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
-    bus.wait_no_mreq(cpu.regs.get_ir(), Clocks(1));
+    bus.wait_no_mreq(cpu.regs.get_ir(), 1);
     // get input data
-    let src = bus.read(cpu.regs.get_hl(), Clocks(3));
+    let src = bus.read(cpu.regs.get_hl(), 3);
     let b = cpu.regs.dec_reg_8(RegName8::B, 1);
     bus.write_io(cpu.regs.get_bc(), src);
     // move pointer

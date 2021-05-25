@@ -1,12 +1,6 @@
 // emulator
-use rustzx_z80::Clocks;
-use crate::{
-    emulator::Emulator,
-    host::Host,
-    z80::{opcodes, RegName16, Z80Bus, FLAG_CARRY, FLAG_ZERO},
-    zx::tape::TapeImpl,
-    Result,
-};
+use crate::{emulator::Emulator, host::Host, zx::tape::TapeImpl, Result};
+use rustzx_z80::{opcodes, RegName16, Z80Bus, FLAG_CARRY, FLAG_ZERO};
 
 pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) -> Result<()> {
     // So, at current moment we at 0x056C in 48K Rom.
@@ -95,7 +89,7 @@ pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) -> Result<()> {
             &mut emulator.cpu,
             &mut emulator.controller,
             RegName16::PC,
-            Clocks(0),
+            0,
         );
     }
     emulator.cpu.regs.set_flags(f);

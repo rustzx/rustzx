@@ -1,7 +1,4 @@
-use crate::{
-    Clocks,
-    utils::{make_word, split_word},
-};
+use crate::utils::{make_word, split_word};
 
 /// Z80 processor System bus
 /// Implement it for communication with CPU.
@@ -14,26 +11,26 @@ pub trait Z80Bus {
     /// Required method for write byte to bus without waiting
     fn write_internal(&mut self, addr: u16, data: u8);
     /// Wait some clocks
-    fn wait_mreq(&mut self, addr: u16, clk: Clocks);
+    fn wait_mreq(&mut self, addr: u16, clk: usize);
     /// Wait while mreq is not active (can be different from
     /// active mreq contention as it works in ZX Spectrum 2+/3)
-    fn wait_no_mreq(&mut self, addr: u16, clk: Clocks);
+    fn wait_no_mreq(&mut self, addr: u16, clk: usize);
     /// Internal wait, avoiding contentions
-    fn wait_internal(&mut self, clk: Clocks);
+    fn wait_internal(&mut self, clk: usize);
     /// Any single clock (t-state) can cause contention on ULA
     /// or any other chipm which not detects MREQ signal
-    fn wait_loop(&mut self, addr: u16, clk: Clocks) {
-        for _ in 0..clk.count() {
-            self.wait_no_mreq(addr, Clocks(1));
+    fn wait_loop(&mut self, addr: u16, clk: usize) {
+        for _ in 0..clk {
+            self.wait_no_mreq(addr, 1);
         }
     }
     // Normal read from memory, contention may be applied
-    fn read(&mut self, addr: u16, clk: Clocks) -> u8 {
+    fn read(&mut self, addr: u16, clk: usize) -> u8 {
         self.wait_mreq(addr, clk);
         self.read_internal(addr)
     }
     // Normal write to memory, contention may be applied
-    fn write(&mut self, addr: u16, value: u8, clk: Clocks) {
+    fn write(&mut self, addr: u16, value: u8, clk: usize) {
         self.wait_mreq(addr, clk);
         self.write_internal(addr, value)
     }
@@ -42,13 +39,13 @@ pub trait Z80Bus {
     // Method for writing to io port.
     fn write_io(&mut self, port: u16, data: u8);
     /// Provided metod to write word, LSB first (clk - clocks per byte)
-    fn write_word(&mut self, addr: u16, data: u16, clk: Clocks) {
+    fn write_word(&mut self, addr: u16, data: u16, clk: usize) {
         let (h, l) = split_word(data);
         self.write(addr, l, clk);
         self.write(addr.wrapping_add(1), h, clk);
     }
     /// Provided method to read word (clk - clocks per byte)
-    fn read_word(&mut self, addr: u16, clk: Clocks) -> u16 {
+    fn read_word(&mut self, addr: u16, clk: usize) -> u16 {
         let l = self.read(addr, clk);
         let h = self.read(addr.wrapping_add(1), clk);
         make_word(h, l)

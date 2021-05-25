@@ -5,8 +5,6 @@ pub(crate) mod emulator;
 pub(crate) mod settings;
 pub(crate) mod utils;
 
-pub(crate) use rustzx_z80 as z80;
-
 pub mod error;
 pub mod host;
 pub mod zx;

@@ -1,11 +1,8 @@
 //! Module describes ZX Spectrum screen
 //! *block* - is 8x1 pxels stripe.
-use rustzx_z80::Clocks;
 use crate::{
     host::{FrameBuffer, FrameBufferSource},
-    utils::{
-        screen::{attr_col_rel, attr_row_rel, bitmap_col_rel, bitmap_line_rel},
-    },
+    utils::screen::{attr_col_rel, attr_row_rel, bitmap_col_rel, bitmap_line_rel},
     zx::{
         constants::{
             ATTR_BASE_REL, ATTR_COLS, ATTR_MAX_REL, ATTR_ROWS, BITMAP_MAX_REL, CANVAS_HEIGHT,
@@ -31,18 +28,18 @@ impl BlocksCount {
     }
 
     /// Constructs self from clocks count, taking into account machine type
-    pub fn from_clocks(clocks: Clocks, machine: ZXMachine) -> BlocksCount {
+    pub fn from_clocks(clocks: usize, machine: ZXMachine) -> BlocksCount {
         // get reference to specs for less words
         let specs = machine.specs();
         let mut lines;
         let mut columns;
-        if clocks.count() < specs.clocks_ula_read_origin {
+        if clocks < specs.clocks_ula_read_origin {
             // zero blocks passed
             lines = 0;
             columns = 0;
         } else {
             // clocks relative to first pixel rendering
-            let clocks = clocks.count() - specs.clocks_ula_read_origin;
+            let clocks = clocks - specs.clocks_ula_read_origin;
             // so find passed lines and columns count
             lines = clocks / specs.clocks_line;
             columns = (clocks % specs.clocks_line) / CLOCKS_PER_COL;
@@ -156,7 +153,7 @@ impl<FB: FrameBuffer> ZXScreen<FB> {
     /// renders some  8x1 blocks
     /// `clocks` - current  clocks count form frame start.
     /// if clocks < previous call clocks then discard processing
-    pub fn process_clocks(&mut self, clocks: Clocks) {
+    pub fn process_clocks(&mut self, clocks: usize) {
         let blocks = BlocksCount::from_clocks(clocks, self.machine);
         // so, let's count of 8x1 blocks, which passed.
         let count = blocks.passed_from(&self.last_blocks);

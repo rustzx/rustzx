@@ -1,9 +1,8 @@
 use crate::{
-    Clocks,
-    smallnum::U2,
-    utils::{bool_to_u8, word_displacement},
     opcodes::{execute_rot, BitOperand8, Opcode},
+    smallnum::U2,
     tables::F3F5_TABLE,
+    utils::{bool_to_u8, word_displacement},
     Prefix, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN,
     FLAG_ZERO, Z80,
 };
@@ -15,7 +14,7 @@ use crate::{
 pub fn execute_bits(cpu: &mut Z80, bus: &mut dyn Z80Bus, prefix: Prefix) {
     let (opcode, operand) = if prefix == Prefix::None {
         // normal opcode fetch
-        let tmp_opcode = Opcode::from_byte(cpu.fetch_byte(bus, Clocks(4)));
+        let tmp_opcode = Opcode::from_byte(cpu.fetch_byte(bus, 4));
         // inc r when non-prefixed.
         cpu.regs.inc_r(1);
         // return opcode with operand tuple
@@ -29,13 +28,13 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut dyn Z80Bus, prefix: Prefix) {
         // xx xx dd nn format opcode fetch
         // if prefixed, we need to swap displacement and opcode
         // fetch displacement
-        let d = cpu.fetch_byte(bus, Clocks(3)) as i8;
+        let d = cpu.fetch_byte(bus, 3) as i8;
         // build address
         let addr = word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d);
         // read next byte
-        let tmp_opcode = Opcode::from_byte(bus.read(cpu.regs.get_pc(), Clocks(3)));
+        let tmp_opcode = Opcode::from_byte(bus.read(cpu.regs.get_pc(), 3));
         // wait 2 clocks
-        bus.wait_loop(cpu.regs.get_pc(), Clocks(2));
+        bus.wait_loop(cpu.regs.get_pc(), 2);
         // next byte
         cpu.regs.inc_pc(1);
         (tmp_opcode, BitOperand8::Indirect(addr))
@@ -55,8 +54,8 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut dyn Z80Bus, prefix: Prefix) {
             let bit_number = opcode.y.as_byte();
             let data = match operand {
                 BitOperand8::Indirect(addr) => {
-                    let tmp = bus.read(addr, Clocks(3));
-                    bus.wait_no_mreq(addr, Clocks(1));
+                    let tmp = bus.read(addr, 3);
+                    bus.wait_no_mreq(addr, 1);
                     tmp
                 }
                 BitOperand8::Reg(reg) => cpu.regs.get_reg_8(reg),
@@ -87,7 +86,7 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut dyn Z80Bus, prefix: Prefix) {
                     result = data & (!(0x01 << bit_number));
                     match operand {
                         BitOperand8::Indirect(addr) => {
-                            bus.write(addr, result, Clocks(3));
+                            bus.write(addr, result, 3);
                         }
                         BitOperand8::Reg(reg) => {
                             cpu.regs.set_reg_8(reg, result);
@@ -100,7 +99,7 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut dyn Z80Bus, prefix: Prefix) {
                     result = data | (0x01 << bit_number);
                     match operand {
                         BitOperand8::Indirect(addr) => {
-                            bus.write(addr, result, Clocks(3));
+                            bus.write(addr, result, 3);
                         }
                         BitOperand8::Reg(reg) => {
                             cpu.regs.set_reg_8(reg, result);

@@ -1,13 +1,6 @@
 use crate::{
-    Clocks,
-    smallnum::U3,
-    utils::bool_to_u8,
-    opcodes::BitOperand8,
-    tables::SZPF3F5_TABLE,
-    Flag,
-    Z80Bus,
-    FLAG_CARRY,
-    Z80,
+    opcodes::BitOperand8, smallnum::U3, tables::SZPF3F5_TABLE, utils::bool_to_u8, Flag, Z80Bus,
+    FLAG_CARRY, Z80,
 };
 
 /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)
@@ -16,8 +9,8 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut dyn Z80Bus, rot_code: U3, operand: B
     // get byte which will be rotated
     let mut data = match operand {
         BitOperand8::Indirect(addr) => {
-            let tmp = bus.read(addr, Clocks(3));
-            bus.wait_no_mreq(addr, Clocks(1));
+            let tmp = bus.read(addr, 3);
+            bus.wait_no_mreq(addr, 1);
             tmp
         }
         BitOperand8::Reg(reg) => cpu.regs.get_reg_8(reg),
@@ -96,7 +89,7 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut dyn Z80Bus, rot_code: U3, operand: B
     // write result
     match operand {
         BitOperand8::Indirect(addr) => {
-            bus.write(addr, data, Clocks(3));
+            bus.write(addr, data, 3);
         }
         BitOperand8::Reg(reg) => {
             cpu.regs.set_reg_8(reg, data);

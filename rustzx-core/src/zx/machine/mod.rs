@@ -3,7 +3,6 @@
 // Allow outer modules to use ZXSpecs struct, but not construct
 mod specs;
 
-use rustzx_z80::Clocks;
 use lazy_static::lazy_static;
 use specs::ZXSpecsBuilder;
 
@@ -60,20 +59,18 @@ impl ZXMachine {
     }
 
     /// Returns contention during specified time
-    pub fn contention_clocks(self, clocks: Clocks) -> Clocks {
+    pub fn contention_clocks(self, clocks: usize) -> usize {
         let specs = self.specs();
-        if (clocks.count() < (specs.clocks_first_pixel - 1))
-            || (clocks.count()
-                >= (specs.clocks_first_pixel - 1) + specs.lines_screen * specs.clocks_line)
+        if (clocks < (specs.clocks_first_pixel - 1))
+            || (clocks >= (specs.clocks_first_pixel - 1) + specs.lines_screen * specs.clocks_line)
         {
-            return Clocks(0);
+            return 0;
         }
-        let clocks_trough_line =
-            (clocks.count() - (specs.clocks_first_pixel - 1)) % specs.clocks_line;
+        let clocks_trough_line = (clocks - (specs.clocks_first_pixel - 1)) % specs.clocks_line;
         if clocks_trough_line >= specs.clocks_screen_row {
-            return Clocks(0);
+            return 0;
         }
-        return Clocks(self.specs().contention_pattern[(clocks_trough_line % 8) as usize]);
+        return self.specs().contention_pattern[(clocks_trough_line % 8) as usize];
     }
 
     /// Checks port contention on machine

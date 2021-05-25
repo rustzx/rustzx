@@ -8,12 +8,9 @@ mod common_types;
 mod cpu;
 pub mod opcodes;
 mod registers;
-pub mod tables;
 mod smallnum;
-mod clocks;
+pub mod tables;
 mod utils;
-
-pub use clocks::Clocks;
 
 // Bring nested types and functions to current scope
 pub use self::{bus::*, common_types::*, cpu::*, registers::*};
