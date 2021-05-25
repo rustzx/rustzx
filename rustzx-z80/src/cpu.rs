@@ -1,10 +1,11 @@
 //! Z80 CPU module
 
 use crate::{
+    common_types::Prefix,
     opcodes::{
         execute_bits, execute_extended, execute_normal, execute_pop_16, execute_push_16, Opcode,
     },
-    IntMode, Prefix, RegName16, Regs, Z80Bus,
+    IntMode, RegName16, Regs, Z80Bus,
 };
 
 /// Z80 Processor struct

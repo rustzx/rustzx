@@ -1,4 +1,5 @@
 use crate::{
+    common_types::Prefix,
     opcodes::{execute_alu_8, execute_pop_16, execute_push_16, LoadOperand8, Opcode},
     smallnum::{U1, U2, U3},
     tables::{
@@ -6,8 +7,8 @@ use crate::{
         SZF3F5_TABLE, SZPF3F5_TABLE,
     },
     utils::word_displacement,
-    Condition, Flag, Prefix, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5,
-    FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
+    Condition, Flag, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY,
+    FLAG_PV, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
 };
 
 /// normal execution group, can be modified with prefixes DD, FD, providing
