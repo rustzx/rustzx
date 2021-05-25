@@ -1,5 +1,3 @@
-use crate::utils::{make_word, split_word};
-
 /// Z80 processor System bus
 /// Implement it for communication with CPU.
 #[allow(unused_variables)]
@@ -40,7 +38,7 @@ pub trait Z80Bus {
     fn write_io(&mut self, port: u16, data: u8);
     /// Provided metod to write word, LSB first (clk - clocks per byte)
     fn write_word(&mut self, addr: u16, data: u16, clk: usize) {
-        let (h, l) = split_word(data);
+        let [l, h] = data.to_le_bytes();
         self.write(addr, l, clk);
         self.write(addr.wrapping_add(1), h, clk);
     }
@@ -48,7 +46,7 @@ pub trait Z80Bus {
     fn read_word(&mut self, addr: u16, clk: usize) -> u16 {
         let l = self.read(addr, clk);
         let h = self.read(addr.wrapping_add(1), clk);
-        make_word(h, l)
+        u16::from_le_bytes([l, h])
     }
     /// Reads value from bus during interrupt.
     /// mutable bacause on interrupt read some internal system attributes may be changed

@@ -6,10 +6,10 @@
 mod bus;
 mod common_types;
 mod cpu;
-pub mod opcodes;
+mod opcodes;
 mod registers;
 mod smallnum;
-pub mod tables;
+mod tables;
 mod utils;
 
 // Bring nested types and functions to current scope

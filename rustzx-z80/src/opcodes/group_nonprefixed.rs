@@ -5,7 +5,7 @@ use crate::{
         lookup16_r12, lookup8_r12, F3F5_TABLE, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE,
         SZF3F5_TABLE, SZPF3F5_TABLE,
     },
-    utils::{bool_to_u8, make_word, split_word, word_displacement},
+    utils::word_displacement,
     Condition, Flag, Prefix, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5,
     FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
 };
@@ -98,7 +98,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     // get last flags, reset affected by instruction
                     let mut flags = cpu.regs.get_flags() & (FLAG_ZERO | FLAG_PV | FLAG_SIGN);
                     flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
-                    flags |= bool_to_u8(temp > 0xFFFF) * FLAG_CARRY;
+                    flags |= (temp > 0xFFFF) as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[((temp >> 8) as u8) as usize];
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_reg_16(reg_acc, temp as u16);
@@ -217,14 +217,14 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
             if opcode.z == U3::N4 {
                 // INC
                 result = data.wrapping_add(1);
-                flags |= bool_to_u8(data == 0x7F) * FLAG_PV;
+                flags |= (data == 0x7F) as u8 * FLAG_PV;
                 let lookup = lookup8_r12(data, 1, result);
                 flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
             } else {
                 // DEC
                 result = data.wrapping_sub(1);
                 flags |= FLAG_SUB;
-                flags |= bool_to_u8(data == 0x80) * FLAG_PV;
+                flags |= (data == 0x80) as u8 * FLAG_PV;
                 let lookup = lookup8_r12(data, 1, result);
                 flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
             }
@@ -302,7 +302,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                         data &= 0xFE;
                     };
                     let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
-                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
@@ -319,7 +319,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                         data &= 0x7F;
                     };
                     let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
-                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
@@ -336,7 +336,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                         data &= 0xFE;
                     };
                     let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
-                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
@@ -353,7 +353,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                         data &= 0x7F;
                     };
                     let mut flags = cpu.regs.get_flags() & (FLAG_PV | FLAG_SIGN | FLAG_ZERO);
-                    flags |= bool_to_u8(carry) * FLAG_CARRY;
+                    flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_acc(data);
@@ -410,8 +410,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     let old_carry = (cpu.regs.get_flags() & FLAG_CARRY) != 0;
                     let mut flags = cpu.regs.get_flags() & (FLAG_SIGN | FLAG_PV | FLAG_ZERO);
                     flags |= F3F5_TABLE[data as usize];
-                    flags |= bool_to_u8(old_carry) * FLAG_HALF_CARRY;
-                    flags |= bool_to_u8(!old_carry) * FLAG_CARRY;
+                    flags |= old_carry as u8 * FLAG_HALF_CARRY;
+                    flags |= (!old_carry) as u8 * FLAG_CARRY;
                     cpu.regs.set_flags(flags);
                 }
             }
@@ -603,7 +603,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     let addr = cpu.regs.get_sp();
                     let tmp = bus.read_word(addr, 3);
                     bus.wait_no_mreq(addr.wrapping_add(1), 1);
-                    let (h, l) = split_word(cpu.regs.get_reg_16(reg));
+                    let [l, h] = cpu.regs.get_reg_16(reg).to_le_bytes();
                     bus.write(addr.wrapping_add(1), h, 3);
                     bus.write(addr, l, 3);
                     // bus.write_word(addr, cpu.regs.get_reg_16(reg), 3);
@@ -642,7 +642,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
         U2::N3 if opcode.z == U3::N4 => {
             let addr_l = cpu.fetch_byte(bus, 3);
             let addr_h = bus.read(cpu.regs.get_pc(), 3);
-            let addr = make_word(addr_h, addr_l);
+            let addr = u16::from_le_bytes([addr_l, addr_h]);
             if cpu.regs.eval_condition(Condition::from_u3(opcode.y)) {
                 bus.wait_no_mreq(cpu.regs.get_pc(), 1);
                 cpu.regs.inc_pc(1);
@@ -673,7 +673,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                         U2::N0 => {
                             let addr_l = cpu.fetch_byte(bus, 3);
                             let addr_h = bus.read(cpu.regs.get_pc(), 3);
-                            let addr = make_word(addr_h, addr_l);
+                            let addr = u16::from_le_bytes([addr_l, addr_h]);
                             bus.wait_no_mreq(cpu.regs.get_pc(), 1);
                             cpu.regs.inc_pc(1);
                             execute_push_16(cpu, bus, RegName16::PC, 3);

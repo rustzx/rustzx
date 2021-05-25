@@ -1,6 +1,5 @@
 use crate::{
-    opcodes::BitOperand8, smallnum::U3, tables::SZPF3F5_TABLE, utils::bool_to_u8, Flag, Z80Bus,
-    FLAG_CARRY, Z80,
+    opcodes::BitOperand8, smallnum::U3, tables::SZPF3F5_TABLE, Flag, Z80Bus, FLAG_CARRY, Z80,
 };
 
 /// Rotate operations (RLC, RRC, RL, RR, SLA, SRA, SLL, SRL)
@@ -84,7 +83,7 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut dyn Z80Bus, rot_code: U3, operand: B
             data = (data >> 1) & 0x7F;
         }
     };
-    flags |= bool_to_u8(carry_bit) * FLAG_CARRY;
+    flags |= carry_bit as u8 * FLAG_CARRY;
     flags |= SZPF3F5_TABLE[data as usize];
     // write result
     match operand {

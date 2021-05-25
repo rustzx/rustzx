@@ -4,7 +4,6 @@ use crate::{
         lookup8_r12, F3F5_TABLE, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE, OVERFLOW_ADD_TABLE,
         OVERFLOW_SUB_TABLE, PARITY_TABLE,
     },
-    utils::bool_to_u8,
     Flag, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
 };
 
@@ -26,7 +25,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
             // using lookup for finding overflow and half carry flags
             flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
             flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
-            flags |= bool_to_u8(temp > 0xFF) * FLAG_CARRY;
+            flags |= (temp > 0xFF) as u8 * FLAG_CARRY;
         }
         // ADC A, Operand
         U3::N1 => {
@@ -37,7 +36,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
             let lookup = lookup8_r12(acc, operand, temp as u8);
             flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
             flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
-            flags |= bool_to_u8(temp > 0xFF) * FLAG_CARRY;
+            flags |= (temp > 0xFF) as u8 * FLAG_CARRY;
         }
         // SUB A, Operand
         U3::N2 | U3::N7 => {
@@ -46,7 +45,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
             let lookup = lookup8_r12(acc, operand, temp as u8);
             flags |= OVERFLOW_SUB_TABLE[(lookup >> 4) as usize];
             flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
-            flags |= bool_to_u8(temp > 0xFF) * FLAG_CARRY;
+            flags |= (temp > 0xFF) as u8 * FLAG_CARRY;
             flags |= FLAG_SUB;
         }
         // SBC A, Operand; CP A, Operand
@@ -58,7 +57,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
             let lookup = lookup8_r12(acc, operand, temp as u8);
             flags |= OVERFLOW_SUB_TABLE[(lookup >> 4) as usize];
             flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
-            flags |= bool_to_u8(temp > 0xFF) * FLAG_CARRY;
+            flags |= (temp > 0xFF) as u8 * FLAG_CARRY;
             flags |= FLAG_SUB;
         }
         // AND A, Operand
@@ -85,7 +84,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
         flags |= F3F5_TABLE[result as usize];
         cpu.regs.set_acc(result);
     };
-    flags |= bool_to_u8(result == 0) * FLAG_ZERO;
+    flags |= (result == 0) as u8 * FLAG_ZERO;
     flags |= result & FLAG_SIGN;
     cpu.regs.set_flags(flags);
 }

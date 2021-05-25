@@ -1,8 +1,9 @@
 //! Z80 CPU module
 
 use crate::{
-    opcodes::{execute_bits, execute_extended, execute_normal, execute_push_16, Opcode},
-    utils::make_word,
+    opcodes::{
+        execute_bits, execute_extended, execute_normal, execute_pop_16, execute_push_16, Opcode,
+    },
     IntMode, Prefix, RegName16, Regs, Z80Bus,
 };
 
@@ -49,7 +50,7 @@ impl Z80 {
         hi_addr = self.regs.inc_pc(1);
         let hi = bus.read(hi_addr, clk);
         self.regs.inc_pc(1);
-        make_word(hi, lo)
+        u16::from_le_bytes([lo, hi])
     }
 
     /// Checks is cpu halted
@@ -71,6 +72,18 @@ impl Z80 {
             2 => IntMode::IM2,
             _ => unreachable!(),
         }
+    }
+
+    /// Pushes program counter to the stack. Exposed as a public crate interface to support
+    /// 48K SNA loading in `rustzx-core` and fast tape loaders (Perform RET)
+    pub fn pop_pc_from_stack(&mut self, bus: &mut dyn Z80Bus) {
+        execute_pop_16(self, bus, RegName16::PC, 0);
+    }
+
+    /// Pops program counter from the stack. Exposed as a public crate interface to support
+    /// 48K SNA saving in `rustzx-core`
+    pub fn push_pc_to_stack(&mut self, bus: &mut dyn Z80Bus) {
+        execute_push_16(self, bus, RegName16::PC, 0);
     }
 
     /// Main emulation step function

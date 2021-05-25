@@ -2,7 +2,7 @@ use crate::{
     opcodes::{execute_rot, BitOperand8, Opcode},
     smallnum::U2,
     tables::F3F5_TABLE,
-    utils::{bool_to_u8, word_displacement},
+    utils::word_displacement,
     Prefix, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN,
     FLAG_ZERO, Z80,
 };
@@ -68,10 +68,10 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut dyn Z80Bus, prefix: Prefix) {
                     // only carry is not affected;
                     let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
                     flags |= FLAG_HALF_CARRY;
-                    flags |= bool_to_u8(!bit_is_set) * (FLAG_ZERO | FLAG_PV);
+                    flags |= (!bit_is_set) as u8 * (FLAG_ZERO | FLAG_PV);
                     // NOTE: according to FUSE.
                     // maybe must be based on current bit or something?
-                    flags |= bool_to_u8((data & 0x80 != 0) && (bit_number == 7)) * FLAG_SIGN;
+                    flags |= ((data & 0x80 != 0) && (bit_number == 7)) as u8 * FLAG_SIGN;
                     if let BitOperand8::Indirect(addr) = operand {
                         flags |= F3F5_TABLE[(addr >> 8) as usize];
                     } else {

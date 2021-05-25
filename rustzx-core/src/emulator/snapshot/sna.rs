@@ -5,10 +5,6 @@ use crate::{
     zx::{machine::ZXMachine, video::colors::ZXColor},
     Result,
 };
-use rustzx_z80::{
-    opcodes::{execute_pop_16, execute_push_16},
-    RegName16,
-};
 
 const SNA_HEADER_SIZE: usize = 27;
 const SNA_128K_SECONDARY_HEADER_SIZE: usize = 4;
@@ -159,13 +155,7 @@ where
             asset.read_exact(page)?;
         }
 
-        // Perform RET as 48K sna snapshot stores it in the machine stack
-        execute_pop_16(
-            &mut emulator.cpu,
-            &mut emulator.controller,
-            RegName16::PC,
-            0,
-        );
+        emulator.cpu.pop_pc_from_stack(&mut emulator.controller);
     }
 
     // Refresh screen and other memory-dependent peripheral
@@ -185,12 +175,7 @@ impl<'a, H: Host> ScopedSnapshotState<'a, H> {
     fn enter(emulator: &'a mut Emulator<H>) -> Self {
         let is_48k = emulator.settings.machine == ZXMachine::Sinclair48K;
         if is_48k {
-            execute_push_16(
-                &mut emulator.cpu,
-                &mut emulator.controller,
-                RegName16::PC,
-                0,
-            );
+            emulator.cpu.push_pc_to_stack(&mut emulator.controller);
         }
 
         Self { emulator, is_48k }
@@ -200,12 +185,9 @@ impl<'a, H: Host> ScopedSnapshotState<'a, H> {
 impl<'a, H: Host> Drop for ScopedSnapshotState<'a, H> {
     fn drop(&mut self) {
         if self.is_48k {
-            execute_pop_16(
-                &mut self.emulator.cpu,
-                &mut self.emulator.controller,
-                RegName16::PC,
-                0,
-            );
+            self.emulator
+                .cpu
+                .pop_pc_from_stack(&mut self.emulator.controller);
         }
     }
 }
