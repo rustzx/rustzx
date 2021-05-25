@@ -1,6 +1,5 @@
 use crate::{
-    common_types::Prefix,
-    opcodes::{execute_alu_8, execute_pop_16, execute_push_16, LoadOperand8, Opcode},
+    opcode::{execute_alu_8, execute_pop_16, execute_push_16, LoadOperand8, Opcode, Prefix},
     smallnum::{U1, U2, U3},
     tables::{
         lookup16_r12, lookup8_r12, F3F5_TABLE, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE,

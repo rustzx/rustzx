@@ -1,12 +1,30 @@
 //! Z80 CPU module
 
 use crate::{
-    common_types::Prefix,
-    opcodes::{
+    opcode::{
         execute_bits, execute_extended, execute_normal, execute_pop_16, execute_push_16, Opcode,
+        Prefix,
     },
-    IntMode, RegName16, Regs, Z80Bus,
+    RegName16, Regs, Z80Bus,
 };
+
+/// Interrupt mode enum
+#[derive(Debug, Clone, Copy)]
+pub enum IntMode {
+    IM0,
+    IM1,
+    IM2,
+}
+
+impl From<IntMode> for u8 {
+    fn from(mode: IntMode) -> Self {
+        match mode {
+            IntMode::IM0 => 0,
+            IntMode::IM1 => 1,
+            IntMode::IM2 => 2,
+        }
+    }
+}
 
 /// Z80 Processor struct
 pub struct Z80 {
