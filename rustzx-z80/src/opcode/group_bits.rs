@@ -1,6 +1,5 @@
 use crate::{
-    common_types::Prefix,
-    opcodes::{execute_rot, BitOperand8, Opcode},
+    opcode::{execute_rot, BitOperand8, Opcode, Prefix},
     smallnum::U2,
     tables::F3F5_TABLE,
     utils::word_displacement,

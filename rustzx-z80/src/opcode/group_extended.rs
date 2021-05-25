@@ -1,5 +1,5 @@
 use crate::{
-    opcodes::{
+    opcode::{
         execute_cpi_cpd, execute_ini_ind, execute_ldi_ldd, execute_outi_outd, execute_pop_16,
         BlockDir, Opcode,
     },

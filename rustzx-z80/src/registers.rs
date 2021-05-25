@@ -1,6 +1,6 @@
 //! Module which contains Z80 registers implementation
 use crate::{
-    common_types::Prefix,
+    opcode::Prefix,
     smallnum::{U2, U3},
     utils::word_displacement,
 };

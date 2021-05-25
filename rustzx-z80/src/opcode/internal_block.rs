@@ -1,5 +1,5 @@
 use crate::{
-    opcodes::BlockDir,
+    opcode::BlockDir,
     tables::{lookup8_r12, HALF_CARRY_SUB_TABLE, PARITY_TABLE, SZF3F5_TABLE},
     RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN,
     FLAG_SUB, FLAG_ZERO, Z80,
