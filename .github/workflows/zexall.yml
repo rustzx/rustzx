@@ -1,0 +1,50 @@
+name: Zexall Z80 test suite
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'rustzx-z80/**'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'rustzx-z80/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+# alu8r and alu8rx take a very long time to test, however
+# assuming GitHub provides at least 2-core runners for the
+# free tier, overall zexall test suite execution time will
+# be only as long as alu8r test duration (longest test)
+jobs:
+  batch1:
+    name: "Batch 1"
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p rustzx-z80 -- --ignored zexall_alu8r
+  batch2:
+    name: "Batch 2"
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p rustzx-z80 -- --ignored --skip zexall_alu8r zexall

@@ -106,8 +106,6 @@ impl Z80 {
     }
 
     /// Main emulation step function
-    /// return `false` if execution can be continued or true if last event must be executed
-    /// instantly
     pub fn emulate(&mut self, bus: &mut dyn Z80Bus) {
         // check interrupts
         if !self.skip_interrupt {
