@@ -112,7 +112,7 @@ where
         emulator
             .cpu
             .regs
-            .set_pc(u16::from_le_bytes([header[0], header[1]]));
+            .set_pc(u16::from_le_bytes([tmp[0], tmp[1]]));
         let port_7ffd = tmp[2];
         let _trdos_paged = tmp[3];
         // This will alsto setup required memory map before banks restore
