@@ -4,25 +4,23 @@ use crate::{
         lookup8_r12, F3F5_TABLE, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE, OVERFLOW_ADD_TABLE,
         OVERFLOW_SUB_TABLE, PARITY_TABLE,
     },
-    Flag, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
+    FLAG_CARRY, FLAG_HALF_CARRY, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
 };
 
 /// 8-bit ALU operations
 pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
-    let acc = cpu.regs.get_acc(); // old acc
+    let acc = cpu.regs.get_acc();
     let result;
-    // all flags are changing after alu, so init flags with zero
-    let prev_carry = cpu.regs.get_flag(Flag::Carry);
+    let with_carry = (cpu.regs.get_flags() & FLAG_CARRY) != 0;
     let mut flags = 0u8;
     match alu_code {
         // ADD A, Operand
         U3::N0 => {
             let temp: u16 = (acc as u16).wrapping_add(operand as u16);
             result = temp as u8;
-            // get lookup code in r12 form [read file overflows.rs in z80/tables module]
+            // get lookup code in r12 form [read file overflows.rs in `tables` module]
             // high nibble will be bit 7 in r12 form, low nibble will be 3 bit in same form
             let lookup = lookup8_r12(acc, operand, temp as u8);
-            // using lookup for finding overflow and half carry flags
             flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
             flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
             flags |= (temp > 0xFF) as u8 * FLAG_CARRY;
@@ -31,7 +29,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
         U3::N1 => {
             let temp: u16 = (acc as u16)
                 .wrapping_add(operand as u16)
-                .wrapping_add(prev_carry as u16);
+                .wrapping_add(with_carry as u16);
             result = temp as u8;
             let lookup = lookup8_r12(acc, operand, temp as u8);
             flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
@@ -52,7 +50,7 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
         U3::N3 => {
             let temp: u16 = (acc as u16)
                 .wrapping_sub(operand as u16)
-                .wrapping_sub(prev_carry as u16);
+                .wrapping_sub(with_carry as u16);
             result = temp as u8;
             let lookup = lookup8_r12(acc, operand, temp as u8);
             flags |= OVERFLOW_SUB_TABLE[(lookup >> 4) as usize];

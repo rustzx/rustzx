@@ -16,14 +16,6 @@ impl U1 {
             _ => U1::N1,
         }
     }
-
-    /// Transforms self back to byte
-    pub fn as_byte(self) -> u8 {
-        match self {
-            U1::N0 => 0,
-            U1::N1 => 1,
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -43,7 +35,8 @@ impl U2 {
             0 => U2::N0,
             1 => U2::N1,
             2 => U2::N2,
-            _ => U2::N3,
+            3 => U2::N3,
+            _ => unreachable!(),
         }
     }
 
@@ -79,7 +72,8 @@ impl U3 {
             4 => U3::N4,
             5 => U3::N5,
             6 => U3::N6,
-            _ => U3::N7,
+            7 => U3::N7,
+            _ => unreachable!(),
         }
     }
 
