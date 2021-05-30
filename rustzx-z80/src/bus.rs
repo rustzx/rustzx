@@ -1,6 +1,7 @@
+use crate::opcode::{Opcode, Prefix};
+
 /// Z80 processor System bus
 /// Implement it for communication with CPU.
-#[allow(unused_variables)]
 pub trait Z80Bus {
     /// Required method for reading byte without waiting
     /// pass `self` as mut, because method can change state of
@@ -61,4 +62,5 @@ pub trait Z80Bus {
     fn nmi_active(&self) -> bool;
     /// invokes breakpoints check on bus device
     fn pc_callback(&mut self, addr: u16);
+    fn process_unknown_opcode(&mut self, _prefix: Prefix, _opcode: Opcode) {}
 }

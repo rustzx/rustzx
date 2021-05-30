@@ -11,17 +11,17 @@ use crate::{
 /// Interrupt mode enum
 #[derive(Debug, Clone, Copy)]
 pub enum IntMode {
-    IM0,
-    IM1,
-    IM2,
+    Im0,
+    Im1,
+    Im2,
 }
 
 impl From<IntMode> for u8 {
     fn from(mode: IntMode) -> Self {
         match mode {
-            IntMode::IM0 => 0,
-            IntMode::IM1 => 1,
-            IntMode::IM2 => 2,
+            IntMode::Im0 => 0,
+            IntMode::Im1 => 1,
+            IntMode::Im2 => 2,
         }
     }
 }
@@ -31,11 +31,11 @@ pub struct Z80 {
     /// Contains Z80 registers data
     pub regs: Regs,
     /// active if Z80 waiting for interrupt
-    pub halted: bool,
+    pub(crate) halted: bool,
     /// enabled if interrupt check will be skipped nex time
-    pub skip_interrupt: bool,
+    pub(crate) skip_interrupt: bool,
     /// type of interrupt
-    pub int_mode: IntMode,
+    pub(crate) int_mode: IntMode,
     active_prefix: Prefix,
 }
 
@@ -45,7 +45,7 @@ impl Default for Z80 {
             regs: Regs::default(),
             halted: false,
             skip_interrupt: false,
-            int_mode: IntMode::IM0,
+            int_mode: IntMode::Im0,
             active_prefix: Prefix::None,
         }
     }
@@ -54,21 +54,21 @@ impl Default for Z80 {
 impl Z80 {
     /// Reads byte from memory and increments PC
     #[inline]
-    pub fn fetch_byte(&mut self, bus: &mut dyn Z80Bus, clk: usize) -> u8 {
+    pub(crate) fn fetch_byte(&mut self, bus: &mut impl Z80Bus, clk: usize) -> u8 {
         let addr = self.regs.get_pc();
-        self.regs.inc_pc(1);
+        self.regs.inc_pc();
         bus.read(addr, clk)
     }
 
     /// Reads word from memory and increments PC twice
     #[inline]
-    pub fn fetch_word(&mut self, bus: &mut dyn Z80Bus, clk: usize) -> u16 {
+    pub(crate) fn fetch_word(&mut self, bus: &mut impl Z80Bus, clk: usize) -> u16 {
         let (hi_addr, lo_addr);
         lo_addr = self.regs.get_pc();
         let lo = bus.read(lo_addr, clk);
-        hi_addr = self.regs.inc_pc(1);
+        hi_addr = self.regs.inc_pc();
         let hi = bus.read(hi_addr, clk);
-        self.regs.inc_pc(1);
+        self.regs.inc_pc();
         u16::from_le_bytes([lo, hi])
     }
 
@@ -86,142 +86,125 @@ impl Z80 {
     pub fn set_im(&mut self, value: u8) {
         assert!(value < 3);
         self.int_mode = match value {
-            0 => IntMode::IM0,
-            1 => IntMode::IM1,
-            2 => IntMode::IM2,
+            0 => IntMode::Im0,
+            1 => IntMode::Im1,
+            2 => IntMode::Im2,
             _ => unreachable!(),
         }
     }
 
-    /// Pushes program counter to the stack. Exposed as a public crate interface to support
+    /// Pops program counter to the stack. Exposed as a public crate interface to support
     /// 48K SNA loading in `rustzx-core` and fast tape loaders (Perform RET)
-    pub fn pop_pc_from_stack(&mut self, bus: &mut dyn Z80Bus) {
+    pub fn pop_pc_from_stack(&mut self, bus: &mut impl Z80Bus) {
         execute_pop_16(self, bus, RegName16::PC, 0);
     }
 
-    /// Pops program counter from the stack. Exposed as a public crate interface to support
+    /// Pushes program counter from the stack. Exposed as a public crate interface to support
     /// 48K SNA saving in `rustzx-core`
-    pub fn push_pc_to_stack(&mut self, bus: &mut dyn Z80Bus) {
+    pub fn push_pc_to_stack(&mut self, bus: &mut impl Z80Bus) {
         execute_push_16(self, bus, RegName16::PC, 0);
     }
 
-    /// Main emulation step function
-    pub fn emulate(&mut self, bus: &mut dyn Z80Bus) {
-        // check interrupts
-        if !self.skip_interrupt {
-            // at first check nmi
-            if bus.nmi_active() {
-                // send to bus halt end message
-                if self.halted {
-                    bus.halt(false);
-                    self.halted = false;
-                    self.regs.inc_pc(1);
-                }
-                // push pc and set pc to 0x0066 ( pleace PC on bus ?)
-                bus.wait_loop(self.regs.get_pc(), 5);
-                // reset iff1
-                self.regs.set_iff1(false);
-                // 3 x 2 clocks consumed
-                execute_push_16(self, bus, RegName16::PC, 3);
-                self.regs.set_pc(0x0066);
-                self.regs.inc_r(1);
+    fn handle_interrupt(&mut self, bus: &mut impl Z80Bus) {
+        if bus.nmi_active() {
+            // Release halt line on the bus
+            if self.halted {
+                bus.halt(false);
+                self.halted = false;
+                self.regs.inc_pc();
+            }
+            // push pc and set pc to 0x0066
+            bus.wait_loop(self.regs.get_pc(), 5);
+            self.regs.set_iff1(false);
+            // 3 x 2 clocks consumed
+            execute_push_16(self, bus, RegName16::PC, 3);
+            self.regs.set_pc(0x0066);
+            self.regs.inc_r();
             // 5 + 3 + 3 = 11 clocks
-            } else if bus.int_active() && self.regs.get_iff1() {
-                // send to bus halt end message
-                if self.halted {
-                    bus.halt(false);
-                    self.halted = false;
-                    self.regs.inc_pc(1);
+        } else if bus.int_active() && self.regs.get_iff1() {
+            // Release halt line on the bus
+            if self.halted {
+                bus.halt(false);
+                self.halted = false;
+                self.regs.inc_pc();
+            }
+            self.regs.inc_r();
+            self.regs.set_iff1(false);
+            self.regs.set_iff2(false);
+            match self.int_mode {
+                // For zx spectrum both Im0 and Im1 are same
+                IntMode::Im0 | IntMode::Im1 => {
+                    execute_push_16(self, bus, RegName16::PC, 3);
+                    self.regs.set_pc(0x0038);
+                    bus.wait_internal(7);
+                    // 3 + 3 + 7 = 13 clocks
                 }
-                self.regs.inc_r(1);
-                // clear flip-flops
-                self.regs.set_iff1(false);
-                self.regs.set_iff2(false);
-                match self.int_mode {
-                    // execute instruction on the bus
-                    IntMode::IM0 => {
-                        // for zx spectrum same as IM1
-                        execute_push_16(self, bus, RegName16::PC, 3);
-                        self.regs.set_pc(0x0038);
-                        bus.wait_internal(7);
-                    }
-                    // push pc and jump to 0x0038
-                    IntMode::IM1 => {
-                        execute_push_16(self, bus, RegName16::PC, 3);
-                        self.regs.set_pc(0x0038);
-                        bus.wait_internal(7);
-                        // 3 + 3 + 7 = 13 clocks
-                    }
-                    // jump using interrupt vector
-                    IntMode::IM2 => {
-                        execute_push_16(self, bus, RegName16::PC, 3);
-                        // build interrupt vector
-                        let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00)
-                            | ((bus.read_interrupt() as u16) & 0x00FF);
-                        let addr = bus.read_word(addr, 3);
-                        self.regs.set_pc(addr);
-                        bus.wait_internal(7);
-                        // 3 + 3 + 3 + 3 + 7 = 19 clocks
-                    }
+                // jump using interrupt vector
+                IntMode::Im2 => {
+                    execute_push_16(self, bus, RegName16::PC, 3);
+                    // build interrupt vector
+                    let addr = (((self.regs.get_i() as u16) << 8) & 0xFF00)
+                        | ((bus.read_interrupt() as u16) & 0x00FF);
+                    let addr = bus.read_word(addr, 3);
+                    self.regs.set_pc(addr);
+                    bus.wait_internal(7);
+                    // 3 + 3 + 3 + 3 + 7 = 19 clocks
                 }
             }
+        }
+    }
+
+    /// Perform next emulation step
+    pub fn emulate(&mut self, bus: &mut impl Z80Bus) {
+        // check interrupts
+        if !self.skip_interrupt {
+            self.handle_interrupt(bus);
         } else {
             // allow interrupts again
             self.skip_interrupt = false;
         };
-        // get first byte
         let byte1 = if self.active_prefix != Prefix::None {
             let tmp = self.active_prefix.to_byte().unwrap();
             self.active_prefix = Prefix::None;
             tmp
         } else {
-            self.regs.inc_r(1);
+            self.regs.inc_r();
             self.fetch_byte(bus, 4)
         };
         let prefix_hi = Prefix::from_byte(byte1);
-        // if prefix finded
         if prefix_hi != Prefix::None {
             match prefix_hi {
-                // may double-prefixed
                 prefix_single @ Prefix::DD | prefix_single @ Prefix::FD => {
-                    // next byte, prefix or opcode
                     let byte2 = self.fetch_byte(bus, 4);
-                    self.regs.inc_r(1);
+                    self.regs.inc_r();
                     let prefix_lo = Prefix::from_byte(byte2);
-                    // if second prefix finded
                     match prefix_lo {
                         Prefix::DD | Prefix::ED | Prefix::FD => {
                             self.active_prefix = prefix_lo;
                             self.skip_interrupt = true;
                         }
                         Prefix::CB => {
-                            // FDCB, DDCB prefixed
                             execute_bits(self, bus, prefix_single);
                         }
                         Prefix::None => {
-                            // use second byte as opcode
                             let opcode = Opcode::from_byte(byte2);
                             execute_normal(self, bus, opcode, prefix_single);
                         }
                     };
                 }
-                // CB-prefixed
                 Prefix::CB => {
-                    // opcode will be read in function
+                    // opcode will be read in the called
                     execute_bits(self, bus, Prefix::None);
                 }
-                // ED-prefixed
                 Prefix::ED => {
-                    // next byte, prefix or opcode
                     let byte2 = self.fetch_byte(bus, 4);
-                    self.regs.inc_r(1);
+                    self.regs.inc_r();
                     let opcode = Opcode::from_byte(byte2);
                     execute_extended(self, bus, opcode);
                 }
                 _ => unreachable!(),
             };
         } else {
-            // Non-prefixed
             let opcode = Opcode::from_byte(byte1);
             execute_normal(self, bus, opcode, Prefix::None);
         };

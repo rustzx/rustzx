@@ -4,6 +4,7 @@ use crate::{
 };
 
 /// Instruction prefix type
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Prefix {
     None,
@@ -72,7 +73,7 @@ pub struct Opcode {
 }
 impl Opcode {
     /// splits opcode into parts
-    pub fn from_byte(data: u8) -> Opcode {
+    pub(crate) fn from_byte(data: u8) -> Opcode {
         Opcode {
             byte: data,
             x: U2::from_byte(data, 6),

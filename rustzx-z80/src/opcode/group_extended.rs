@@ -1,24 +1,22 @@
 use crate::{
     opcode::{
         execute_cpi_cpd, execute_ini_ind, execute_ldi_ldd, execute_outi_outd, execute_pop_16,
-        BlockDir, Opcode,
+        BlockDir, Opcode, Prefix,
     },
     smallnum::{U1, U2, U3},
     tables::{
         lookup16_r12, lookup8_r12, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE, OVERFLOW_ADD_TABLE,
         OVERFLOW_SUB_TABLE, SZF3F5_TABLE, SZPF3F5_TABLE,
     },
-    Flag, IntMode, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_PV, FLAG_SUB, FLAG_ZERO, Z80,
+    IntMode, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_PV, FLAG_SUB, FLAG_ZERO, Z80,
 };
 
 /// Extended instruction group (ED-prefixed)
-/// Operations are assorted.
-pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
+/// (assorted operations)
+pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
     match opcode.x {
         U2::N0 | U2::N3 => {
-            // Nothing. Just nothung. Invalid opcodes.
-            // But timings in table still exsist, all ok.
-            // Maybe I'll  add some debug codes or something in future.
+            bus.process_unknown_opcode(Prefix::ED, opcode);
         }
         // ---------------------------------
         // [0b01yyyzzz] instruction section
@@ -29,24 +27,20 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                 // IN
                 // [0b01yyy000] : 40 48 50 58 60 68 70 78
                 U3::N0 => {
-                    // option, if y == 6 then reg = None
                     let reg = RegName8::from_u3(opcode.y);
-                    // put BC on bus (this how Z80 acts on real HW) and get io data
                     let data = bus.read_io(cpu.regs.get_bc());
                     if let Some(reg) = reg {
                         cpu.regs.set_reg_8(reg, data);
                     };
-                    let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
-                    flags |= SZPF3F5_TABLE[data as usize];
+                    let flags = cpu.regs.get_flags() & FLAG_CARRY | SZPF3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
                 }
                 // OUT
                 // [0b01yyy001] : 41 49 51 59 61 69 71 79
                 U3::N1 => {
-                    let data = if let Some(reg) = RegName8::from_u3(opcode.y) {
-                        cpu.regs.get_reg_8(reg)
-                    } else {
-                        0
+                    let data = match RegName8::from_u3(opcode.y) {
+                        Some(reg) => cpu.regs.get_reg_8(reg),
+                        None => 0,
                     };
                     bus.write_io(cpu.regs.get_bc(), data);
                 }
@@ -54,33 +48,33 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                 // [0b0ppq010]
                 U3::N2 => {
                     bus.wait_loop(cpu.regs.get_ir(), 7);
-                    let prev_carry = cpu.regs.get_flag(Flag::Carry) as u16;
+                    let with_carry = (cpu.regs.get_flags() & FLAG_CARRY) != 0;
                     let operand = cpu.regs.get_reg_16(RegName16::from_u2_sp(opcode.p));
                     let hl = cpu.regs.get_hl();
                     let mut flags = 0u8;
-                    let result: u32;
-                    match opcode.q {
+                    let result = match opcode.q {
                         // SBC HL, rp[p]
                         U1::N0 => {
-                            result = (hl as u32)
+                            let result = (hl as u32)
                                 .wrapping_sub(operand as u32)
-                                .wrapping_sub(prev_carry as u32);
+                                .wrapping_sub(with_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
                             flags |= OVERFLOW_SUB_TABLE[(lookup >> 4) as usize];
                             flags |= HALF_CARRY_SUB_TABLE[(lookup & 0x07) as usize];
                             flags |= FLAG_SUB;
+                            result
                         }
                         // ADC HL, rp[p]
                         U1::N1 => {
-                            result = (hl as u32)
+                            let result = (hl as u32)
                                 .wrapping_add(operand as u32)
-                                .wrapping_add(prev_carry as u32);
+                                .wrapping_add(with_carry as u32);
                             let lookup = lookup16_r12(hl, operand, result as u16);
                             flags |= OVERFLOW_ADD_TABLE[(lookup >> 4) as usize];
                             flags |= HALF_CARRY_ADD_TABLE[(lookup & 0x07) as usize];
+                            result
                         }
-                    }
-                    // set flags
+                    };
                     flags |= (result > 0xFFFF) as u8 * FLAG_CARRY;
                     flags |= SZF3F5_TABLE[((result >> 8) as u8) as usize];
                     flags &= !FLAG_ZERO;
@@ -119,10 +113,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                 }
                 // RETN, RETI
                 U3::N5 => {
-                    // RETN and even RETI copy iff2 into iff1
+                    // RETN and even RETI should copy iff2 into iff1
                     let iff2 = cpu.regs.get_iff2();
                     cpu.regs.set_iff1(iff2);
-                    // restore PC
                     execute_pop_16(cpu, bus, RegName16::PC, 3);
                     if opcode.y == U3::N1 {
                         bus.reti();
@@ -131,12 +124,12 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                 // IM im[y]
                 U3::N6 => {
                     cpu.int_mode = match opcode.y {
-                        U3::N0 | U3::N1 | U3::N4 | U3::N5 => IntMode::IM0,
-                        U3::N2 | U3::N6 => IntMode::IM1,
-                        U3::N3 | U3::N7 => IntMode::IM2,
+                        U3::N0 | U3::N1 | U3::N4 | U3::N5 => IntMode::Im0,
+                        U3::N2 | U3::N6 => IntMode::Im1,
+                        U3::N3 | U3::N7 => IntMode::Im2,
                     };
                 }
-                // Assorted - LD,Rotates, Nop
+                // Assorted - LD, rotations, nop's
                 U3::N7 => {
                     match opcode.y {
                         // LD I, A
@@ -177,9 +170,9 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                         U3::N4 => {
                             let mut acc = cpu.regs.get_acc();
                             let mut mem = bus.read(cpu.regs.get_hl(), 3);
-                            // low nimble
+                            // low nibble
                             let mem_lo = mem & 0x0F;
-                            // mem_hi to mem_lo and clear hi nimble
+                            // mem_hi to mem_lo and clear hi nibble
                             mem = (mem >> 4) & 0x0F;
                             // acc_lo to mem_hi
                             mem |= (acc << 4) & 0xF0;
@@ -196,7 +189,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                         U3::N5 => {
                             let mut acc = cpu.regs.get_acc();
                             let mut mem = bus.read(cpu.regs.get_hl(), 3);
-                            // low nimble
+                            // low nibble
                             let acc_lo = acc & 0x0F;
                             // mem_hi to acc_lo
                             acc = (acc & 0xF0) | ((mem >> 4) & 0x0F);
@@ -212,7 +205,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                         }
                         // NOP
                         U3::N6 | U3::N7 => {
-                            // No operation
+                            bus.process_unknown_opcode(Prefix::ED, opcode);
                         }
                     }
                 }
@@ -237,7 +230,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             if cpu.regs.get_reg_16(RegName16::BC) != 0 {
                                 // last DE for wait
                                 bus.wait_loop(cpu.regs.get_de().wrapping_sub(1), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
                         // LDDR
@@ -246,11 +240,14 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             if cpu.regs.get_reg_16(RegName16::BC) != 0 {
                                 // last DE for wait
                                 bus.wait_loop(cpu.regs.get_de().wrapping_add(1), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
-                        // No operation
-                        _ => {}
+                        // NOP
+                        _ => {
+                            bus.process_unknown_opcode(Prefix::ED, opcode);
+                        }
                     }
                 }
                 // CP Block group
@@ -270,7 +267,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             if (cpu.regs.get_reg_16(RegName16::BC) != 0) & (!result) {
                                 // last HL
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_sub(1), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
                         // CPDR
@@ -278,11 +276,14 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             let result = execute_cpi_cpd(cpu, bus, BlockDir::Dec);
                             if (cpu.regs.get_reg_16(RegName16::BC) != 0) & (!result) {
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_add(1), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
-                        // No operation
-                        _ => {}
+                        // NOP
+                        _ => {
+                            bus.process_unknown_opcode(Prefix::ED, opcode);
+                        }
                     }
                 }
                 // IN Block group
@@ -297,7 +298,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             execute_ini_ind(cpu, bus, BlockDir::Inc);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_sub(1), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
                         // INDR
@@ -305,11 +307,14 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             execute_ini_ind(cpu, bus, BlockDir::Dec);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_add(1), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
-                        // No operation
-                        _ => {}
+                        // NOP
+                        _ => {
+                            bus.process_unknown_opcode(Prefix::ED, opcode);
+                        }
                     }
                 }
                 // Out Block group
@@ -324,7 +329,8 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             execute_outi_outd(cpu, bus, BlockDir::Inc);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_bc(), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
                         // OTDR
@@ -332,15 +338,20 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode) {
                             execute_outi_outd(cpu, bus, BlockDir::Dec);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_bc(), 5);
-                                cpu.regs.dec_pc(2);
+                                cpu.regs.dec_pc();
+                                cpu.regs.dec_pc();
                             };
                         }
-                        // No operation
-                        _ => {}
+                        // NOP
+                        _ => {
+                            bus.process_unknown_opcode(Prefix::ED, opcode);
+                        }
                     }
                 }
-                // No operation
-                _ => {}
+                // NOP
+                _ => {
+                    bus.process_unknown_opcode(Prefix::ED, opcode);
+                }
             }
         }
     }

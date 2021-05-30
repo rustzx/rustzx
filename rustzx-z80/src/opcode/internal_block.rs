@@ -5,55 +5,43 @@ use crate::{
     FLAG_SUB, FLAG_ZERO, Z80,
 };
 
-/// ldi or ldd instruction
-pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
-    // read (HL)
+/// ldi/ldd instruction group
+pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     let src = bus.read(cpu.regs.get_hl(), 3);
-    let bc = cpu.regs.dec_reg_16(RegName16::BC, 1);
-    // write (HL) to (DE)
+    let bc = cpu.regs.dec_reg_16(RegName16::BC);
     bus.write(cpu.regs.get_de(), src, 3);
     bus.wait_loop(cpu.regs.get_de(), 2);
-    // inc or dec HL and DE
     match dir {
         BlockDir::Inc => {
-            cpu.regs.inc_reg_16(RegName16::HL, 1);
-            cpu.regs.inc_reg_16(RegName16::DE, 1);
+            cpu.regs.inc_reg_16(RegName16::HL);
+            cpu.regs.inc_reg_16(RegName16::DE);
         }
         BlockDir::Dec => {
-            cpu.regs.dec_reg_16(RegName16::HL, 1);
-            cpu.regs.dec_reg_16(RegName16::DE, 1);
+            cpu.regs.dec_reg_16(RegName16::HL);
+            cpu.regs.dec_reg_16(RegName16::DE);
         }
     }
-    // flags
     let mut flags = cpu.regs.get_flags();
-    // reset affected flags
     flags &= !(FLAG_SUB | FLAG_HALF_CARRY | FLAG_PV | FLAG_F3 | FLAG_F5);
-    // set PV if bc != 0
     flags |= (bc != 0) as u8 * FLAG_PV;
     let src_plus_a = src.wrapping_add(cpu.regs.get_acc());
-    // bit 1 for F5 and bit 3 for F3
     flags |= (src_plus_a & 0x08 != 0) as u8 * FLAG_F3;
     flags |= (src_plus_a & 0x02 != 0) as u8 * FLAG_F5;
     cpu.regs.set_flags(flags);
     // Clocks: <4 + 4> + 3 + 3 + 2 = 16
 }
 
-/// cpi or cpd instruction
-pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) -> bool {
-    // read (HL)
+/// cpi/cpd instruction group
+pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) -> bool {
     let src = bus.read(cpu.regs.get_hl(), 3);
     bus.wait_loop(cpu.regs.get_hl(), 5);
-    // move pointer
     match dir {
-        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL, 1),
-        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL, 1),
+        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL),
+        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL),
     };
-    // dec bc
-    let bc = cpu.regs.dec_reg_16(RegName16::BC, 1);
+    let bc = cpu.regs.dec_reg_16(RegName16::BC);
     let acc = cpu.regs.get_acc();
-    // variable to store CP (HL) subtract result
     let tmp = acc.wrapping_sub(src);
-    // flags, only carry unaffected
     let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
     flags |= FLAG_SUB;
     flags |= (bc != 0) as u8 * FLAG_PV;
@@ -71,33 +59,27 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) -> bo
     flags |= ((tmp2 & 0x02) != 0) as u8 * FLAG_F5;
     cpu.regs.set_flags(flags);
     // Clocks: <4 + 4> + 3 + 5 = 16
-    tmp == 0 // return comarison result
+    tmp == 0
 }
 
-/// ini or ind instruction
-pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
+/// ini/ind instruction group
+pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     bus.wait_no_mreq(cpu.regs.get_ir(), 1);
-    // get from port and write to memory
     let src = bus.read_io(cpu.regs.get_bc());
     bus.write(cpu.regs.get_hl(), src, 3);
-    // dec counter
-    let b = cpu.regs.dec_reg_8(RegName8::B, 1);
-    // move pointer
+    let b = cpu.regs.dec_reg_8(RegName8::B);
     match dir {
-        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL, 1),
-        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL, 1),
+        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL),
+        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL),
     };
     let mut flags = 0u8;
-    // as in dec b
     flags |= SZF3F5_TABLE[b as usize];
-    // 7 bit from input value
     flags |= ((src & 0x80) != 0) as u8 * FLAG_SUB;
-    // get C reg and modify it according to instruction type
     let c = match dir {
         BlockDir::Inc => cpu.regs.get_reg_8(RegName8::C).wrapping_add(1),
         BlockDir::Dec => cpu.regs.get_reg_8(RegName8::C).wrapping_sub(1),
     };
-    // k_carry from (HL) + ( C (+ or -) 1) & 0xFF
+    // (HL) + ( C (+ or -) 1) & 0xFF
     let (k, k_carry) = c.overflowing_add(src);
     flags |= k_carry as u8 * (FLAG_CARRY | FLAG_HALF_CARRY);
     // Parity of (k & 7) xor B is PV flag
@@ -105,25 +87,21 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
     cpu.regs.set_flags(flags);
 }
 
-/// outi or outd instruction
-pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut dyn Z80Bus, dir: BlockDir) {
+/// outi/outd instruction group
+pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     bus.wait_no_mreq(cpu.regs.get_ir(), 1);
-    // get input data
     let src = bus.read(cpu.regs.get_hl(), 3);
-    let b = cpu.regs.dec_reg_8(RegName8::B, 1);
+    let b = cpu.regs.dec_reg_8(RegName8::B);
     bus.write_io(cpu.regs.get_bc(), src);
-    // move pointer
     match dir {
-        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL, 1),
-        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL, 1),
+        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL),
+        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL),
     };
     let l = cpu.regs.get_l();
     let mut flags = 0u8;
-    // as in dec b
     flags |= SZF3F5_TABLE[b as usize];
-    // 7 bit of output value [(HL)]
     flags |= ((src & 0x80) != 0) as u8 * FLAG_SUB;
-    // temporary k is L + (HL)
+    // L + (HL)
     let (k, k_carry) = l.overflowing_add(src);
     flags |= k_carry as u8 * (FLAG_CARRY | FLAG_HALF_CARRY);
     // Parity of (k & 7) xor B is PV flag

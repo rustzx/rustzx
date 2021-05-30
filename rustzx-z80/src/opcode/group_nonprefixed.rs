@@ -5,10 +5,51 @@ use crate::{
         lookup16_r12, lookup8_r12, F3F5_TABLE, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE,
         SZF3F5_TABLE, SZPF3F5_TABLE,
     },
-    utils::word_displacement,
-    Condition, Flag, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY,
-    FLAG_PV, FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
+    RegName16, RegName8, Regs, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY, FLAG_PV,
+    FLAG_SIGN, FLAG_SUB, FLAG_ZERO, Z80,
 };
+
+#[derive(Clone, Copy)]
+pub enum FlagsCondition {
+    NonZero,
+    Zero,
+    NonCarry,
+    Carry,
+    ParityOdd,
+    ParityEven,
+    SignPositive,
+    SignNegative,
+}
+
+impl FlagsCondition {
+    /// Returns condition encoded in 3-bit value
+    pub fn from_u3(code: U3) -> Self {
+        match code {
+            U3::N0 => Self::NonZero,
+            U3::N1 => Self::Zero,
+            U3::N2 => Self::NonCarry,
+            U3::N3 => Self::Carry,
+            U3::N4 => Self::ParityOdd,
+            U3::N5 => Self::ParityEven,
+            U3::N6 => Self::SignPositive,
+            U3::N7 => Self::SignNegative,
+        }
+    }
+
+    pub fn eval(self, regs: &Regs) -> bool {
+        let f = regs.get_flags();
+        match self {
+            Self::Carry => (f & FLAG_CARRY) != 0,
+            Self::NonCarry => (f & FLAG_CARRY) == 0,
+            Self::Zero => (f & FLAG_ZERO) != 0,
+            Self::NonZero => (f & FLAG_ZERO) == 0,
+            Self::SignNegative => (f & FLAG_SIGN) != 0,
+            Self::SignPositive => (f & FLAG_SIGN) == 0,
+            Self::ParityEven => (f & FLAG_PV) != 0,
+            Self::ParityOdd => (f & FLAG_PV) == 0,
+        }
+    }
+}
 
 /// normal execution group, can be modified with prefixes DD, FD, providing
 /// DD OPCODE [NN], FD OPCODE [NN] instruction group
@@ -18,7 +59,7 @@ use crate::{
 ///
 /// DAA algorithm
 /// [link](http://www.worldofspectrum.org/faq/reference/z80reference.htm#DAA)
-pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefix: Prefix) {
+pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, prefix: Prefix) {
     // 2 first bits of opcode
     match opcode.x {
         // ---------------------------------
@@ -42,12 +83,12 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     // emulate read byte without pc shift
                     let offset = bus.read(cpu.regs.get_pc(), 3) as i8;
                     // preform jump if needed
-                    if cpu.regs.dec_reg_8(RegName8::B, 1) != 0 {
+                    if cpu.regs.dec_reg_8(RegName8::B) != 0 {
                         bus.wait_loop(cpu.regs.get_pc(), 5);
                         cpu.regs.shift_pc(offset);
                     };
                     // inc pc, what left after reading displacement
-                    cpu.regs.inc_pc(1);
+                    cpu.regs.inc_pc();
                 }
                 // JR offset
                 // [0b00011000] = 0x18
@@ -56,7 +97,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     let offset = bus.read(cpu.regs.get_pc(), 3) as i8;
                     bus.wait_loop(cpu.regs.get_pc(), 5);
                     cpu.regs.shift_pc(offset);
-                    cpu.regs.inc_pc(1);
+                    cpu.regs.inc_pc();
                 }
                 // JR condition[y-4] displacement; 4 + 3 + [5] = 7/12 clocks
                 // NZ [0b00100000], Z [0b00101000] NC [0b00110000] C [0b00111000]
@@ -64,13 +105,13 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     // 0x20, 0x28, 0x30, 0x38
                     let offset = bus.read(cpu.regs.get_pc(), 3) as i8;
                     // y in range 4..7
-                    let cnd = Condition::from_u3(U3::from_byte(opcode.y.as_byte() - 4, 0));
-                    if cpu.regs.eval_condition(cnd) {
+                    let cnd = FlagsCondition::from_u3(U3::from_byte(opcode.y.as_byte() - 4, 0));
+                    if cnd.eval(&cpu.regs) {
                         bus.wait_loop(cpu.regs.get_pc(), 5);
                         cpu.regs.shift_pc(offset);
                     };
                     // inc pc, which left after reading displacement
-                    cpu.regs.inc_pc(1);
+                    cpu.regs.inc_pc();
                 }
             };
         }
@@ -167,12 +208,12 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                 // INC BC/DE/HL/IX/IY/SP
                 // [0b00pp0011] : 0x03, 0x13, 0x23, 0x33
                 U1::N0 => {
-                    cpu.regs.inc_reg_16(reg, 1);
+                    cpu.regs.inc_reg_16(reg);
                 }
                 // DEC BC/DE/HL/IX/IY/SP
                 // [0b00pp1011] : 0x03, 0x13, 0x23, 0x33
                 U1::N1 => {
-                    cpu.regs.dec_reg_16(reg, 1);
+                    cpu.regs.dec_reg_16(reg);
                 }
             };
         }
@@ -201,8 +242,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     // we have INC/DEC (IX/IY + d)
                     let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                     bus.wait_loop(cpu.regs.get_pc(), 5);
-                    cpu.regs.inc_pc(1);
-                    word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d)
+                    cpu.regs.inc_pc();
+                    cpu.regs
+                        .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
                 };
                 // read data
                 data = bus.read(addr, 3);
@@ -260,7 +302,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                 } else {
                     // LD (IX+d/ IY+d)
                     let d = cpu.fetch_byte(bus, 3) as i8;
-                    word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d)
+                    cpu.regs
+                        .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
                 };
                 LoadOperand8::Indirect(addr)
             };
@@ -272,7 +315,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     bus.wait_loop(cpu.regs.get_pc(), 2);
                 }
             }
-            cpu.regs.inc_pc(1);
+            cpu.regs.inc_pc();
             // write to bus or reg
             match operand {
                 LoadOperand8::Indirect(addr) => {
@@ -330,7 +373,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     let mut data = cpu.regs.get_acc();
                     let carry = (data & 0x80) != 0;
                     data <<= 1;
-                    if cpu.regs.get_flag(Flag::Carry) {
+                    if (cpu.regs.get_flags() & FLAG_CARRY) != 0 {
                         data |= 1;
                     } else {
                         data &= 0xFE;
@@ -347,7 +390,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                     let mut data = cpu.regs.get_acc();
                     let carry = (data & 0x01) != 0;
                     data >>= 1;
-                    if cpu.regs.get_flag(Flag::Carry) {
+                    if (cpu.regs.get_flags() & FLAG_CARRY) != 0 {
                         data |= 0x80;
                     } else {
                         data &= 0x7F;
@@ -421,7 +464,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
         U2::N1 if (opcode.z == U3::N6) && (opcode.y == U3::N6) => {
             cpu.halted = true;
             bus.halt(true);
-            cpu.regs.dec_pc(1);
+            cpu.regs.dec_pc();
         }
         // ---------------------------------
         // [0b01yyyzzz] instruction section
@@ -434,8 +477,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
             } else {
                 let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                 bus.wait_loop(cpu.regs.get_pc(), 5);
-                cpu.regs.inc_pc(1);
-                word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d)
+                cpu.regs.inc_pc();
+                cpu.regs
+                    .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
             };
             cpu.regs
                 .set_reg_8(RegName8::from_u3(opcode.y).unwrap(), bus.read(src_addr, 3));
@@ -450,8 +494,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
             } else {
                 let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                 bus.wait_loop(cpu.regs.get_pc(), 5);
-                cpu.regs.inc_pc(1);
-                word_displacement(cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)), d)
+                cpu.regs.inc_pc();
+                cpu.regs
+                    .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
             };
             bus.write(
                 dst_addr,
@@ -484,11 +529,10 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                 } else {
                     let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                     bus.wait_loop(cpu.regs.get_pc(), 5);
-                    cpu.regs.inc_pc(1);
-                    let addr = word_displacement(
-                        cpu.regs.get_reg_16(RegName16::HL.with_prefix(prefix)),
-                        d,
-                    );
+                    cpu.regs.inc_pc();
+                    let addr = cpu
+                        .regs
+                        .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d);
                     bus.read(addr, 3)
                 }
             };
@@ -505,7 +549,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
         // [0b11yyy000] : C0; C8; D0; D8; E0; E8; F0; F8;
         U2::N3 if opcode.z == U3::N0 => {
             bus.wait_no_mreq(cpu.regs.get_ir(), 1);
-            if cpu.regs.eval_condition(Condition::from_u3(opcode.y)) {
+            if FlagsCondition::from_u3(opcode.y).eval(&cpu.regs) {
                 // write value from stack to pc
                 execute_pop_16(cpu, bus, RegName16::PC, 3);
             };
@@ -562,7 +606,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
         // [0b11yyy010]: C2,CA,D2,DA,E2,EA,F2,FA
         U2::N3 if opcode.z == U3::N2 => {
             let addr = cpu.fetch_word(bus, 3);
-            if cpu.regs.eval_condition(Condition::from_u3(opcode.y)) {
+            if FlagsCondition::from_u3(opcode.y).eval(&cpu.regs) {
                 cpu.regs.set_pc(addr);
             };
         }
@@ -643,13 +687,13 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
             let addr_l = cpu.fetch_byte(bus, 3);
             let addr_h = bus.read(cpu.regs.get_pc(), 3);
             let addr = u16::from_le_bytes([addr_l, addr_h]);
-            if cpu.regs.eval_condition(Condition::from_u3(opcode.y)) {
+            if FlagsCondition::from_u3(opcode.y).eval(&cpu.regs) {
                 bus.wait_no_mreq(cpu.regs.get_pc(), 1);
-                cpu.regs.inc_pc(1);
+                cpu.regs.inc_pc();
                 execute_push_16(cpu, bus, RegName16::PC, 3);
                 cpu.regs.set_pc(addr);
             } else {
-                cpu.regs.inc_pc(1);
+                cpu.regs.inc_pc();
             }
         }
         // [0b11ppq101] opcodes group : PUSH rp2[p], CALL nn
@@ -675,7 +719,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut dyn Z80Bus, opcode: Opcode, prefi
                             let addr_h = bus.read(cpu.regs.get_pc(), 3);
                             let addr = u16::from_le_bytes([addr_l, addr_h]);
                             bus.wait_no_mreq(cpu.regs.get_pc(), 1);
-                            cpu.regs.inc_pc(1);
+                            cpu.regs.inc_pc();
                             execute_push_16(cpu, bus, RegName16::PC, 3);
                             cpu.regs.set_pc(addr);
                         }
