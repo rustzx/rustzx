@@ -5,20 +5,20 @@ use anyhow::{anyhow, bail, Context};
 use frame_buffer::{FrameBufferContext, RgbaFrameBuffer};
 pub use io::FileAsset;
 use rustzx_core::{
-    host::{FrameBuffer, Host, HostContext, RomFormat, RomSet, Snapshot, Tape},
+    host::{FrameBuffer, Host, HostContext, RomFormat, RomSet, Screen, Snapshot, Tape},
     zx::machine::ZXMachine,
 };
 use std::{collections::VecDeque, fs::File, path::Path};
 
 const SUPPORTED_SNAPSHOT_FORMATS: [&str; 1] = ["sna"];
 const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
+const SUPPORTED_SCREEN_FORMATS: [&str; 1] = ["scr"];
 
 pub struct AppHost;
 
 impl Host for AppHost {
     type Context = AppHostContext;
     type FrameBuffer = RgbaFrameBuffer;
-    type RomSet = FileRomSet;
     type TapeAsset = FileAsset;
 }
 
@@ -49,6 +49,7 @@ impl RomSet for FileRomSet {
 pub enum DetectedFileKind {
     Tape,
     Snapshot,
+    Screen,
 }
 
 pub fn load_tape(path: &Path) -> anyhow::Result<Tape<FileAsset>> {
@@ -77,6 +78,20 @@ pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<FileAsset>> {
     File::open(path)
         .with_context(|| "Failed to open snapshot file")
         .map(|file| Snapshot::Sna(file.into()))
+}
+
+pub fn load_screen(path: &Path) -> anyhow::Result<Screen<FileAsset>> {
+    if !file_extension_matches_one_of(path, &SUPPORTED_SCREEN_FORMATS) {
+        bail!("Invalid screen format");
+    }
+
+    if !path.exists() {
+        bail!("Provided screen file does not exist");
+    }
+
+    File::open(path)
+        .with_context(|| "Failed to open screen file")
+        .map(|file| Screen::Scr(file.into()))
 }
 
 fn load_rom_asset(path: &Path) -> anyhow::Result<FileAsset> {
@@ -128,6 +143,8 @@ pub fn detect_file_type(path: &Path) -> anyhow::Result<DetectedFileKind> {
     } else if file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
         load_snapshot(path)?;
         Ok(DetectedFileKind::Snapshot)
+    } else if file_extension_matches_one_of(path, &SUPPORTED_SCREEN_FORMATS) {
+        Ok(DetectedFileKind::Screen)
     } else {
         Err(anyhow!("Not supported file format"))
     }

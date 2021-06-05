@@ -105,6 +105,11 @@ impl RustzxApp {
                 .load_tape(host::load_tape(tape)?)
                 .map_err(|e| anyhow!("Emulator failed to load tape: {}", e))?;
         }
+        if let Some(screen) = settings.screen.as_ref() {
+            emulator
+                .load_screen(host::load_screen(screen)?)
+                .map_err(|e| anyhow!("Emulator failed to load screen: {}", e))?;
+        }
 
         let file_autodetect = settings.file_autodetect.clone();
 
@@ -271,6 +276,10 @@ impl RustzxApp {
                     .load_tape(host::load_tape(&path)?)
                     .map_err(|e| anyhow!("Emulator failed to load auto-detected tape: {}", e))?;
             }
+            DetectedFileKind::Screen => self
+                .emulator
+                .load_screen(host::load_screen(&path)?)
+                .map_err(|e| anyhow!("Emulator failed load screen via auto-detect: {}", e))?,
         }
         Ok(())
     }

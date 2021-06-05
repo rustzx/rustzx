@@ -73,6 +73,9 @@ pub struct Settings {
     /// Set snapshot file path. Only `.sna` files are supported currently
     #[structopt(long, conflicts_with = "file-autodetect")]
     pub snap: Option<PathBuf>,
+    /// Set screen file to load. Only `.scr` files are supported currently
+    #[structopt(long, conflicts_with = "file-autodetect")]
+    pub screen: Option<PathBuf>,
 
     /// Load provided file to emulator. Emulator will perform autodetect of format if possible
     pub file_autodetect: Option<PathBuf>,

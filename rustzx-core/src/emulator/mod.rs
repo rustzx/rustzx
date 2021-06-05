@@ -1,12 +1,13 @@
 //! Platform-independent high-level Emulator interaction module
-mod loaders;
+mod fastload;
+mod screenshot;
 mod snapshot;
 
 use crate::{
     error::RomLoadError,
     host::{
-        DataRecorder, Host, LoadableAsset, RomFormat, RomSet, SeekableAsset, Snapshot,
-        SnapshotRecorder, Tape,
+        DataRecorder, Host, LoadableAsset, RomFormat, RomSet, Screen, ScreenAsset, Snapshot,
+        SnapshotAsset, SnapshotRecorder, Tape,
     },
     settings::RustzxSettings,
     utils::EmulationSpeed,
@@ -102,10 +103,7 @@ impl<H: Host> Emulator<H> {
         }
     }
 
-    pub fn load_snapshot<A>(&mut self, snapshot: Snapshot<A>) -> Result<()>
-    where
-        A: LoadableAsset + SeekableAsset,
-    {
+    pub fn load_snapshot(&mut self, snapshot: Snapshot<impl SnapshotAsset>) -> Result<()> {
         match snapshot {
             Snapshot::Sna(asset) => snapshot::sna::load(self, asset),
         }
@@ -140,7 +138,7 @@ impl<H: Host> Emulator<H> {
         Ok(())
     }
 
-    fn load_rom_binary_16k_pages(&mut self, mut rom: H::RomSet) -> Result<()> {
+    fn load_rom_binary_16k_pages(&mut self, mut rom: impl RomSet) -> Result<()> {
         let page_count = self.settings.machine.specs().rom_pages;
 
         for page_index in 0..page_count {
@@ -152,10 +150,18 @@ impl<H: Host> Emulator<H> {
         Ok(())
     }
 
-    pub fn load_rom(&mut self, rom: H::RomSet) -> Result<()> {
+    pub fn load_rom(&mut self, rom: impl RomSet) -> Result<()> {
         match rom.format() {
             RomFormat::Binary16KPages => self.load_rom_binary_16k_pages(rom),
         }
+    }
+
+    pub fn load_screen(&mut self, screen: Screen<impl ScreenAsset>) -> Result<()> {
+        match screen {
+            Screen::Scr(asset) => screenshot::scr::load(self, asset)?,
+        };
+
+        Ok(())
     }
 
     pub fn play_tape(&mut self) {
@@ -219,7 +225,7 @@ impl<H: Host> Emulator<H> {
             && self.controller.tape.can_fast_load()
             && self.fast_load
         {
-            loaders::tap::fast_load_tap(self)?;
+            fastload::tap::fast_load_tap(self)?;
         }
         Ok(())
     }

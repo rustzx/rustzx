@@ -7,8 +7,10 @@ pub enum Error {
     AssetRead(IoError),
     /// Failed to load rom
     RomLoad(RomLoadError),
-    /// Failed to load rom
+    /// Failed to load tape
     TapeLoad(TapeLoadError),
+    /// Failed to load screen
+    ScreenLoad(ScreenLoadError),
 }
 
 #[derive(Debug, Display)]
@@ -33,4 +35,12 @@ pub enum RomLoadError {
 pub enum TapeLoadError {
     /// Provided tap file is invalid
     InvalidTapFile,
+}
+
+#[derive(Debug, Display)]
+pub enum ScreenLoadError {
+    /// Provided scr file is invalid
+    InvalidScrFile,
+    /// Selected machine can't be used to load given screen file
+    MachineNotSupported,
 }

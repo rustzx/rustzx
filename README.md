@@ -19,7 +19,10 @@ ZX Spectrum emulator written in Rust
 - Perfect emulation of Z80 core
 - Highly precise AY chip emulation
 - Beeper sound emulation
-- Supported formats: TAP, SNA (both 48K and 128K version)
+- Supported formats:
+    - `tap` - tape
+    - `sna` - snapshot, both 48K and 128K versions supported
+    - `scr` - screenshot
 - Fast loading of tap files with standard loader
 - Precise timings
 - Full border emulation

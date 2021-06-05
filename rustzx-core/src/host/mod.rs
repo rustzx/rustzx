@@ -20,6 +20,10 @@ pub enum Tape<LoadableAssetImpl: LoadableAsset> {
     // TODO(#56): Implement TZX tape format support
 }
 
+pub enum Screen<LoadableAssetImpl: LoadableAsset> {
+    Scr(LoadableAssetImpl),
+}
+
 pub enum RomFormat {
     Binary16KPages,
 }
@@ -35,6 +39,12 @@ pub trait HostContext<H: Host + ?Sized>: Sized {
     fn frame_buffer_context(&self) -> <H::FrameBuffer as FrameBuffer>::Context;
 }
 
+pub trait ScreenAsset: LoadableAsset + SeekableAsset {}
+impl<T> ScreenAsset for T where T: LoadableAsset + SeekableAsset {}
+
+pub trait SnapshotAsset: LoadableAsset + SeekableAsset {}
+impl<T> SnapshotAsset for T where T: LoadableAsset + SeekableAsset {}
+
 /// Represents set of required types for emulator implementation
 /// based on `rustzx-core`.
 pub trait Host {
@@ -43,8 +53,6 @@ pub trait Host {
     type Context: HostContext<Self>;
     /// File-like type implementation for tape loading
     type TapeAsset: LoadableAsset + SeekableAsset;
-    /// File-like type implementation for rom loading
-    type RomSet: RomSet;
     /// Frame buffer implementation
     type FrameBuffer: FrameBuffer;
 }
