@@ -1,4 +1,7 @@
-use crate::opcode::{Opcode, Prefix};
+use crate::{
+    opcode::{Opcode, Prefix},
+    CodegenMemorySpace,
+};
 
 /// Z80 processor System bus
 /// Implement it for communication with CPU.
@@ -63,4 +66,14 @@ pub trait Z80Bus {
     /// invokes breakpoints check on bus device
     fn pc_callback(&mut self, addr: u16);
     fn process_unknown_opcode(&mut self, _prefix: Prefix, _opcode: Opcode) {}
+}
+
+impl<T> CodegenMemorySpace for T
+where
+    T: Z80Bus,
+{
+    fn write_byte(&mut self, addr: u16, byte: u8) {
+        // write, but does not perform any processing (zero clock cycles)
+        self.write(addr, byte, 0);
+    }
 }

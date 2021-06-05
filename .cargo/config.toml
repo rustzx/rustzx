@@ -1,0 +1,5 @@
+[alias]
+rustzx-fmt = "fmt --all"
+rustzx-clippy = "clippy --workspace --all-features"
+rustzx-run = "run --release --bin rustzx --"
+rustzx-install = "install --path rustzx"

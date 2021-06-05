@@ -3,6 +3,7 @@
 //! Module which contains all CPU-specific structures, functions, constants
 
 mod bus;
+mod codegen;
 mod cpu;
 mod opcode;
 mod registers;
@@ -10,6 +11,7 @@ mod smallnum;
 mod tables;
 
 pub use bus::Z80Bus;
+pub use codegen::{CodeGenerator, CodegenMemorySpace};
 pub use cpu::{IntMode, Z80};
 pub use opcode::{Opcode, Prefix};
 pub use registers::{
