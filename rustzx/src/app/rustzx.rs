@@ -157,7 +157,7 @@ impl RustzxApp {
             // absolute start time
             let frame_start = Instant::now();
             // Emulate all requested frames
-            let cpu_dt = self
+            let emulator_dt = self
                 .emulator
                 .emulate_frames(MAX_FRAME_TIME, &mut stopwatch)
                 .map_err(|e| anyhow!("Emulation step failed: {}", e))?;
@@ -253,8 +253,8 @@ impl RustzxApp {
             // change window header
             if self.enable_frame_trace {
                 log::trace!(
-                    "CPU: {:7.3}ms; FRAME:{:7.3}ms",
-                    cpu_dt.as_millis(),
+                    "EMUALTOR: {:7.3}ms; FRAME:{:7.3}ms",
+                    emulator_dt.as_millis(),
                     frame_dt.as_millis()
                 );
             }

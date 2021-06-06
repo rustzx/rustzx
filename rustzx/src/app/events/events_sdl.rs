@@ -10,7 +10,7 @@ use rustzx_core::{
         keys::{CompoundKey, ZXKey},
         mouse::kempston::{KempstonMouseButton, KempstonMouseWheelDirection},
     },
-    EmulationSpeed,
+    EmulationMode,
 };
 use sdl2::{
     event::Event as SdlEvent,
@@ -214,9 +214,9 @@ impl EventsSdl {
             match code {
                 Scancode::F1 => Some(Event::QuickSave),
                 Scancode::F2 => Some(Event::QuickLoad),
-                Scancode::F3 => Some(Event::ChangeSpeed(EmulationSpeed::Definite(1))),
-                Scancode::F4 => Some(Event::ChangeSpeed(EmulationSpeed::Definite(2))),
-                Scancode::F5 => Some(Event::ChangeSpeed(EmulationSpeed::Max)),
+                Scancode::F3 => Some(Event::ChangeSpeed(EmulationMode::FrameCount(1))),
+                Scancode::F4 => Some(Event::ChangeSpeed(EmulationMode::FrameCount(2))),
+                Scancode::F5 => Some(Event::ChangeSpeed(EmulationMode::Max)),
                 Scancode::F6 => Some(Event::SwitchFrameTrace),
                 Scancode::F9 => {
                     self.enable_joy_keyaboard_layer = !self.enable_joy_keyaboard_layer;

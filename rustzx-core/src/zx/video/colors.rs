@@ -1,22 +1,22 @@
 /// Represents color brightness
 #[derive(Clone, Copy)]
 pub enum ZXBrightness {
-    Normal,
-    Bright,
+    Normal = 0,
+    Bright = 1,
 }
 
 /// ZX Spectrum color enum
 /// Constructs self from 3-bit value
 #[derive(Clone, Copy)]
 pub enum ZXColor {
-    Black,
-    Blue,
-    Red,
-    Purple,
-    Green,
-    Cyan,
-    Yellow,
-    White,
+    Black = 0,
+    Blue = 1,
+    Red = 2,
+    Purple = 3,
+    Green = 4,
+    Cyan = 5,
+    Yellow = 6,
+    White = 7,
 }
 
 impl ZXColor {

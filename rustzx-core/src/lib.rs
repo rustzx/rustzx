@@ -11,7 +11,7 @@ pub mod zx;
 
 pub use emulator::{Emulator, Stopwatch};
 pub use settings::RustzxSettings;
-pub use utils::EmulationSpeed;
+pub use utils::EmulationMode;
 
 extern crate alloc;
 
