@@ -1,6 +1,6 @@
 use rustzx_core::{
     zx::{machine::ZXMachine, sound::ay::ZXAYMode},
-    EmulationSpeed, RustzxSettings,
+    EmulationMode, RustzxSettings,
 };
 
 use std::path::PathBuf;
@@ -18,7 +18,7 @@ pub struct Settings {
     /// Set emulation speed at emualtor start-up. Can be specified as deciamal non-zero
     /// value or as a special value `MAX` to run emulator as fast as possible
     #[structopt(long, default_value = "1", parse(try_from_str = emualtion_speed_from_str))]
-    pub speed: EmulationSpeed,
+    pub speed: EmulationMode,
     /// Disable fast tape loading
     #[structopt(long = "nofastload")]
     pub disable_fastload: bool,
@@ -89,15 +89,15 @@ fn machine_from_str(s: &str) -> Result<ZXMachine, anyhow::Error> {
     }
 }
 
-fn emualtion_speed_from_str(s: &str) -> Result<EmulationSpeed, anyhow::Error> {
+fn emualtion_speed_from_str(s: &str) -> Result<EmulationMode, anyhow::Error> {
     match s.to_lowercase().as_str() {
-        "max" => Ok(EmulationSpeed::Max),
+        "max" => Ok(EmulationMode::Max),
         s => {
             let speed: std::num::NonZeroUsize = s
                 .parse()
                 .map_err(|_| anyhow::anyhow!("Invalid emulation speed `{}`", s))?;
 
-            Ok(EmulationSpeed::Definite(speed.into()))
+            Ok(EmulationMode::FrameCount(speed.into()))
         }
     }
 }
@@ -157,7 +157,7 @@ impl Settings {
 
         RustzxSettings {
             machine: self.machine,
-            emulation_speed: self.speed,
+            emulation_mode: self.speed,
             tape_fastload_enabled: !self.disable_fastload,
             kempston_enabled: !self.disable_kempston,
             mouse_enabled: self.enable_mouse,

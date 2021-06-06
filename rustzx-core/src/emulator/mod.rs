@@ -10,7 +10,7 @@ use crate::{
         SnapshotAsset, SnapshotRecorder, Tape,
     },
     settings::RustzxSettings,
-    utils::EmulationSpeed,
+    utils::EmulationMode,
     zx::{
         controller::ZXController,
         events::EmulationEvents,
@@ -25,6 +25,7 @@ use crate::{
     },
     Result,
 };
+use core::time::Duration;
 use rustzx_z80::Z80;
 
 #[cfg(feature = "sound")]
@@ -32,14 +33,12 @@ use crate::zx::sound::sample::SoundSample;
 #[cfg(feature = "autoload")]
 use crate::{host::BufferCursor, zx::machine::ZXMachine};
 
-use core::time::Duration;
-
 /// Represents main Emulator structure
 pub struct Emulator<H: Host> {
     settings: RustzxSettings,
     cpu: Z80,
     controller: ZXController<H>,
-    speed: EmulationSpeed,
+    mode: EmulationMode,
     fast_load: bool,
     #[cfg(feature = "sound")]
     sound_enabled: bool,
@@ -55,7 +54,7 @@ impl<H: Host> Emulator<H> {
     /// # Arguments
     /// `settings` - emulator settings
     pub fn new(settings: RustzxSettings, context: H::Context) -> Result<Self> {
-        let speed = settings.emulation_speed;
+        let mode = settings.emulation_mode;
         let fast_load = settings.tape_fastload_enabled;
         #[cfg(feature = "sound")]
         let sound_enabled = settings.sound_enabled;
@@ -67,7 +66,7 @@ impl<H: Host> Emulator<H> {
             settings,
             cpu,
             controller,
-            speed,
+            mode,
             fast_load,
             #[cfg(feature = "sound")]
             sound_enabled,
@@ -77,8 +76,8 @@ impl<H: Host> Emulator<H> {
     }
 
     /// changes emulation speed
-    pub fn set_speed(&mut self, new_speed: EmulationSpeed) {
-        self.speed = new_speed;
+    pub fn set_speed(&mut self, new_speed: EmulationMode) {
+        self.mode = new_speed;
     }
 
     /// changes fast loading flag
@@ -96,7 +95,7 @@ impl<H: Host> Emulator<H> {
     #[cfg(feature = "sound")]
     pub fn have_sound(&self) -> bool {
         // enable sound only if speed is normal
-        if let EmulationSpeed::Definite(1) = self.speed {
+        if let EmulationMode::FrameCount(1) = self.mode {
             self.sound_enabled
         } else {
             false
@@ -230,17 +229,18 @@ impl<H: Host> Emulator<H> {
         Ok(())
     }
 
-    /// Emulate frames, maximum in `max_time` time, returns emulation time in nanoseconds
-    /// in most cases time is max 1/50 of second, even when using
-    /// loader acceleration
-    pub fn emulate_frames<S>(&mut self, max_time: Duration, stopwatch: &mut S) -> Result<Duration>
+    /// Perform emulatio up to `emulation_limit` duration, returns actuall elapsed duration
+    pub fn emulate_frames<S>(
+        &mut self,
+        emulation_limit: Duration,
+        stopwatch: &mut S,
+    ) -> Result<Duration>
     where
         S: Stopwatch,
     {
-        let mut time = Duration::new(0, 0);
-        'frame: loop {
-            // start of current frame
-            stopwatch.reset();
+        stopwatch.reset();
+        // frame loop
+        loop {
             // reset controller internal frame counter
             self.controller.reset_frame_counter();
             'cpu: loop {
@@ -253,26 +253,24 @@ impl<H: Host> Emulator<H> {
                     self.process_events(self.controller.events())?;
                     self.controller.clear_events();
                 }
-                // If speed is defined
-                if let EmulationSpeed::Definite(multiplier) = self.speed {
-                    if self.controller.frames_count() >= multiplier {
-                        // no more frames
-                        return Ok(stopwatch.measure());
-                    };
-                // if speed is maximal.
-                } else {
-                    // if any frame passed then break cpu loop, but try to start new frame
-                    if self.controller.frames_count() != 0 {
-                        break 'cpu;
+
+                match self.mode {
+                    EmulationMode::FrameCount(frames) => {
+                        if self.controller.frames_count() >= frames {
+                            return Ok(stopwatch.measure());
+                        };
+                    }
+                    EmulationMode::Max => {
+                        if self.controller.frames_count() != 0 {
+                            break 'cpu;
+                        }
                     }
                 }
             }
-            time += stopwatch.measure();
             // if time is bigger than `max_time` then stop emulation cycle
-            if time > max_time {
-                break 'frame;
+            if stopwatch.measure() > emulation_limit {
+                return Ok(stopwatch.measure());
             }
         }
-        Ok(time)
     }
 }

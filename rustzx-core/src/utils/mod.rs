@@ -3,7 +3,7 @@
 pub mod screen;
 
 #[derive(Copy, Clone)]
-pub enum EmulationSpeed {
-    Definite(usize),
+pub enum EmulationMode {
+    FrameCount(usize),
     Max,
 }

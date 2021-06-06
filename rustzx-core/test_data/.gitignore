@@ -1,0 +1,2 @@
+# Do not include temporary tests output in the repo
+actual/**

@@ -11,7 +11,7 @@ use rustzx_core::{
         keys::{CompoundKey, ZXKey},
         mouse::kempston::{KempstonMouseButton, KempstonMouseWheelDirection},
     },
-    EmulationSpeed,
+    EmulationMode,
 };
 use std::path::PathBuf;
 
@@ -28,7 +28,7 @@ pub enum Event {
     MouseWheel(KempstonMouseWheelDirection),
     SwitchFrameTrace,
     ChangeJoyKeyboardLayer(bool),
-    ChangeSpeed(EmulationSpeed),
+    ChangeSpeed(EmulationMode),
     InsertTape,
     StopTape,
     QuickSave,

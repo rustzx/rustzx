@@ -1,11 +1,11 @@
-use crate::{utils::EmulationSpeed, zx::machine::ZXMachine};
+use crate::{utils::EmulationMode, zx::machine::ZXMachine};
 
 #[cfg(all(feature = "sound", feature = "ay"))]
 use crate::zx::sound::ay::ZXAYMode;
 
 pub struct RustzxSettings {
     pub machine: ZXMachine,
-    pub emulation_speed: EmulationSpeed,
+    pub emulation_mode: EmulationMode,
     pub tape_fastload_enabled: bool,
     pub kempston_enabled: bool,
     pub mouse_enabled: bool,
