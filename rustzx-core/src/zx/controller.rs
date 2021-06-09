@@ -52,10 +52,6 @@ pub(crate) struct ZXController<H: Host> {
     // frames count, which passed during emulation invokation
     passed_frames: usize,
     events: EmulationEvents,
-    // audio in
-    mic: bool,
-    // audio out
-    ear: bool,
     paging_enabled: bool,
     screen_bank: u8,
     current_port_7ffd: u8,
@@ -120,8 +116,6 @@ impl<H: Host> ZXController<H> {
             passed_frames: 0,
             tape: Default::default(),
             events: Default::default(),
-            mic: false,
-            ear: false,
             paging_enabled: paging,
             screen_bank,
             current_port_7ffd: 0,
@@ -462,12 +456,9 @@ impl<H: Host> Z80Bus for ZXController<H> {
         if let Err(e) = self.tape.process_clocks(clk) {
             self.last_emulation_error = Some(e);
         }
-        let mic = self.tape.current_bit();
-        self.mic = mic;
         #[cfg(feature = "sound")]
         {
             let pos = self.frame_pos();
-            self.mixer.beeper.change_bit(self.mic | self.ear);
             self.mixer.process(pos);
         }
         self.screen.process_clocks(self.frame_clocks);
@@ -514,11 +505,14 @@ impl<H: Host> Z80Bus for ZXController<H> {
                     tmp &= keyboard_byte;
                 }
             }
-            // invert bit 6 if mic_hw active;
-            if self.mic {
+
+            // Emulate zx spectrum "issue 2" model.
+            // For future "issue 3" implementation condition will be `!self.ear`, but
+            // different zx spectrum "issues" emulation is not planned yet
+            if !self.tape.current_bit() {
                 tmp ^= 0x40;
             }
-            // 5 and 7 unused
+            // 5 and 7 bits are unused
             tmp
         } else if self.mouse.is_some() && (port & 0x0121 == 0x0001) {
             self.mouse.as_ref().unwrap().buttons_port
@@ -549,10 +543,10 @@ impl<H: Host> Z80Bus for ZXController<H> {
             self.write_ay_port(data);
         } else if port & 0x0001 == 0 {
             self.set_border_color(self.frame_clocks, ZXColor::from_bits(data & 0x07));
-            self.mic = data & 0x08 != 0;
-            self.ear = data & 0x10 != 0;
+            let mic = data & 0x08 != 0;
+            let ear = data & 0x10 != 0;
             #[cfg(feature = "sound")]
-            self.mixer.beeper.change_bit(self.mic | self.ear);
+            self.mixer.beeper.change_bit(mic | ear);
         } else if (port & 0x8002 == 0) && (self.machine == ZXMachine::Sinclair128K) {
             self.write_7ffd(data);
         }
