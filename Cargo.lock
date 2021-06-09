@@ -571,6 +571,7 @@ dependencies = [
  "env_logger",
  "log",
  "rustzx-core",
+ "rustzx-utils",
  "sdl2",
  "structopt",
 ]
@@ -586,7 +587,15 @@ dependencies = [
  "from_variants",
  "lazy_static",
  "png",
+ "rustzx-utils",
  "rustzx-z80",
+]
+
+[[package]]
+name = "rustzx-utils"
+version = "0.1.0"
+dependencies = [
+ "rustzx-core",
 ]
 
 [[package]]

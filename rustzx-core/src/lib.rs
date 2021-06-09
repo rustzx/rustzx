@@ -9,7 +9,7 @@ pub mod error;
 pub mod host;
 pub mod zx;
 
-pub use emulator::{Emulator, Stopwatch};
+pub use emulator::Emulator;
 pub use settings::RustzxSettings;
 pub use utils::EmulationMode;
 
