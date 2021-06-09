@@ -1,6 +1,6 @@
 use std::{
     path::{Path, PathBuf},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use rustzx_core::{
@@ -10,58 +10,12 @@ use rustzx_core::{
         sound::ay::ZXAYMode,
         video::colors::{ZXBrightness, ZXColor},
     },
-    EmulationMode, Emulator, RustzxSettings, Stopwatch,
+    EmulationMode, Emulator, RustzxSettings,
 };
-
-// TODO(WIP): Move to new `rustzx-utils` crate?
-// TODO(WIP): Add Stopwatch associated type to host instead?
-struct InstantStopwatch {
-    timestamp: Instant,
-}
-
-impl Default for InstantStopwatch {
-    fn default() -> Self {
-        Self {
-            timestamp: Instant::now(),
-        }
-    }
-}
-
-impl Stopwatch for InstantStopwatch {
-    fn reset(&mut self) {
-        self.timestamp = Instant::now();
-    }
-
-    fn measure(&self) -> Duration {
-        self.timestamp.elapsed()
-    }
-}
+use rustzx_utils::{palette::rgba::ORIGINAL as DEFAULT_PALETTE, stopwatch::InstantStopwatch};
 
 fn make_png_palette() -> Vec<u8> {
-    // TODO(WIP): move `Palette` form rustzx to new `rustzx-utils` crate
-    // and get default color pallete from there?
-    const COLORS: [[u8; 4]; 16] = [
-        // normal
-        0x000000FF_u32.to_be_bytes(),
-        0x0000CDFF_u32.to_be_bytes(),
-        0xCD0000FF_u32.to_be_bytes(),
-        0xCD00CDFF_u32.to_be_bytes(),
-        0x00CD00FF_u32.to_be_bytes(),
-        0x00CDCDFF_u32.to_be_bytes(),
-        0xCDCD00FF_u32.to_be_bytes(),
-        0xCDCDCDFF_u32.to_be_bytes(),
-        // bright
-        0x000000FF_u32.to_be_bytes(),
-        0x0000FFFF_u32.to_be_bytes(),
-        0xFF0000FF_u32.to_be_bytes(),
-        0xFF00FFFF_u32.to_be_bytes(),
-        0x00FF00FF_u32.to_be_bytes(),
-        0x00FFFFFF_u32.to_be_bytes(),
-        0xFFFF00FF_u32.to_be_bytes(),
-        0xFFFFFFFF_u32.to_be_bytes(),
-    ];
-
-    COLORS
+    DEFAULT_PALETTE
         .iter()
         .fold(Vec::with_capacity(4 * 16), |mut buffer, color| {
             buffer.extend_from_slice(&color[0..3]);
@@ -151,6 +105,7 @@ struct TesterHost;
 
 impl Host for TesterHost {
     type Context = TesterContext;
+    type EmulationStopwatch = InstantStopwatch;
     type FrameBuffer = FrameContent;
     type TapeAsset = BufferCursor<Vec<u8>>;
 }
@@ -227,9 +182,8 @@ impl RustZXTester {
 
         let mut emulated_duration = Duration::from_secs(0);
         while emulated_duration < duration {
-            let mut stopwatch = InstantStopwatch::default();
             self.emulator
-                .emulate_frames(FRAME_HOST_DURATION_LIMIT, &mut stopwatch)
+                .emulate_frames(FRAME_HOST_DURATION_LIMIT)
                 .expect("Emulation failed");
             emulated_duration += FRAME_EMULATED_DURATION;
         }

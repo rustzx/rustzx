@@ -17,7 +17,7 @@ use rustzx_core::{
     zx::constants::{
         CANVAS_HEIGHT, CANVAS_WIDTH, CANVAS_X, CANVAS_Y, FPS, SCREEN_HEIGHT, SCREEN_WIDTH,
     },
-    Emulator, Stopwatch,
+    Emulator,
 };
 use std::{
     fs::{self, File},
@@ -28,28 +28,6 @@ use std::{
 
 /// max 100 ms interval in `max frames` speed mode
 const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
-
-struct InstantStopwatch {
-    timestamp: Instant,
-}
-
-impl Default for InstantStopwatch {
-    fn default() -> Self {
-        Self {
-            timestamp: Instant::now(),
-        }
-    }
-}
-
-impl Stopwatch for InstantStopwatch {
-    fn reset(&mut self) {
-        self.timestamp = Instant::now();
-    }
-
-    fn measure(&self) -> Duration {
-        self.timestamp.elapsed()
-    }
-}
 
 /// returns frame length from given `fps`
 fn frame_length(fps: usize) -> Duration {
@@ -151,7 +129,6 @@ impl RustzxApp {
 
     pub fn start(&mut self) -> anyhow::Result<()> {
         let scale = self.scale;
-        let mut stopwatch = InstantStopwatch::default();
         'emulator: loop {
             let frame_target_dt = frame_length(FPS);
             // absolute start time
@@ -159,7 +136,7 @@ impl RustzxApp {
             // Emulate all requested frames
             let emulator_dt = self
                 .emulator
-                .emulate_frames(MAX_FRAME_TIME, &mut stopwatch)
+                .emulate_frames(MAX_FRAME_TIME)
                 .map_err(|e| anyhow!("Emulation step failed: {}", e))?;
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {

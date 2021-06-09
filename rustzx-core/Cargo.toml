@@ -28,3 +28,4 @@ rustzx-z80 = { version = "0.1", path = "../rustzx-z80" }
 
 [dev-dependencies]
 png = "0.16"
+rustzx-utils = { version = "0.1", path =  "../rustzx-utils", features = ["std"] }

@@ -7,7 +7,7 @@ use crate::{
     error::RomLoadError,
     host::{
         DataRecorder, Host, LoadableAsset, RomFormat, RomSet, Screen, ScreenAsset, Snapshot,
-        SnapshotAsset, SnapshotRecorder, Tape,
+        SnapshotAsset, SnapshotRecorder, Stopwatch, Tape,
     },
     settings::RustzxSettings,
     utils::EmulationMode,
@@ -42,11 +42,6 @@ pub struct Emulator<H: Host> {
     fast_load: bool,
     #[cfg(feature = "sound")]
     sound_enabled: bool,
-}
-
-pub trait Stopwatch {
-    fn reset(&mut self);
-    fn measure(&self) -> Duration;
 }
 
 impl<H: Host> Emulator<H> {
@@ -230,15 +225,8 @@ impl<H: Host> Emulator<H> {
     }
 
     /// Perform emulatio up to `emulation_limit` duration, returns actuall elapsed duration
-    pub fn emulate_frames<S>(
-        &mut self,
-        emulation_limit: Duration,
-        stopwatch: &mut S,
-    ) -> Result<Duration>
-    where
-        S: Stopwatch,
-    {
-        stopwatch.reset();
+    pub fn emulate_frames(&mut self, emulation_limit: Duration) -> Result<Duration> {
+        let stopwatch = H::EmulationStopwatch::new();
         // frame loop
         loop {
             // reset controller internal frame counter

@@ -2,6 +2,7 @@
 members = [
     "rustzx-z80",
     "rustzx-core",
+    "rustzx-utils",
     "rustzx",
     "vtx",
     "vtx/vtx-bin",

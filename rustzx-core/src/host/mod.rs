@@ -1,10 +1,14 @@
 mod frame_buffer;
 mod io;
 
+pub use core::time::Duration;
 pub use frame_buffer::{FrameBuffer, FrameBufferSource};
-pub use io::{DataRecorder, LoadableAsset, SeekFrom, SeekableAsset};
+pub use io::{BufferCursor, DataRecorder, LoadableAsset, SeekFrom, SeekableAsset};
 
-pub use io::BufferCursor;
+pub trait Stopwatch {
+    fn new() -> Self;
+    fn measure(&self) -> Duration;
+}
 
 pub enum Snapshot<LoadableAssetImpl: LoadableAsset> {
     Sna(LoadableAssetImpl),
@@ -55,4 +59,5 @@ pub trait Host {
     type TapeAsset: LoadableAsset + SeekableAsset;
     /// Frame buffer implementation
     type FrameBuffer: FrameBuffer;
+    type EmulationStopwatch: Stopwatch;
 }

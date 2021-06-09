@@ -53,11 +53,11 @@ jobs:
         with:
           command: build
           args: --release --workspace --all-features --verbose
-      - name: Build(rustzx-core) - Minimal
+      - name: Build(rustzx-core/rustzx-utils) - Minimal
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release -p rustzx-core --verbose
+          args: --release -p rustzx-core -p rustzx-utils --verbose
       - name: Test
         uses: actions-rs/cargo@v1
         with:

@@ -1,0 +1,16 @@
+[package]
+name = "rustzx-utils"
+version = "0.1.0"
+authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
+description = "Additional helpers for rustzx-core based emulators"
+repository = "https://github.com/pacmancoder/rustzx"
+keywords = ["rustzx", "emulator", "no_std"]
+license = "MIT"
+edition = "2018"
+
+[dependencies]
+rustzx-core = { version = "0.13", path = "../rustzx-core" }
+
+[features]
+default = []
+std = []
