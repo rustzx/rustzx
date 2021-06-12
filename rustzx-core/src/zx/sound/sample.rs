@@ -16,7 +16,6 @@ const ERROR_SIZE: u16 = 100;
 // `SoundSample<f64>` is using for audio processing.
 // It have special functions:
 // - `mix` - for mixing with another source
-// - `normalize` - to fit sample in 0..1 range
 // - `into_i16` - to transform sa,ple to i16 sample
 #[derive(Clone, Copy)]
 pub struct SoundSample<T>
@@ -54,8 +53,8 @@ where
 impl SoundSample<f64> {
     /// Mixes self with another sample
     pub fn mix<'a>(&'a mut self, sample: &SoundSample<f64>) -> &'a mut Self {
-        self.left = self.left + sample.left - self.left * sample.left;
-        self.right = self.right + sample.right - self.right * sample.right;
+        self.left = self.left + sample.left;
+        self.right = self.right + sample.right;
         self
     }
 
@@ -65,19 +64,6 @@ impl SoundSample<f64> {
             left: self.left as f32,
             right: self.right as f32,
         }
-    }
-
-    /// Places float sample in range 0..1
-    /// # Arguments
-    /// - `min` - minimal original value
-    /// - `max` - maximal original value
-    /// # Example
-    /// If original value in range -1...1 then `normalize(-1.0, 1.0)`
-    /// will transform it to 0.0..1.0 range
-    pub fn normalize(&mut self, min: f64, max: f64) -> &mut Self {
-        self.left = (self.left - min) / (max - min);
-        self.right = (self.right - min) / (max - min);
-        self
     }
 }
 

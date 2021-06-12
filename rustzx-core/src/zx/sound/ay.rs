@@ -53,6 +53,11 @@ impl ZXAyChip {
 impl SampleGenerator<f64> for ZXAyChip {
     fn gen_sample(&mut self) -> SoundSample<f64> {
         let sample = self.ay.next_sample();
-        *SoundSample::new(sample.left, sample.right).normalize(-1.0, 1.0)
+
+        // Place -1..1 sample in 0..1 range
+        let left = (sample.left + 1f64) / (2f64);
+        let right = (sample.right + 1f64) / (2f64);
+
+        SoundSample::new(left, right)
     }
 }

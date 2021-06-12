@@ -18,7 +18,7 @@ impl ZXBeeper {
 impl SampleGenerator<f64> for ZXBeeper {
     fn gen_sample(&mut self) -> SoundSample<f64> {
         if self.curr_bit {
-            SoundSample::new(1.0, 1.0)
+            SoundSample::new(0.50, 0.50)
         } else {
             SoundSample::new(0.0, 0.0)
         }
