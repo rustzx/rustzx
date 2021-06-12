@@ -109,7 +109,6 @@ impl ZXMixer {
         } else {
             SoundSample::new(0.0, 0.0)
         };
-        // prevent AY sound generation if disabled [it is pretty long process]
         #[cfg(feature = "ay")]
         if self.use_ay {
             master_float.mix(&self.ay.gen_sample());
