@@ -1,6 +1,6 @@
 [package]
 name = "rustzx"
-version = "0.13.0"
+version = "0.14.0"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 description = "ZX Spectum emulator"
 repository = "https://github.com/pacmancoder/rustzx"
@@ -13,8 +13,8 @@ edition = "2018"
 
 [dependencies]
 sdl2 = { version = "0.34", features = ["unsafe_textures", "bundled", "static-link"] }
-rustzx-core = { version = "0.13", path =  "../rustzx-core", features = ["full"] }
-rustzx-utils = { version = "0.1", path =  "../rustzx-utils", features = ["std"] }
+rustzx-core = { version = "0.14", path =  "../rustzx-core", features = ["full"] }
+rustzx-utils = { version = "0.14", path =  "../rustzx-utils", features = ["std"] }
 log = "0.4"
 anyhow = "1"
 structopt = "0.3"

@@ -280,11 +280,11 @@ mod tests {
                 player_frequency: 50,
                 loop_start_frame: 0,
                 year: 2005,
-                title: "\"SECRET LAND\" ( Sandra \' 95 )",
-                author: "AY_VER BY IGNEOUS\'2000",
+                title: "\"SECRET LAND\" ( Sandra ' 95 )",
+                author: "AY_VER BY IGNEOUS'2000",
                 from: "",
                 tracker: "",
-                comment: "Created by Sergey Bulba\'s AY-3-8910/12 Emulator v2.6",
+                comment: "Created by Sergey Bulba's AY-3-8910/12 Emulator v2.6",
                 frame_data: [],
             }
         "#]]
@@ -308,7 +308,7 @@ mod tests {
                 author: "Fuxoft",
                 from: "Song In Lines 3-5",
                 tracker: "",
-                comment: "Created by Sergey Bulba\'s AY-3-8910/12 Emulator v1.5",
+                comment: "Created by Sergey Bulba's AY-3-8910/12 Emulator v1.5",
                 frame_data: [],
             }
         "#]]
