@@ -1,7 +1,10 @@
 ### RustZX v0.14
 - **[Refactoring]** Moved z80 emulation to the separate crate (`rustzx-z80`)
 - **[Feature]** Added support for `*.scr` screenshot format loading
+- **[Feature]** Improved beeper emulation logic
 - **[Fix]** Fixed invalid EAR bit value on read from 0xFE port
+- **[Fix]** Fixed bug with invalid SNA loading logic
+- **[Infrastructure]** Created basic integration testing framework for rustzx
 
 ### RustZX v0.13
 - **[Feature]** Support for ZX Spectrum 128K SNA variant

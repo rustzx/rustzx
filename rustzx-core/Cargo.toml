@@ -1,6 +1,6 @@
 [package]
 name = "rustzx-core"
-version = "0.13.0"
+version = "0.14.0"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 description = "ZX Spectum emulator core library"
 repository = "https://github.com/pacmancoder/rustzx"
@@ -24,8 +24,8 @@ displaydoc = { version = "0.2", default-features = false }
 from_variants = "0.6"
 enum_dispatch = "0.3"
 aym = { version = "0.1.1", path = "../aym", optional = true }
-rustzx-z80 = { version = "0.1", path = "../rustzx-z80" }
+rustzx-z80 = { version = "0.14", path = "../rustzx-z80" }
 
 [dev-dependencies]
 png = "0.16"
-rustzx-utils = { version = "0.1", path =  "../rustzx-utils", features = ["std"] }
+rustzx-utils = { version = "0.14", path =  "../rustzx-utils", features = ["std"] }

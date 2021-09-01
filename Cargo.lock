@@ -565,7 +565,7 @@ checksum = "b9b1a3d5f46d53f4a3478e2be4a5a5ce5108ea58b100dcd139830eae7f79a3a1"
 
 [[package]]
 name = "rustzx"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "env_logger",
@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-core"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "aym",
  "bitflags",
@@ -593,23 +593,23 @@ dependencies = [
 
 [[package]]
 name = "rustzx-utils"
-version = "0.1.0"
+version = "0.14.0"
 dependencies = [
  "rustzx-core",
 ]
 
 [[package]]
 name = "rustzx-z80"
-version = "0.1.0"
+version = "0.14.0"
 dependencies = [
  "paste",
 ]
 
 [[package]]
 name = "sdl2"
-version = "0.34.4"
+version = "0.34.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "505d7a6ef5f96289a6ec50fc8b65ec75f5571f0aa94fa6ea230f6b228fa05d57"
+checksum = "deecbc3fa9460acff5a1e563e05cb5f31bba0aa0c214bb49a43db8159176d54b"
 dependencies = [
  "bitflags",
  "lazy_static",
@@ -619,9 +619,9 @@ dependencies = [
 
 [[package]]
 name = "sdl2-sys"
-version = "0.34.4"
+version = "0.34.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cb164f53dbcad111de976bbf1f3083d3fcdeda88da9cfa281c70822720ee3da"
+checksum = "41a29aa21f175b5a41a6e26da572d5e5d1ee5660d35f9f9d0913e8a802098f74"
 dependencies = [
  "cfg-if 0.1.7",
  "cmake",
@@ -813,7 +813,7 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 
 [[package]]
 name = "vtx"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "aym",
  "byteorder",
@@ -827,7 +827,7 @@ dependencies = [
 
 [[package]]
 name = "vtx-bin"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "structopt",

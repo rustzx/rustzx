@@ -240,22 +240,22 @@ impl RustzxApp {
     }
 
     fn load_file_autodetect(&mut self, path: &Path) -> anyhow::Result<()> {
-        match host::detect_file_type(&path)? {
+        match host::detect_file_type(path)? {
             DetectedFileKind::Snapshot => {
                 self.emulator
-                    .load_snapshot(host::load_snapshot(&path)?)
+                    .load_snapshot(host::load_snapshot(path)?)
                     .map_err(|e| {
                         anyhow!("Emulator failed to load auto-detected snapshot: {}", e)
                     })?;
             }
             DetectedFileKind::Tape => {
                 self.emulator
-                    .load_tape(host::load_tape(&path)?)
+                    .load_tape(host::load_tape(path)?)
                     .map_err(|e| anyhow!("Emulator failed to load auto-detected tape: {}", e))?;
             }
             DetectedFileKind::Screen => self
                 .emulator
-                .load_screen(host::load_screen(&path)?)
+                .load_screen(host::load_screen(path)?)
                 .map_err(|e| anyhow!("Emulator failed load screen via auto-detect: {}", e))?,
         }
         Ok(())

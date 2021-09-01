@@ -130,7 +130,7 @@ pub fn load_rom(path: &Path, machine: ZXMachine) -> anyhow::Result<FileRomSet> {
 
             Ok(FileRomSet {
                 pages: VecDeque::from(vec![
-                    load_rom_asset(&rom0_path).with_context(|| "128K ROM0 load failed")?,
+                    load_rom_asset(rom0_path).with_context(|| "128K ROM0 load failed")?,
                     load_rom_asset(&rom1_path).with_context(|| "128K ROM1 load failed")?,
                 ]),
             })

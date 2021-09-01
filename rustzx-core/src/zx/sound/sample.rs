@@ -53,8 +53,8 @@ where
 impl SoundSample<f64> {
     /// Mixes self with another sample
     pub fn mix<'a>(&'a mut self, sample: &SoundSample<f64>) -> &'a mut Self {
-        self.left = self.left + sample.left;
-        self.right = self.right + sample.right;
+        self.left += sample.left;
+        self.right += sample.right;
         self
     }
 

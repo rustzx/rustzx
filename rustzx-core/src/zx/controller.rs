@@ -543,10 +543,12 @@ impl<H: Host> Z80Bus for ZXController<H> {
             self.write_ay_port(data);
         } else if port & 0x0001 == 0 {
             self.set_border_color(self.frame_clocks, ZXColor::from_bits(data & 0x07));
-            let mic = data & 0x08 != 0;
-            let ear = data & 0x10 != 0;
             #[cfg(feature = "sound")]
-            self.mixer.beeper.change_state(ear, mic);
+            {
+                let mic = data & 0x08 != 0;
+                let ear = data & 0x10 != 0;
+                self.mixer.beeper.change_state(ear, mic);
+            }
         } else if (port & 0x8002 == 0) && (self.machine == ZXMachine::Sinclair128K) {
             self.write_7ffd(data);
         }
