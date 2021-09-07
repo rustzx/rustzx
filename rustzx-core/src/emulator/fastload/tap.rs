@@ -65,7 +65,7 @@ pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) -> Result<()> {
                 }
             }
             // move destination pointer and decrease count of remaining bytes
-            dest += 1;
+            dest = dest.wrapping_add(1);
             length -= 1;
         } else {
             // this happens if requested length and provided are not matched
