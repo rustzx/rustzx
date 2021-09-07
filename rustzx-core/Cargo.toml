@@ -25,7 +25,3 @@ from_variants = "0.6"
 enum_dispatch = "0.3"
 aym = { version = "0.1.1", path = "../aym", optional = true }
 rustzx-z80 = { version = "0.14", path = "../rustzx-z80" }
-
-[dev-dependencies]
-png = "0.16"
-rustzx-utils = { version = "0.14", path =  "../rustzx-utils", features = ["std"] }

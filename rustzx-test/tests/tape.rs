@@ -1,4 +1,4 @@
-use crate::framework::{presets, RustZXTester};
+use rustzx_test::framework::{presets, RustZXTester};
 use std::time::Duration;
 
 #[test]

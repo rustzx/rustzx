@@ -56,7 +56,7 @@ impl FrameBuffer for FrameContent {
         let pixel_index = x + y * self.width;
         let buffer_index = pixel_index / 2;
         // 0xF0 mask for even pixels, 0x0F mask for odd pixels
-        let mask = 0xF0 >> (pixel_index % 2) * 4;
+        let mask = 0xF0 >> ((pixel_index % 2) * 4);
         let indexed_color = (color as u8) + (brightness as u8) * 8;
         // 0x0A => 0xAA, 0x03  => 0x33, etc.
         let color_overlay_byte = indexed_color | (indexed_color << 4);

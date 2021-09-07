@@ -1,0 +1,11 @@
+[package]
+name = "rustzx-test"
+version = "0.1.0"
+edition = "2018"
+publish = false
+description = "RustZX emulator integration tests"
+
+[dependencies]
+png = "0.16"
+rustzx-core = { version = "0.14", path = "../rustzx-core", features = ["full"] }
+rustzx-utils = { version = "0.14", path =  "../rustzx-utils", features = ["std"] }
