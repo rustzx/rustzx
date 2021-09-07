@@ -6,6 +6,8 @@ publish = false
 description = "RustZX emulator integration tests"
 
 [dependencies]
+anyhow = "1.0"
+nanoid = "0.4"
 png = "0.16"
 rustzx-core = { version = "0.14", path = "../rustzx-core", features = ["full"] }
 rustzx-utils = { version = "0.14", path =  "../rustzx-utils", features = ["std"] }
