@@ -586,9 +586,16 @@ dependencies = [
  "enum_dispatch",
  "from_variants",
  "lazy_static",
- "png",
- "rustzx-utils",
  "rustzx-z80",
+]
+
+[[package]]
+name = "rustzx-test"
+version = "0.1.0"
+dependencies = [
+ "png",
+ "rustzx-core",
+ "rustzx-utils",
 ]
 
 [[package]]
