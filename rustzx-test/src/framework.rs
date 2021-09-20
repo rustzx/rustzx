@@ -1,4 +1,5 @@
 use std::{
+    env,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -6,6 +7,7 @@ use std::{
 use rustzx_core::{
     host::{BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, Tape},
     zx::{
+        keys::ZXKey,
         machine::ZXMachine,
         sound::ay::ZXAYMode,
         video::colors::{ZXBrightness, ZXColor},
@@ -135,6 +137,12 @@ pub mod presets {
             autoload_enabled: true,
         }
     }
+
+    pub fn settings_128k_nosound() -> RustzxSettings {
+        let mut settings = settings_48k_nosound();
+        settings.machine = ZXMachine::Sinclair128K;
+        settings
+    }
 }
 
 impl RustZXTester {
@@ -194,25 +202,80 @@ impl RustZXTester {
         let expected = std::fs::read(self.expected_data_folder().join(&path)).unwrap_or_default();
 
         if actual != expected {
+            if is_env_specified_update_expect() {
+                eprintln!("Saving current actual result as expected data...");
+                self.save_expected_data(actual, name.as_ref());
+                return;
+            }
+
             eprintln!("Integration test failed, writing actual data...");
             // Wirte actual output for further investigation
-            std::fs::create_dir_all(self.actual_data_folder())
-                .expect("Failed to create expected data dir");
-            std::fs::write(self.actual_data_folder().join(path), actual)
-                .expect("Failed to write actual data");
-
-            panic!(
-                "Comparison with {} failed; Actual data has been saved for further investigation",
-                path.display()
-            );
+            self.save_actual_data(actual, name.as_ref());
         }
     }
 
+    fn save_actual_data(&self, actual: Vec<u8>, filename: &Path) {
+        std::fs::create_dir_all(self.actual_data_folder())
+            .expect("Failed to create actual data dir");
+        std::fs::write(self.actual_data_folder().join(filename), actual)
+            .expect("Failed to write actual data");
+
+        panic!(
+            "Comparison with {} failed; Actual data has been saved for further investigation",
+            filename.display()
+        );
+    }
+
+    fn save_expected_data(&self, expected: Vec<u8>, filename: &Path) {
+        std::fs::create_dir_all(self.expected_data_folder())
+            .expect("Failed to create expected data dir");
+        std::fs::write(self.expected_data_folder().join(filename), expected)
+            .expect("Failed to write expected data");
+    }
+
     pub fn expect_screen(&self, name: impl AsRef<Path>) {
-        self.compare_buffer_with_file(self.get_screen(), name);
+        self.compare_buffer_with_file(self.get_screen(), make_screen_filename(name));
     }
 
     pub fn expect_border(&self, name: impl AsRef<Path>) {
-        self.compare_buffer_with_file(self.get_border(), name);
+        self.compare_buffer_with_file(self.get_border(), make_border_filename(name));
     }
+
+    pub fn emulator(&mut self) -> &mut Emulator<impl Host> {
+        &mut self.emulator
+    }
+
+    pub fn send_keystrokes(&mut self, keystrokes: &[&[ZXKey]], keystroke_delay: Duration) {
+        let mut first = true;
+        for keys in keystrokes {
+            if !first {
+                self.emulate_for(keystroke_delay);
+            }
+            first = false;
+
+            for key in *keys {
+                self.emulator.send_key(*key, true);
+            }
+
+            self.emulate_for(keystroke_delay);
+
+            for key in *keys {
+                self.emulator.send_key(*key, false);
+            }
+        }
+    }
+}
+
+fn is_env_specified_update_expect() -> bool {
+    env::var("RUSTZX_UPDATE_EXPECT")
+        .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
+        .unwrap_or(false)
+}
+
+fn make_screen_filename(name: impl AsRef<Path>) -> PathBuf {
+    name.as_ref().with_extension("screen.png")
+}
+
+fn make_border_filename(name: impl AsRef<Path>) -> PathBuf {
+    name.as_ref().with_extension("border.png")
 }

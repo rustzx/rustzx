@@ -261,7 +261,6 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
     }
 
     fn rewind(&mut self) -> Result<()> {
-        self.state = TapeState::Stop;
         self.curr_bit = false;
         self.curr_byte = 0x00;
         self.block_bytes_read = 0;
