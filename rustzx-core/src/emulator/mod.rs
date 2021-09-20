@@ -166,6 +166,12 @@ impl<H: Host> Emulator<H> {
         self.controller.tape.stop();
     }
 
+    /// Rewinds tape. May return error if underlying tape asset failed to
+    /// perform seek operaion to go back to the the beginning of the tape
+    pub fn rewind_tape(&mut self) -> Result<()> {
+        self.controller.tape.rewind()
+    }
+
     pub fn screen_buffer(&self) -> &H::FrameBuffer {
         self.controller.screen.frame_buffer()
     }
