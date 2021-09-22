@@ -80,8 +80,8 @@ ${ZMAKEBAS_BIN} \
     -l \
     -a 10 \
     -n screen \
-    -o "${BUILD_DIR}/loaders/screen.tap" \
-    "${SRC_DIR}/loaders/screen.bas"
+    -o "${BUILD_DIR}/loader_screen.tap" \
+    "${SRC_DIR}/loader_screen.bas"
 if [ $? -ne 0 ]; then
     log_error "Failed to build screen loader"
     exit 1
@@ -92,13 +92,41 @@ log_unindent
 log_info "Building simple_tape..."
 log_indent
 z88dk-appmake +zx \
-    -b "${SRC_DIR}/simple_tape/loading.scr" \
+    -b "${SRC_DIR}/rustzx.scr" \
     -o "${BUILD_DIR}/simple_tape_loaderless.tap" \
     --blockname screen \
     --org 16384 \
     --noloader
-cat "${BUILD_DIR}/loaders/screen.tap" \
+cat "${BUILD_DIR}/loader_screen.tap" \
     "${BUILD_DIR}/simple_tape_loaderless.tap" \
     > "${OUT_DIR}/simple_tape.tap"
 log_success "Done"
 log_unindent
+
+function build_sna {
+    local APP_NAME="$1"
+    local ADDITIONAL_ARGS=""
+    local EXT_PREFIX="48k"
+
+    if [ "$2" = "128k" ]; then
+        ADDITIONAL_ARGS="-Cz --128"
+        local EXT_PREFIX="128k"
+    fi
+
+    log_info "Building ${APP_NAME} SNA (${EXT_PREFIX})..."
+    log_indent
+    zcc +zx \
+        -lm \
+        -o "${BUILD_DIR}/${APP_NAME}.${EXT_PREFIX}.o" \
+        -create-app \
+        -Cz --sna \
+        -Cz -o \
+        -Cz "${OUT_DIR}/${APP_NAME}.${EXT_PREFIX}.sna" \
+        "${ADDITIONAL_ARGS}" \
+        "${SRC_DIR}/${APP_NAME}.c"
+    log_success "Done"
+    log_unindent
+}
+
+build_sna sound 48k
+build_sna sound 128k
