@@ -7,7 +7,11 @@ description = "RustZX emulator integration tests"
 
 [dependencies]
 anyhow = "1.0"
+base64 = "0.13"
+expect-test = "1.1"
 nanoid = "0.4"
 png = "0.16"
 rustzx-core = { version = "0.14", path = "../rustzx-core", features = ["full"] }
 rustzx-utils = { version = "0.14", path =  "../rustzx-utils", features = ["std"] }
+sha2 = "0.9"
+wav = "1.0"

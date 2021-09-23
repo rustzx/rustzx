@@ -1,11 +1,6 @@
-use std::{
-    env,
-    path::{Path, PathBuf},
-    time::Duration,
-};
-
+use expect_test::Expect;
 use rustzx_core::{
-    host::{BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, Tape},
+    host::{BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, Snapshot, Tape},
     zx::{
         keys::ZXKey,
         machine::ZXMachine,
@@ -15,15 +10,13 @@ use rustzx_core::{
     EmulationMode, Emulator, RustzxSettings,
 };
 use rustzx_utils::{palette::rgba::ORIGINAL as DEFAULT_PALETTE, stopwatch::InstantStopwatch};
+use std::{
+    env,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
-fn make_png_palette() -> Vec<u8> {
-    DEFAULT_PALETTE
-        .iter()
-        .fold(Vec::with_capacity(4 * 16), |mut buffer, color| {
-            buffer.extend_from_slice(&color[0..3]);
-            buffer
-        })
-}
+const DEFAULT_SOUND_BITRATE: usize = 44100;
 
 // TODO(#83): Add tests for gigascreen
 
@@ -114,6 +107,7 @@ impl Host for TesterHost {
 
 pub struct RustZXTester {
     emulator: Emulator<TesterHost>,
+    sound_buffer: Option<Vec<i16>>,
     test_name: String,
 }
 
@@ -132,16 +126,33 @@ pub mod presets {
             beeper_enabled: false,
             sound_enabled: false,
             sound_volume: 100,
-            sound_sample_rate: 44100,
+            sound_sample_rate: DEFAULT_SOUND_BITRATE,
             load_default_rom: true,
             autoload_enabled: true,
         }
     }
 
     pub fn settings_128k_nosound() -> RustzxSettings {
-        let mut settings = settings_48k_nosound();
-        settings.machine = ZXMachine::Sinclair128K;
-        settings
+        RustzxSettings {
+            machine: ZXMachine::Sinclair128K,
+            ..settings_48k_nosound()
+        }
+    }
+
+    pub fn settings_48k() -> RustzxSettings {
+        RustzxSettings {
+            sound_enabled: true,
+            ay_enabled: true,
+            beeper_enabled: true,
+            ..settings_48k_nosound()
+        }
+    }
+
+    pub fn settings_128k() -> RustzxSettings {
+        RustzxSettings {
+            machine: ZXMachine::Sinclair128K,
+            ..settings_48k()
+        }
     }
 }
 
@@ -153,6 +164,7 @@ impl RustZXTester {
         Self {
             emulator,
             test_name: test_name.to_owned(),
+            sound_buffer: None,
         }
     }
 
@@ -160,20 +172,24 @@ impl RustZXTester {
         Path::new("test_data/asset").to_owned()
     }
 
-    fn expected_data_folder(&self) -> PathBuf {
-        Path::new("test_data/expected").join(&self.test_name)
-    }
-
     fn actual_data_folder(&self) -> PathBuf {
         Path::new("test_data/actual").join(&self.test_name)
     }
 
-    pub fn load_tape(&mut self, name: impl AsRef<Path>) {
+    pub fn load_tap(&mut self, name: impl AsRef<Path>) {
         let path = self.assets_folder().join(name);
         let content = std::fs::read(path).expect("Failed to read test tape file");
         self.emulator
             .load_tape(Tape::Tap(BufferCursor::new(content)))
-            .expect("Failed to load test tape");
+            .expect("Failed to load test TAP");
+    }
+
+    pub fn load_sna(&mut self, name: impl AsRef<Path>) {
+        let path = self.assets_folder().join(name);
+        let content = std::fs::read(path).expect("Failed to read test sna file");
+        self.emulator
+            .load_snapshot(Snapshot::Sna(BufferCursor::new(content)))
+            .expect("Failed to load test SNA")
     }
 
     fn get_screen(&self) -> Vec<u8> {
@@ -193,52 +209,47 @@ impl RustZXTester {
             self.emulator
                 .emulate_frames(FRAME_HOST_DURATION_LIMIT)
                 .expect("Emulation failed");
+
+            if let Some(sound_buffer) = &mut self.sound_buffer {
+                while let Some(sample) = self.emulator.next_audio_sample() {
+                    let normalize = |s| ((s - 0.5) * i16::MAX as f32) as i16;
+                    sound_buffer.push(normalize(sample.left));
+                    sound_buffer.push(normalize(sample.right));
+                }
+            }
+
             emulated_duration += FRAME_EMULATED_DURATION;
         }
     }
 
-    pub fn compare_buffer_with_file(&self, actual: Vec<u8>, name: impl AsRef<Path>) {
-        let path = name.as_ref();
-        let expected = std::fs::read(self.expected_data_folder().join(&path)).unwrap_or_default();
-
-        if actual != expected {
-            if is_env_specified_update_expect() {
-                eprintln!("Saving current actual result as expected data...");
-                self.save_expected_data(actual, name.as_ref());
-                return;
-            }
-
-            eprintln!("Integration test failed, writing actual data...");
-            // Wirte actual output for further investigation
-            self.save_actual_data(actual, name.as_ref());
+    pub fn compare_buffer_with_file(
+        &self,
+        actual: Vec<u8>,
+        name: impl AsRef<Path>,
+        expect: Expect,
+    ) {
+        if TestEnv::save_test_data_enabled() {
+            self.save_actual_data(&actual, name.as_ref());
         }
+
+        expect.assert_eq(&actual.fingerprint());
     }
 
-    fn save_actual_data(&self, actual: Vec<u8>, filename: &Path) {
+    fn save_actual_data(&self, actual: &[u8], filename: &Path) {
+        let filename = self.actual_data_folder().join(filename);
+        eprintln!("Saving actual test data file {}", filename.display());
+
         std::fs::create_dir_all(self.actual_data_folder())
             .expect("Failed to create actual data dir");
-        std::fs::write(self.actual_data_folder().join(filename), actual)
-            .expect("Failed to write actual data");
-
-        panic!(
-            "Comparison with {} failed; Actual data has been saved for further investigation",
-            filename.display()
-        );
+        std::fs::write(filename, actual).expect("Failed to write actual data");
     }
 
-    fn save_expected_data(&self, expected: Vec<u8>, filename: &Path) {
-        std::fs::create_dir_all(self.expected_data_folder())
-            .expect("Failed to create expected data dir");
-        std::fs::write(self.expected_data_folder().join(filename), expected)
-            .expect("Failed to write expected data");
+    pub fn expect_screen(&self, name: impl AsRef<Path>, expect: Expect) {
+        self.compare_buffer_with_file(self.get_screen(), make_screen_filename(name), expect);
     }
 
-    pub fn expect_screen(&self, name: impl AsRef<Path>) {
-        self.compare_buffer_with_file(self.get_screen(), make_screen_filename(name));
-    }
-
-    pub fn expect_border(&self, name: impl AsRef<Path>) {
-        self.compare_buffer_with_file(self.get_border(), make_border_filename(name));
+    pub fn expect_border(&self, name: impl AsRef<Path>, expect: Expect) {
+        self.compare_buffer_with_file(self.get_border(), make_border_filename(name), expect);
     }
 
     pub fn emulator(&mut self) -> &mut Emulator<impl Host> {
@@ -264,12 +275,49 @@ impl RustZXTester {
             }
         }
     }
+
+    pub fn start_sound_capture(&mut self) {
+        // Pre-allocate 1Mb of memory
+        self.sound_buffer.replace(Vec::with_capacity(1024 * 1024));
+    }
+
+    pub fn expect_sound(&mut self, name: impl AsRef<Path>, expect: Expect) {
+        let data = self
+            .sound_buffer
+            .take()
+            .expect("Sound is not being recorded");
+
+        let mut wav_data = std::io::Cursor::new(vec![]);
+        let wav_header = wav::Header::new(
+            wav::header::WAV_FORMAT_PCM,
+            2,
+            DEFAULT_SOUND_BITRATE as u32,
+            16,
+        );
+        wav::write(wav_header, &wav::BitDepth::Sixteen(data), &mut wav_data)
+            .expect("Failed to generate wav");
+
+        self.compare_buffer_with_file(wav_data.into_inner(), make_sound_filename(name), expect);
+    }
 }
 
-fn is_env_specified_update_expect() -> bool {
-    env::var("RUSTZX_UPDATE_EXPECT")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
-        .unwrap_or(false)
+struct TestEnv;
+
+impl TestEnv {
+    fn save_test_data_enabled() -> bool {
+        env::var("RUSTZX_SAVE_TEST_DATA")
+            .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
+            .unwrap_or(false)
+    }
+}
+
+fn make_png_palette() -> Vec<u8> {
+    DEFAULT_PALETTE
+        .iter()
+        .fold(Vec::with_capacity(4 * 16), |mut buffer, color| {
+            buffer.extend_from_slice(&color[0..3]);
+            buffer
+        })
 }
 
 fn make_screen_filename(name: impl AsRef<Path>) -> PathBuf {
@@ -278,4 +326,23 @@ fn make_screen_filename(name: impl AsRef<Path>) -> PathBuf {
 
 fn make_border_filename(name: impl AsRef<Path>) -> PathBuf {
     name.as_ref().with_extension("border.png")
+}
+
+fn make_sound_filename(name: impl AsRef<Path>) -> PathBuf {
+    name.as_ref().with_extension("wav")
+}
+
+trait Fingerprintable {
+    fn fingerprint(&self) -> String;
+}
+
+impl Fingerprintable for Vec<u8> {
+    fn fingerprint(&self) -> String {
+        use sha2::{Digest, Sha256};
+
+        let mut hasher = Sha256::default();
+        hasher.update(&self);
+        let hash = hasher.finalize();
+        base64::encode(hash)
+    }
 }
