@@ -9,7 +9,7 @@ use crate::{
         sound::{SoundDevice, SoundSdl},
         video::{Rect, TextureInfo, VideoDevice, VideoSdl},
     },
-    host::{self, AppHost, AppHostContext, DetectedFileKind, FileAsset},
+    host::{self, AppHost, AppHostContext, DetectedFileKind},
 };
 use anyhow::anyhow;
 use rustzx_core::{
@@ -19,6 +19,7 @@ use rustzx_core::{
     },
     Emulator,
 };
+use rustzx_utils::io::FileAsset;
 use std::{
     fs::{self, File},
     path::{Path, PathBuf},
@@ -137,7 +138,7 @@ impl RustzxApp {
             let emulator_dt = self
                 .emulator
                 .emulate_frames(MAX_FRAME_TIME)
-                .map_err(|e| anyhow!("Emulation step failed: {}", e))?;
+                .map_err(|e| anyhow!("Emulation step failed: {:#?}", e))?;
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime

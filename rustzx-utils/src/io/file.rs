@@ -1,3 +1,5 @@
+use super::{into_std_seek_pos, DynamicAssetImpl, DynamicDataRecorderImpl};
+
 use rustzx_core::{
     error::IoError,
     host::{DataRecorder, LoadableAsset, SeekFrom, SeekableAsset},
@@ -48,10 +50,5 @@ impl DataRecorder for FileAsset {
     }
 }
 
-fn into_std_seek_pos(pos: SeekFrom) -> std::io::SeekFrom {
-    match pos {
-        SeekFrom::Start(offset) => std::io::SeekFrom::Start(offset as u64),
-        SeekFrom::End(offset) => std::io::SeekFrom::End(offset as i64),
-        SeekFrom::Current(offset) => std::io::SeekFrom::Current(offset as i64),
-    }
-}
+impl DynamicAssetImpl for FileAsset {}
+impl DynamicDataRecorderImpl for FileAsset {}

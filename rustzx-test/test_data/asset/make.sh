@@ -99,7 +99,8 @@ z88dk-appmake +zx \
     --noloader
 cat "${BUILD_DIR}/loader_screen.tap" \
     "${BUILD_DIR}/simple_tape_loaderless.tap" \
-    > "${OUT_DIR}/simple_tape.tap"
+    > "${BUILD_DIR}/simple_tape.tap"
+gzip --stdout "${BUILD_DIR}/simple_tape.tap" > "${OUT_DIR}/simple_tape.tap.gz"
 log_success "Done"
 log_unindent
 
@@ -121,9 +122,10 @@ function build_sna {
         -create-app \
         -Cz --sna \
         -Cz -o \
-        -Cz "${OUT_DIR}/${APP_NAME}.${EXT_PREFIX}.sna" \
+        -Cz "${BUILD_DIR}/${APP_NAME}.${EXT_PREFIX}.sna" \
         "${ADDITIONAL_ARGS}" \
         "${SRC_DIR}/${APP_NAME}.c"
+    gzip --stdout "${BUILD_DIR}/${APP_NAME}.${EXT_PREFIX}.sna" > "${OUT_DIR}/${APP_NAME}.${EXT_PREFIX}.sna.gz"
     log_success "Done"
     log_unindent
 }

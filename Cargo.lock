@@ -680,6 +680,8 @@ dependencies = [
 name = "rustzx-utils"
 version = "0.14.0"
 dependencies = [
+ "flate2",
+ "log",
  "rustzx-core",
 ]
 

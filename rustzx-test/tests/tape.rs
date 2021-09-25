@@ -10,7 +10,7 @@ fn no_fastload() {
     settings.autoload_enabled = false;
 
     let mut tester = RustZXTester::new("no_fastload", settings);
-    tester.load_tap("simple_tape.tap");
+    tester.load_tap("simple_tape.tap.gz");
     // Wait for ROM to load
     tester.emulate_for(Duration::from_millis(2000));
     // Emulate LOAD ""
@@ -77,7 +77,7 @@ fn no_fastload_128k() {
     settings.autoload_enabled = false;
 
     let mut tester = RustZXTester::new("no_fastload_128k", settings);
-    tester.load_tap("simple_tape.tap");
+    tester.load_tap("simple_tape.tap.gz");
     // Wait for ROM to load
     tester.emulate_for(Duration::from_millis(3000));
 
@@ -129,7 +129,7 @@ fn tape_stop() {
     settings.autoload_enabled = false;
 
     let mut tester = RustZXTester::new("tape_stop", settings);
-    tester.load_tap("simple_tape.tap");
+    tester.load_tap("simple_tape.tap.gz");
     // Wait for ROM to load
     tester.emulate_for(Duration::from_millis(2000));
     // Emulate LOAD ""
@@ -168,7 +168,7 @@ fn tape_rewind() {
     settings.autoload_enabled = false;
 
     let mut tester = RustZXTester::new("tape_rewind", settings);
-    tester.load_tap("simple_tape.tap");
+    tester.load_tap("simple_tape.tap.gz");
     // Play tape for some time while ROM loads
     tester.emulator().play_tape();
     tester.emulate_for(Duration::from_millis(4000));
@@ -196,7 +196,7 @@ fn tape_rewind() {
 #[test]
 fn fastload() {
     let mut tester = RustZXTester::new("fastload", presets::settings_48k_nosound());
-    tester.load_tap("simple_tape.tap");
+    tester.load_tap("simple_tape.tap.gz");
     tester.emulate_for(Duration::from_millis(45));
     tester.expect_screen(
         "running",
@@ -216,7 +216,7 @@ fn fastload() {
 #[test]
 fn fastload_128k() {
     let mut tester = RustZXTester::new("fastload_128k", presets::settings_128k_nosound());
-    tester.load_tap("simple_tape.tap");
+    tester.load_tap("simple_tape.tap.gz");
     tester.emulate_for(Duration::from_millis(100));
     tester.expect_screen(
         "loaded",

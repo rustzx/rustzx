@@ -9,9 +9,14 @@ use rustzx_core::{
     },
     EmulationMode, Emulator, RustzxSettings,
 };
-use rustzx_utils::{palette::rgba::ORIGINAL as DEFAULT_PALETTE, stopwatch::InstantStopwatch};
+use rustzx_utils::{
+    io::{DynamicAsset, GzipAsset},
+    palette::rgba::ORIGINAL as DEFAULT_PALETTE,
+    stopwatch::InstantStopwatch,
+};
 use std::{
     env,
+    io::Cursor,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -102,7 +107,7 @@ impl Host for TesterHost {
     type Context = TesterContext;
     type EmulationStopwatch = InstantStopwatch;
     type FrameBuffer = FrameContent;
-    type TapeAsset = BufferCursor<Vec<u8>>;
+    type TapeAsset = DynamicAsset;
 }
 
 pub struct RustZXTester {
@@ -176,19 +181,34 @@ impl RustZXTester {
         Path::new("test_data/actual").join(&self.test_name)
     }
 
-    pub fn load_tap(&mut self, name: impl AsRef<Path>) {
+    fn load_asset(&mut self, name: impl AsRef<Path>) -> DynamicAsset {
         let path = self.assets_folder().join(name);
-        let content = std::fs::read(path).expect("Failed to read test tape file");
+        let content = std::fs::read(&path).expect("Failed to load asset");
+
+        if path
+            .extension()
+            .map(|e| e.to_str().unwrap() == "gz")
+            .unwrap_or_default()
+        {
+            GzipAsset::new(Cursor::new(content))
+                .expect("Failed to decompress gz")
+                .into()
+        } else {
+            BufferCursor::new(content).into()
+        }
+    }
+
+    pub fn load_tap(&mut self, name: impl AsRef<Path>) {
+        let asset = self.load_asset(name);
         self.emulator
-            .load_tape(Tape::Tap(BufferCursor::new(content)))
+            .load_tape(Tape::Tap(asset))
             .expect("Failed to load test TAP");
     }
 
     pub fn load_sna(&mut self, name: impl AsRef<Path>) {
-        let path = self.assets_folder().join(name);
-        let content = std::fs::read(path).expect("Failed to read test sna file");
+        let asset = self.load_asset(name);
         self.emulator
-            .load_snapshot(Snapshot::Sna(BufferCursor::new(content)))
+            .load_snapshot(Snapshot::Sna(asset))
             .expect("Failed to load test SNA")
     }
 
