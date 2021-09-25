@@ -1,14 +1,15 @@
 mod frame_buffer;
-mod io;
 
 use anyhow::{anyhow, bail, Context};
 use frame_buffer::{FrameBufferContext, RgbaFrameBuffer};
-pub use io::FileAsset;
 use rustzx_core::{
     host::{FrameBuffer, Host, HostContext, RomFormat, RomSet, Screen, Snapshot, Tape},
     zx::machine::ZXMachine,
 };
-use rustzx_utils::stopwatch::InstantStopwatch;
+use rustzx_utils::{
+    io::{DynamicAsset, FileAsset, GzipAsset},
+    stopwatch::InstantStopwatch,
+};
 use std::{collections::VecDeque, fs::File, path::Path};
 
 const SUPPORTED_SNAPSHOT_FORMATS: [&str; 1] = ["sna"];
@@ -21,7 +22,7 @@ impl Host for AppHost {
     type Context = AppHostContext;
     type EmulationStopwatch = InstantStopwatch;
     type FrameBuffer = RgbaFrameBuffer;
-    type TapeAsset = FileAsset;
+    type TapeAsset = DynamicAsset;
 }
 
 pub struct AppHostContext;
@@ -33,11 +34,11 @@ impl HostContext<AppHost> for AppHostContext {
 }
 
 pub struct FileRomSet {
-    pages: VecDeque<FileAsset>,
+    pages: VecDeque<DynamicAsset>,
 }
 
 impl RomSet for FileRomSet {
-    type Asset = FileAsset;
+    type Asset = DynamicAsset;
 
     fn format(&self) -> RomFormat {
         RomFormat::Binary16KPages
@@ -54,7 +55,26 @@ pub enum DetectedFileKind {
     Screen,
 }
 
-pub fn load_tape(path: &Path) -> anyhow::Result<Tape<FileAsset>> {
+pub enum DetectedContainerKind {
+    None,
+    Gzip,
+}
+
+pub fn load_asset(path: &Path) -> anyhow::Result<DynamicAsset> {
+    let container_kind = detect_container(path);
+
+    let file = File::open(path).with_context(|| "Failed to open tape file")?;
+
+    match container_kind {
+        DetectedContainerKind::None => Ok(FileAsset::from(file).into()),
+        DetectedContainerKind::Gzip => {
+            let gzip = GzipAsset::new(file)?;
+            Ok(gzip.into())
+        }
+    }
+}
+
+pub fn load_tape(path: &Path) -> anyhow::Result<Tape<DynamicAsset>> {
     if !file_extension_matches_one_of(path, &SUPPORTED_TAPE_FORMATS) {
         bail!("Invalid tape format");
     }
@@ -63,12 +83,12 @@ pub fn load_tape(path: &Path) -> anyhow::Result<Tape<FileAsset>> {
         bail!("Provided tape file does not exist");
     }
 
-    File::open(path)
-        .with_context(|| "Failed to open tape file")
-        .map(|file| Tape::Tap(file.into()))
+    load_asset(path)
+        .map(Tape::Tap)
+        .with_context(|| "Failed to load tape file")
 }
 
-pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<FileAsset>> {
+pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<DynamicAsset>> {
     if !file_extension_matches_one_of(path, &SUPPORTED_SNAPSHOT_FORMATS) {
         bail!("Invalid snapshot format");
     }
@@ -77,12 +97,12 @@ pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<FileAsset>> {
         bail!("Provided snapshot file does not exist");
     }
 
-    File::open(path)
-        .with_context(|| "Failed to open snapshot file")
-        .map(|file| Snapshot::Sna(file.into()))
+    load_asset(path)
+        .map(Snapshot::Sna)
+        .with_context(|| "Failed to load snapshot file")
 }
 
-pub fn load_screen(path: &Path) -> anyhow::Result<Screen<FileAsset>> {
+pub fn load_screen(path: &Path) -> anyhow::Result<Screen<DynamicAsset>> {
     if !file_extension_matches_one_of(path, &SUPPORTED_SCREEN_FORMATS) {
         bail!("Invalid screen format");
     }
@@ -91,15 +111,13 @@ pub fn load_screen(path: &Path) -> anyhow::Result<Screen<FileAsset>> {
         bail!("Provided screen file does not exist");
     }
 
-    File::open(path)
-        .with_context(|| "Failed to open screen file")
-        .map(|file| Screen::Scr(file.into()))
+    load_asset(path)
+        .map(Screen::Scr)
+        .with_context(|| "Failed to load screen file")
 }
 
-fn load_rom_asset(path: &Path) -> anyhow::Result<FileAsset> {
-    File::open(path)
-        .with_context(|| "Failed to load rom asset")
-        .map(|file| file.into())
+fn load_rom_asset(path: &Path) -> anyhow::Result<DynamicAsset> {
+    load_asset(path).with_context(|| "Failed to load rom asset")
 }
 
 pub fn load_rom(path: &Path, machine: ZXMachine) -> anyhow::Result<FileRomSet> {
@@ -123,7 +141,15 @@ pub fn load_rom(path: &Path, machine: ZXMachine) -> anyhow::Result<FileRomSet> {
             if !rom0_path.exists() {
                 bail!("Provided 128K ROM0 file does not exist");
             }
-            let rom1_path = rom0_path.to_owned().with_extension("1");
+            let rom1_path = if is_container(rom0_path) {
+                let container_ext = rom0_path.extension().unwrap().to_string_lossy();
+                let mut new_path = rom0_path.to_owned();
+                new_path.set_extension(""); // removes just container extension
+                new_path.with_extension(format!("1.{}", container_ext))
+            } else {
+                rom0_path.to_owned().with_extension("1")
+            };
+
             if !rom1_path.exists() {
                 bail!("Provided 128K ROM1 file does not exist");
             }
@@ -152,7 +178,31 @@ pub fn detect_file_type(path: &Path) -> anyhow::Result<DetectedFileKind> {
     }
 }
 
+fn is_container(path: &Path) -> bool {
+    !matches!(detect_container(path), DetectedContainerKind::None)
+}
+
+fn detect_container(path: &Path) -> DetectedContainerKind {
+    let ext = path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or_default()
+        .to_lowercase();
+
+    match ext.as_str() {
+        "gz" => DetectedContainerKind::Gzip,
+        _ => DetectedContainerKind::None,
+    }
+}
+
 fn file_extension_matches(path: &Path, expected: &str) -> bool {
+    let mut path = path.to_owned();
+    // Ignore outer container extension during comparison
+    if is_container(&path) {
+        path.set_extension("");
+    }
+
     let actual = path
         .extension()
         .unwrap_or_default()
@@ -180,6 +230,8 @@ mod tests {
         assert!(file_extension_matches(&Path::new("test.tap"), "tap"));
         assert!(file_extension_matches(&Path::new("test.TAP"), "tap"));
         assert!(file_extension_matches(&Path::new("test.tAp"), "tap"));
+        assert!(file_extension_matches(&Path::new("test.tap.gz"), "tap"));
+        assert!(file_extension_matches(&Path::new("test.tap.gZ"), "tap"));
     }
 
     #[test]
