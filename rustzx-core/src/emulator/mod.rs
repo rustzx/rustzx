@@ -211,7 +211,7 @@ impl<H: Host> Emulator<H> {
         self.controller.send_mouse_wheel(dir);
     }
 
-    pub fn send_mouse_pos(&mut self, x: i8, y: i8) {
+    pub fn send_mouse_pos_diff(&mut self, x: i8, y: i8) {
         self.controller.send_mouse_pos_diff(x, y);
     }
 

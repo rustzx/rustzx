@@ -204,7 +204,7 @@ impl RustzxApp {
                         self.emulator.send_compound_key(key, state);
                     }
                     Event::MouseMove { x, y } => {
-                        self.emulator.send_mouse_pos(x, y);
+                        self.emulator.send_mouse_pos_diff(x, y);
                     }
                     Event::MouseButton(buton, pressed) => {
                         self.emulator.send_mouse_button(buton, pressed);
