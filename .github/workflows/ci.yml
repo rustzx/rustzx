@@ -62,7 +62,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --all-features --verbose
+          args: --workspace --exclude rustzx-test --exclude rustzx-z80 --all-features --verbose
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
         with:

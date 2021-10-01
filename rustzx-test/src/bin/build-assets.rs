@@ -1,8 +1,8 @@
+use anyhow::Context;
 use std::{
     path::{Path, PathBuf},
     process::Command,
 };
-use anyhow::Context;
 
 const DOCKER_IMAGE_REPO: &str = "https://github.com/z88dk/z88dk.git";
 const DOCKER_IMAGE_COMMIT: &str = "d61f6bb46ec15775cccf543f5941b6a2d6864ecf";
@@ -126,11 +126,10 @@ impl DockerImage {
             .output()
             .with_context(|| "Failed to query docker images")
             .and_then(|out| {
-                String::from_utf8(out.stdout)
-                    .with_context(|| "Failed to parse docker stdout")
+                String::from_utf8(out.stdout).with_context(|| "Failed to parse docker stdout")
             })?;
 
-        return Ok(!output.is_empty())
+        return Ok(!output.is_empty());
     }
 
     pub fn from_git(repo: impl AsRef<str>, commit: impl AsRef<str>) -> Self {
