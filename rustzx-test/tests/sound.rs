@@ -10,7 +10,7 @@ fn sound_48k() {
     tester.emulate_for(Duration::from_secs(2));
     tester.expect_sound(
         "beeper_plus_ay",
-        expect![[r#"HPoS7J290tGhhdIMViBIwcW1EgwwRyxcTvViGOQYJC0="#]],
+        expect![[r#"EPGBleJ2tzxSDYEJ1MKxDR4lT3iTdwXX+RHJt0GbZXs="#]],
     );
 }
 
@@ -22,6 +22,6 @@ fn sound_128k() {
     tester.emulate_for(Duration::from_secs(2));
     tester.expect_sound(
         "beeper_plus_ay",
-        expect![[r#"r1Mh8DO3Ci3iF75aYUS8ajCcqAePdd01snEySOv30rM="#]],
+        expect![[r#"wyo0bqTXzJucLwWkpinHkBS5jdpJp3AVqmn0+Rolng0="#]],
     );
 }
