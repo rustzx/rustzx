@@ -174,7 +174,7 @@ impl RustZXTester {
     }
 
     fn assets_folder(&self) -> PathBuf {
-        Path::new("test_data/asset").to_owned()
+        Path::new("test_data").to_owned()
     }
 
     fn actual_data_folder(&self) -> PathBuf {
