@@ -129,7 +129,7 @@ impl DockerImage {
                 String::from_utf8(out.stdout).with_context(|| "Failed to parse docker stdout")
             })?;
 
-        return Ok(!output.is_empty());
+        Ok(!output.is_empty())
     }
 
     pub fn from_git(repo: impl AsRef<str>, commit: impl AsRef<str>) -> Self {
