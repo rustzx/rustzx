@@ -181,6 +181,14 @@ impl<H: Host> Emulator<H> {
         self.controller.border.frame_buffer()
     }
 
+    pub fn set_io_extender(&mut self, extender: H::IoExtender) {
+        self.controller.io_extender = Some(extender);
+    }
+
+    pub fn io_extender(&mut self) -> Option<&mut H::IoExtender> {
+        self.controller.io_extender.as_mut()
+    }
+
     pub fn border_color(&self) -> ZXColor {
         self.controller.border_color
     }

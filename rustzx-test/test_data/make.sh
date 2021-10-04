@@ -124,13 +124,16 @@ function build_sna {
         -Cz -o \
         -Cz "${BUILD_DIR}/${APP_NAME}.${EXT_PREFIX}.sna" \
         "${ADDITIONAL_ARGS}" \
-        "${SRC_DIR}/${APP_NAME}.c"
-    gzip --stdout "${BUILD_DIR}/${APP_NAME}.${EXT_PREFIX}.sna" > "${OUT_DIR}/${APP_NAME}.${EXT_PREFIX}.sna.gz"
+        "${SRC_DIR}/${APP_NAME}.c" \
+        "${SRC_DIR}/librustzx.c" \
+        && gzip \
+            --stdout "${BUILD_DIR}/${APP_NAME}.${EXT_PREFIX}.sna" \
+            > "${OUT_DIR}/${APP_NAME}.${EXT_PREFIX}.sna.gz"
     log_success "Done"
     log_unindent
 }
 
 build_sna sound 48k
 build_sna sound 128k
-
 build_sna mouse 48k
+build_sna kempston_joy 48k

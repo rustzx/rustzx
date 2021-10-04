@@ -1,7 +1,7 @@
 //! Contains ZX Spectrum System contrller (like ula or so) of emulator
 use crate::{
     error::Error,
-    host::{Host, HostContext},
+    host::{Host, HostContext, IoExtender},
     settings::RustzxSettings,
     utils::screen::bitmap_line_addr,
     zx::{
@@ -39,6 +39,7 @@ pub(crate) struct ZXController<H: Host> {
     pub border: ZXBorder<H::FrameBuffer>,
     pub kempston: Option<KempstonJoy>,
     pub mouse: Option<KempstonMouse>,
+    pub io_extender: Option<H::IoExtender>,
     #[cfg(feature = "sound")]
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
@@ -105,6 +106,7 @@ impl<H: Host> ZXController<H> {
             border,
             kempston,
             mouse,
+            io_extender: None,
             #[cfg(feature = "sound")]
             mixer,
             keyboard: [0xFF; 8],
@@ -492,9 +494,17 @@ impl<H: Host> Z80Bus for ZXController<H> {
         // all contentions check
         self.io_contention_first(port);
         self.io_contention_last(port);
+
+        let io_extender_value = self
+            .io_extender
+            .as_mut()
+            .and_then(|e| e.extends_port(port).then(|| e.read(port)));
+
         // find out what we need to do
         let [_, h] = port.to_le_bytes();
-        let output = if port & 0x0001 == 0 {
+        let output = if let Some(value) = io_extender_value {
+            value
+        } else if port & 0x0001 == 0 {
             // ULA port
             let mut tmp: u8 = 0xFF;
             for n in 0..8 {
@@ -536,8 +546,15 @@ impl<H: Host> Z80Bus for ZXController<H> {
     fn write_io(&mut self, port: u16, data: u8) {
         // first contention
         self.io_contention_first(port);
+
         // find active port
-        if port & 0xC002 == 0xC000 {
+        if self
+            .io_extender
+            .as_ref()
+            .map_or(false, |e| e.extends_port(port))
+        {
+            self.io_extender.as_mut().unwrap().write(port, data);
+        } else if port & 0xC002 == 0xC000 {
             self.select_ay_reg(data);
         } else if port & 0xC002 == 0x8000 {
             self.write_ay_port(data);

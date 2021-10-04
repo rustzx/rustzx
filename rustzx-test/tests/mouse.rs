@@ -5,7 +5,10 @@ use std::time::Duration;
 
 #[test]
 fn kempston_mouse() {
-    let mut tester = RustZXTester::new("kempston_mouse", presets::settings_48k_nosound());
+    let mut settings = presets::settings_48k_nosound();
+    settings.mouse_enabled = true;
+
+    let mut tester = RustZXTester::new("kempston_mouse", settings);
     tester.load_sna("mouse.48k.sna.gz");
     tester.emulate_for(Duration::from_millis(250));
     tester.expect_screen(
