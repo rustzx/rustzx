@@ -49,6 +49,34 @@ impl<T> ScreenAsset for T where T: LoadableAsset + SeekableAsset {}
 pub trait SnapshotAsset: LoadableAsset + SeekableAsset {}
 impl<T> SnapshotAsset for T where T: LoadableAsset + SeekableAsset {}
 
+/// Allows to extend base rustzx-core functionality by providing
+/// interface for user-defined IO ports handling
+pub trait IoExtender {
+    /// Write byte value to io extender
+    fn write(&mut self, port: u16, data: u8);
+    /// Read byte value from io extender
+    fn read(&mut self, port: u16) -> u8;
+    /// Return true if io externder can process
+    /// incomming read/write operation for a
+    /// given port
+    fn extends_port(&self, port: u16) -> bool;
+}
+
+/// Does not extend any IO
+pub struct StubIoExtender {}
+
+impl IoExtender for StubIoExtender {
+    fn write(&mut self, _: u16, _: u8) {}
+
+    fn read(&mut self, _: u16) -> u8 {
+        0
+    }
+
+    fn extends_port(&self, _: u16) -> bool {
+        false
+    }
+}
+
 /// Represents set of required types for emulator implementation
 /// based on `rustzx-core`.
 pub trait Host {
@@ -59,5 +87,8 @@ pub trait Host {
     type TapeAsset: LoadableAsset + SeekableAsset;
     /// Frame buffer implementation
     type FrameBuffer: FrameBuffer;
+    /// Type which should provide methods to measure time intervals
     type EmulationStopwatch: Stopwatch;
+    /// RustZX debug port implementation
+    type IoExtender: IoExtender;
 }

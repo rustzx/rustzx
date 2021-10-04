@@ -1,6 +1,8 @@
 use expect_test::Expect;
 use rustzx_core::{
-    host::{BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, Snapshot, Tape},
+    host::{
+        BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, IoExtender, Snapshot, Tape,
+    },
     zx::{
         keys::ZXKey,
         machine::ZXMachine,
@@ -15,6 +17,7 @@ use rustzx_utils::{
     stopwatch::InstantStopwatch,
 };
 use std::{
+    collections::VecDeque,
     env,
     io::Cursor,
     path::{Path, PathBuf},
@@ -22,6 +25,9 @@ use std::{
 };
 
 const DEFAULT_SOUND_BITRATE: usize = 44100;
+const FRAME_HOST_DURATION_LIMIT: Duration = Duration::from_millis(100);
+const FRAME_EMULATED_DURATION: Duration = Duration::from_millis(20);
+const DEFAULT_SYNC_TIMEOUT: Duration = Duration::from_secs(3);
 
 // TODO(#83): Add tests for gigascreen
 
@@ -101,12 +107,57 @@ impl HostContext<TesterHost> for TesterContext {
     }
 }
 
+#[derive(Default)]
+pub struct DebugPort {
+    stdin: VecDeque<u8>,
+    stdout: VecDeque<u8>,
+}
+
+impl IoExtender for DebugPort {
+    fn write(&mut self, _: u16, data: u8) {
+        self.stdout.push_back(data);
+    }
+
+    fn read(&mut self, _: u16) -> u8 {
+        self.stdin.pop_front().unwrap_or(0)
+    }
+
+    fn extends_port(&self, port: u16) -> bool {
+        port == 0xCCCC
+    }
+}
+
+impl DebugPort {
+    pub fn put_byte(&mut self, b: u8) {
+        self.stdin.push_back(b);
+    }
+
+    pub fn get_byte(&mut self) -> Option<u8> {
+        self.stdout.pop_front()
+    }
+
+    pub fn put_text(&mut self, s: &str) {
+        self.stdin.extend(s.as_bytes())
+    }
+
+    pub fn get_text(&mut self) -> String {
+        let s = Vec::from(std::mem::take(&mut self.stdout));
+        String::from_utf8(s).expect("Invalid debug port stdout")
+    }
+
+    pub fn reset(&mut self) {
+        self.stdin.clear();
+        self.stdout.clear();
+    }
+}
+
 struct TesterHost;
 
 impl Host for TesterHost {
     type Context = TesterContext;
     type EmulationStopwatch = InstantStopwatch;
     type FrameBuffer = FrameContent;
+    type IoExtender = DebugPort;
     type TapeAsset = DynamicAsset;
 }
 
@@ -114,6 +165,7 @@ pub struct RustZXTester {
     emulator: Emulator<TesterHost>,
     sound_buffer: Option<Vec<i16>>,
     test_name: String,
+    sync_timeout: Duration,
 }
 
 pub mod presets {
@@ -124,8 +176,8 @@ pub mod presets {
             machine: ZXMachine::Sinclair48K,
             emulation_mode: EmulationMode::FrameCount(1),
             tape_fastload_enabled: true,
-            kempston_enabled: true,
-            mouse_enabled: true,
+            kempston_enabled: false,
+            mouse_enabled: false,
             ay_mode: ZXAYMode::ABC,
             ay_enabled: false,
             beeper_enabled: false,
@@ -170,6 +222,7 @@ impl RustZXTester {
             emulator,
             test_name: test_name.to_owned(),
             sound_buffer: None,
+            sync_timeout: DEFAULT_SYNC_TIMEOUT,
         }
     }
 
@@ -220,24 +273,23 @@ impl RustZXTester {
         self.emulator.border_buffer().to_png()
     }
 
-    pub fn emulate_for(&mut self, duration: Duration) {
-        const FRAME_HOST_DURATION_LIMIT: Duration = Duration::from_millis(100);
-        const FRAME_EMULATED_DURATION: Duration = Duration::from_millis(20);
+    fn update_sound(&mut self) {
+        if let Some(sound_buffer) = &mut self.sound_buffer {
+            while let Some(sample) = self.emulator.next_audio_sample() {
+                let normalize = |s| ((s - 0.5) * i16::MAX as f32) as i16;
+                sound_buffer.push(normalize(sample.left));
+                sound_buffer.push(normalize(sample.right));
+            }
+        }
+    }
 
+    pub fn emulate_for(&mut self, duration: Duration) {
         let mut emulated_duration = Duration::from_secs(0);
         while emulated_duration < duration {
             self.emulator
                 .emulate_frames(FRAME_HOST_DURATION_LIMIT)
                 .expect("Emulation failed");
-
-            if let Some(sound_buffer) = &mut self.sound_buffer {
-                while let Some(sample) = self.emulator.next_audio_sample() {
-                    let normalize = |s| ((s - 0.5) * i16::MAX as f32) as i16;
-                    sound_buffer.push(normalize(sample.left));
-                    sound_buffer.push(normalize(sample.right));
-                }
-            }
-
+            self.update_sound();
             emulated_duration += FRAME_EMULATED_DURATION;
         }
     }
@@ -318,6 +370,50 @@ impl RustZXTester {
             .expect("Failed to generate wav");
 
         self.compare_buffer_with_file(wav_data.into_inner(), make_sound_filename(name), expect);
+    }
+
+    pub fn enable_debug_port(&mut self) {
+        self.emulator.set_io_extender(DebugPort::default());
+    }
+
+    pub fn debug_port(&mut self) -> &mut DebugPort {
+        self.emulator
+            .io_extender()
+            .expect("Debug port is not enabled for the current test")
+    }
+
+    pub fn sync_target(&mut self) {
+        if !self.debug_port().stdout.is_empty() || !self.debug_port().stdin.is_empty() {
+            panic!(
+                "ERROR: Test may be incorrect, there were some unprocessed data in the target's \
+                 port before sync"
+            );
+        }
+
+        // Host (this test executable) writes and then reads port,
+        // while target (emulated snapshot) reads and then writes,
+        // this allows to sync both sides and doesn not produce any
+        // deadlocks
+        self.debug_port().put_byte(1);
+
+        let mut sync_duration = Duration::default();
+        loop {
+            self.emulate_for(FRAME_EMULATED_DURATION);
+            sync_duration += FRAME_EMULATED_DURATION;
+
+            if sync_duration > self.sync_timeout {
+                panic!("Timeout reached when trying to sync host with target");
+            }
+
+            // Try to consume incomming signal and finish sync
+            if self.debug_port().get_byte().is_some() {
+                break;
+            }
+        }
+    }
+
+    pub fn set_sync_timeout(&mut self, timeout: Duration) {
+        self.sync_timeout = timeout;
     }
 }
 
