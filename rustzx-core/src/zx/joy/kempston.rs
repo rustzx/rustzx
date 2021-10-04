@@ -5,6 +5,12 @@ pub enum KempstonKey {
     Down = 0x04,
     Up = 0x08,
     Fire = 0x10,
+    /// Undocumented extra button 1
+    Ext1 = 0x20,
+    /// Undocumented extra button 2
+    Ext2 = 0x40,
+    /// Undocumented extra button 3
+    Ext3 = 0x80,
 }
 
 /// Kempston Joystick
