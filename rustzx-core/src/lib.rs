@@ -13,6 +13,8 @@ pub use emulator::Emulator;
 pub use settings::RustzxSettings;
 pub use utils::EmulationMode;
 
+pub use strum::IntoEnumIterator as IterableEnum;
+
 extern crate alloc;
 
 pub type Result<T> = core::result::Result<T, error::Error>;
