@@ -26,6 +26,10 @@ impl GzipAsset {
             buffer: BufferCursor::new(buffer),
         })
     }
+
+    pub fn into_vec(self) -> Vec<u8> {
+        self.buffer.into_inner()
+    }
 }
 
 impl SeekableAsset for GzipAsset {

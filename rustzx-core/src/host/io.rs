@@ -17,6 +17,12 @@ pub struct BufferCursor<T: AsRef<[u8]>> {
 }
 
 impl<T: AsRef<[u8]>> BufferCursor<T> {
+    pub fn into_inner(self) -> T {
+        self.data
+    }
+}
+
+impl<T: AsRef<[u8]>> BufferCursor<T> {
     pub fn new(data: T) -> Self {
         Self { data, pos: 0 }
     }

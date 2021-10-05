@@ -1,7 +1,8 @@
 use expect_test::Expect;
 use rustzx_core::{
     host::{
-        BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, IoExtender, Snapshot, Tape,
+        BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, IoExtender, RomFormat,
+        RomSet, Snapshot, Tape,
     },
     zx::{
         keys::ZXKey,
@@ -238,7 +239,7 @@ impl RustZXTester {
         Path::new("test_data/actual").join(&self.test_name)
     }
 
-    fn load_asset(&mut self, name: impl AsRef<Path>) -> DynamicAsset {
+    fn load_asset_data(&mut self, name: impl AsRef<Path>) -> Vec<u8> {
         let path = self.assets_folder().join(name);
         let content = std::fs::read(&path).expect("Failed to load asset");
 
@@ -249,10 +250,14 @@ impl RustZXTester {
         {
             GzipAsset::new(Cursor::new(content))
                 .expect("Failed to decompress gz")
-                .into()
+                .into_vec()
         } else {
-            BufferCursor::new(content).into()
+            content
         }
+    }
+
+    fn load_asset(&mut self, name: impl AsRef<Path>) -> DynamicAsset {
+        BufferCursor::new(self.load_asset_data(name)).into()
     }
 
     pub fn load_tap(&mut self, name: impl AsRef<Path>) {
@@ -267,6 +272,31 @@ impl RustZXTester {
         self.emulator
             .load_snapshot(Snapshot::Sna(asset))
             .expect("Failed to load test SNA")
+    }
+
+    pub fn load_single_page_rom(&mut self, name: impl AsRef<Path>) {
+        let rom_data = self.load_asset_data(name);
+        struct DiagRomSet {
+            pages: VecDeque<Vec<u8>>,
+        }
+
+        impl RomSet for DiagRomSet {
+            type Asset = BufferCursor<Vec<u8>>;
+
+            fn format(&self) -> RomFormat {
+                RomFormat::Binary16KPages
+            }
+
+            fn next_asset(&mut self) -> Option<Self::Asset> {
+                Some(BufferCursor::new(self.pages.pop_front().unwrap()))
+            }
+        }
+
+        let rom_set = DiagRomSet {
+            pages: VecDeque::from(vec![rom_data, vec![0u8; 16 * 1024]]),
+        };
+
+        self.emulator.load_rom(rom_set).unwrap();
     }
 
     fn get_screen(&self) -> Vec<u8> {
