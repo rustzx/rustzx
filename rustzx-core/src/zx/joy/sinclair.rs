@@ -1,5 +1,7 @@
 use crate::zx::keys::ZXKey;
+use strum::EnumIter;
 
+#[derive(Debug, Clone, Copy, EnumIter)]
 pub enum SinclairKey {
     Left,
     Right,
@@ -8,6 +10,7 @@ pub enum SinclairKey {
     Fire,
 }
 
+#[derive(Debug, Clone, Copy, EnumIter)]
 pub enum SinclairJoyNum {
     Fist,
     Second,

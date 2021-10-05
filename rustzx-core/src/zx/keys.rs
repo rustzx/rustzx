@@ -1,8 +1,9 @@
 //! Module with hardware key port\masks
+use strum::EnumIter;
 
 /// Struct, which contains mast and port of key
 #[rustfmt::skip]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, EnumIter)]
 pub enum ZXKey {
     // Port 0xFEFE
     Shift, Z, X, C, V,
@@ -22,7 +23,7 @@ pub enum ZXKey {
     Space, SymShift, M, N, B,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, EnumIter)]
 pub enum CompoundKey {
     ArrowLeft,
     ArrowRight,

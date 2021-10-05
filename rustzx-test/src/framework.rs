@@ -132,7 +132,7 @@ impl DebugPort {
         self.stdin.push_back(b);
     }
 
-    pub fn get_byte(&mut self) -> Option<u8> {
+    pub fn take_byte(&mut self) -> Option<u8> {
         self.stdout.pop_front()
     }
 
@@ -140,9 +140,13 @@ impl DebugPort {
         self.stdin.extend(s.as_bytes())
     }
 
-    pub fn get_text(&mut self) -> String {
+    pub fn take_text(&mut self) -> String {
         let s = Vec::from(std::mem::take(&mut self.stdout));
         String::from_utf8(s).expect("Invalid debug port stdout")
+    }
+
+    pub fn take_bufer(&mut self) -> Vec<u8> {
+        Vec::from(std::mem::take(&mut self.stdout))
     }
 
     pub fn reset(&mut self) {
@@ -294,6 +298,10 @@ impl RustZXTester {
         }
     }
 
+    pub fn emulate_frame(&mut self) {
+        self.emulate_for(FRAME_EMULATED_DURATION);
+    }
+
     pub fn compare_buffer_with_file(
         &self,
         actual: Vec<u8>,
@@ -322,6 +330,10 @@ impl RustZXTester {
 
     pub fn expect_border(&self, name: impl AsRef<Path>, expect: Expect) {
         self.compare_buffer_with_file(self.get_border(), make_border_filename(name), expect);
+    }
+
+    pub fn expect_text(&self, name: impl AsRef<Path>, text: String, expect: Expect) {
+        self.compare_buffer_with_file(text.into_bytes(), make_text_filename(name), expect);
     }
 
     pub fn emulator(&mut self) -> &mut Emulator<impl Host> {
@@ -406,7 +418,7 @@ impl RustZXTester {
             }
 
             // Try to consume incomming signal and finish sync
-            if self.debug_port().get_byte().is_some() {
+            if self.debug_port().take_byte().is_some() {
                 break;
             }
         }
@@ -446,6 +458,10 @@ fn make_border_filename(name: impl AsRef<Path>) -> PathBuf {
 
 fn make_sound_filename(name: impl AsRef<Path>) -> PathBuf {
     name.as_ref().with_extension("wav")
+}
+
+fn make_text_filename(name: impl AsRef<Path>) -> PathBuf {
+    name.as_ref().with_extension("txt")
 }
 
 trait Fingerprintable {

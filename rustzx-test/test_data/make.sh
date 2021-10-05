@@ -137,3 +137,4 @@ build_sna sound 48k
 build_sna sound 128k
 build_sna mouse 48k
 build_sna kempston_joy 48k
+build_sna keyboard 48k
