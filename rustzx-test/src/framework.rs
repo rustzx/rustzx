@@ -310,7 +310,7 @@ impl RustZXTester {
     fn update_sound(&mut self) {
         if let Some(sound_buffer) = &mut self.sound_buffer {
             while let Some(sample) = self.emulator.next_audio_sample() {
-                let normalize = |s| ((s - 0.5) * i16::MAX as f32) as i16;
+                let normalize = |s| (s * i16::MAX as f32) as i16;
                 sound_buffer.push(normalize(sample.left));
                 sound_buffer.push(normalize(sample.right));
             }

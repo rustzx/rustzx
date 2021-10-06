@@ -27,8 +27,11 @@ impl ZXAyChip {
             ZXAYMode::ACB => AyMode::ACB,
         };
 
+        let mut ay = AymPrecise::new(SoundChip::AY, mode, AY_FREQ, sample_rate);
+        ay.enable_dc_filter();
+
         Self {
-            ay: AymBackend::new(SoundChip::AY, mode, AY_FREQ, sample_rate),
+            ay,
             current_reg: 0,
             regs: [0; 16],
         }
@@ -53,11 +56,6 @@ impl ZXAyChip {
 impl SampleGenerator<f64> for ZXAyChip {
     fn gen_sample(&mut self) -> SoundSample<f64> {
         let sample = self.ay.next_sample();
-
-        // Place -1..1 sample in 0..1 range
-        let left = (sample.left + 1f64) / (2f64);
-        let right = (sample.right + 1f64) / (2f64);
-
-        SoundSample::new(left, right)
+        SoundSample::new(sample.left, sample.right)
     }
 }

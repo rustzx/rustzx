@@ -7,6 +7,8 @@ use crate::zx::{
     },
 };
 
+// TODO(#117): Implement DC filtering for sound mixing
+
 #[cfg(feature = "ay")]
 use crate::zx::sound::ay::{ZXAYMode, ZXAyChip};
 
