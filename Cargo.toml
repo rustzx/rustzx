@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "rustzx-z80",
+    "aym",
     "rustzx-core",
-    "rustzx-utils",
     "rustzx-test",
+    "rustzx-utils",
+    "rustzx-z80",
     "rustzx",
     "vtx",
     "vtx/vtx-bin",
-    "aym"
 ]

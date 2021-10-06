@@ -15,5 +15,5 @@ path = "src/main.rs"
 [dependencies]
 vtx = { version = "0.1", path = ".." }
 structopt = "0.3"
-wav = "1"
-anyhow = "1"
+wav = "1.0"
+anyhow = "1.0"
