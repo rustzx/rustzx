@@ -2,7 +2,7 @@
 name = "rustzx"
 version = "0.14.0"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
-description = "ZX Spectum emulator"
+description = "ZX Spectrum emulator"
 repository = "https://github.com/pacmancoder/rustzx"
 readme = "../README.md"
 keywords = ["emulator", "game", "z80"]

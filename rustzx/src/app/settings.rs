@@ -22,6 +22,8 @@ pub enum SoundBackend {
 
 /// Structure to handle all emulator runtime settings
 #[derive(StructOpt)]
+#[structopt(about = env!("CARGO_PKG_DESCRIPTION"))]
+#[structopt(name = "RustZX")]
 pub struct Settings {
     /// Specify machine type for launch. Possible values:
     ///   [`48k`, `48`] - Sinclair ZX Spectrum 48K
