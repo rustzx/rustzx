@@ -5,13 +5,13 @@
 use crate::{
     app::{
         events::{Event, EventDevice, EventsSdl},
-        settings::Settings,
-        sound::{SoundDevice, SoundSdl},
+        settings::{Settings, SoundBackend},
+        sound::{SoundCpal, SoundDevice, SoundSdl, DEFAULT_SAMPLE_RATE},
         video::{Rect, TextureInfo, VideoDevice, VideoSdl},
     },
     host::{self, AppHost, AppHostContext, DetectedFileKind},
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use rustzx_core::{
     host::SnapshotRecorder,
     zx::constants::{
@@ -55,8 +55,12 @@ pub struct RustzxApp {
 impl RustzxApp {
     /// Starts application itself
     pub fn from_config(settings: Settings) -> anyhow::Result<RustzxApp> {
-        let snd: Option<Box<dyn SoundDevice>> = if !settings.disable_sound {
-            Some(Box::new(SoundSdl::new(&settings)))
+        let snd = if !settings.disable_sound {
+            let backend = create_sound_backend(&settings).context(
+                "Failed to initialize sound subsystem, try other sound backend or --nosound option",
+            )?;
+
+            Some(backend)
         } else {
             None
         };
@@ -65,8 +69,12 @@ impl RustzxApp {
         let tex_canvas = video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32);
         let scale = settings.scale as u32;
         let events = Box::new(EventsSdl::new(&settings));
+        let sample_rate = snd
+            .as_ref()
+            .map(|s| s.sample_rate())
+            .unwrap_or(DEFAULT_SAMPLE_RATE);
 
-        let mut emulator = Emulator::new(settings.to_rustzx_settings(), AppHostContext)
+        let mut emulator = Emulator::new(settings.to_rustzx_settings(sample_rate), AppHostContext)
             .map_err(|e| anyhow!("Failed to construct emulator: {}", e))?;
 
         if let Some(rom) = settings.rom.as_ref() {
@@ -305,4 +313,12 @@ impl RustzxApp {
         }
         Path::new("default.rustzx.prev.sna").to_owned()
     }
+}
+
+fn create_sound_backend(settings: &Settings) -> anyhow::Result<Box<dyn SoundDevice>> {
+    let backend: Box<dyn SoundDevice> = match settings.sound_backend {
+        SoundBackend::Sdl => Box::new(SoundSdl::new(settings)?),
+        SoundBackend::Cpal => Box::new(SoundCpal::new(settings)?),
+    };
+    Ok(backend)
 }

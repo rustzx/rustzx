@@ -1,5 +1,3 @@
-use strum::EnumIter;
-
 const WHEEL_MASK: u8 = 0xF0;
 const WHEEL_SHIFT: usize = 4;
 
@@ -21,7 +19,8 @@ impl Default for KempstonMouse {
     }
 }
 
-#[derive(Clone, Copy, Debug, EnumIter)]
+#[cfg_attr(feature = "strum", derive(strum::EnumIter))]
+#[derive(Clone, Copy, Debug)]
 pub enum KempstonMouseButton {
     Left = 0x01,
     Right = 0x02,
@@ -29,7 +28,8 @@ pub enum KempstonMouseButton {
     Additional = 0x08,
 }
 
-#[derive(Clone, Copy, Debug, EnumIter)]
+#[cfg_attr(feature = "strum", derive(strum::EnumIter))]
+#[derive(Clone, Copy, Debug)]
 #[repr(i8)]
 pub enum KempstonMouseWheelDirection {
     Up = 1,

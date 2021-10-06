@@ -3,4 +3,4 @@ use sdl2::{self, Sdl};
 use std::cell::RefCell;
 
 thread_local! (pub static SDL_CONTEXT: RefCell<Sdl> = RefCell::new(
-        sdl2::init().expect("[ERROR] Sdl init error, try --nosound")));
+        sdl2::init().expect("SDL init failed")));

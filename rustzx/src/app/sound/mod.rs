@@ -1,13 +1,18 @@
-//! platform-independent traits. Submodules with backends will be selectable
-//! via cargo features in future
+mod sound_cpal;
 mod sound_sdl;
 use rustzx_core::zx::sound::sample::SoundSample;
 
+pub use sound_cpal::SoundCpal;
 pub use sound_sdl::SoundSdl;
 
-// default sample type
+pub const CHANNEL_COUNT: usize = 2;
+pub const DEFAULT_SAMPLE_RATE: usize = 44100;
+
 pub type ZXSample = SoundSample<f32>;
+
 pub trait SoundDevice {
-    // blocking function to send new sample
+    /// Send new sample to the sound device
     fn send_sample(&mut self, sample: ZXSample);
+    /// Return selected device sample rate
+    fn sample_rate(&self) -> usize;
 }

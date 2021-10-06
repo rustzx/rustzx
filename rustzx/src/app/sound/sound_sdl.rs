@@ -1,14 +1,16 @@
-//! Real Audio SDL backend
-use super::{SoundDevice, ZXSample};
-use crate::{app::settings::Settings, backends::SDL_CONTEXT};
+use crate::{
+    app::{
+        settings::Settings,
+        sound::{SoundDevice, ZXSample, CHANNEL_COUNT, DEFAULT_SAMPLE_RATE},
+    },
+    backends::SDL_CONTEXT,
+};
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
-
-const CHANNEL_COUNT: usize = 2;
+use std::sync::mpsc;
 
 /// Struct which used in SDL audio callback
 struct SdlCallback {
-    samples: Receiver<ZXSample>,
+    samples: mpsc::Receiver<ZXSample>,
 }
 
 impl AudioCallback for SdlCallback {
@@ -18,9 +20,12 @@ impl AudioCallback for SdlCallback {
     fn callback(&mut self, out: &mut [f32]) {
         for chunk in out.chunks_mut(CHANNEL_COUNT) {
             // recieve samples from channel
-            if let Ok(sample) = self.samples.recv() {
+            if let Ok(sample) = self.samples.try_recv() {
                 chunk[0] = sample.left;
                 chunk[1] = sample.right;
+            } else {
+                chunk[0] = 0f32;
+                chunk[1] = 0f32;
             }
         }
     }
@@ -28,44 +33,49 @@ impl AudioCallback for SdlCallback {
 
 /// Represents SDL audio backend
 pub struct SoundSdl {
-    sender: SyncSender<ZXSample>,
+    sender: mpsc::Sender<ZXSample>,
+    sample_rate: usize,
     _device: AudioDevice<SdlCallback>, // Should be alive until Drop invocation
 }
 
 impl SoundSdl {
     /// constructs sound backend from settings
-    pub fn new(settings: &Settings) -> SoundSdl {
-        // init backend
+    pub fn new(settings: &Settings) -> anyhow::Result<SoundSdl> {
         let mut audio_subsystem = None;
         SDL_CONTEXT.with(|sdl| {
             audio_subsystem = sdl.borrow_mut().audio().ok();
         });
-        if let Some(audio) = audio_subsystem {
-            // prepare specs
-            let desired_spec = AudioSpecDesired {
-                freq: Some(settings.sound_sample_rate as i32),
-                channels: Some(CHANNEL_COUNT as u8),
-                samples: Some(settings.sound_latency as u16),
-            };
-            let (tx, rx) = sync_channel(settings.sound_latency as usize);
-            let device_handle = audio
-                .open_playback(None, &desired_spec, |_| SdlCallback { samples: rx })
-                .expect("[ERROR Sdl audio device error, try --nosound]");
-            // run
-            device_handle.resume();
-            // save device and cahnnel handles
-            SoundSdl {
-                sender: tx,
-                _device: device_handle,
-            }
-        } else {
-            panic!("[ERROR] Sdl audio error, try --nosound");
-        }
+        let audio = audio_subsystem
+            .ok_or_else(|| anyhow::anyhow!("Failed to initialize SDL audio backend"))?;
+
+        // Basically, SDL shits its pants if desired sound sample rate is not specified
+        let sample_rate = settings.sound_sample_rate.unwrap_or(DEFAULT_SAMPLE_RATE);
+
+        let desired_spec = AudioSpecDesired {
+            freq: Some(sample_rate as i32),
+            channels: Some(CHANNEL_COUNT as u8),
+            samples: settings.sound_latency.map(|l| l as u16),
+        };
+        let (tx, rx) = mpsc::channel();
+        let device_handle = audio
+            .open_playback(None, &desired_spec, |_| SdlCallback { samples: rx })
+            .map_err(|e| anyhow::anyhow!("Failed to start SDL sound stream: {}", e))?;
+        device_handle.resume();
+
+        Ok(SoundSdl {
+            sender: tx,
+            sample_rate,
+            _device: device_handle,
+        })
     }
 }
 
 impl SoundDevice for SoundSdl {
     fn send_sample(&mut self, sample: ZXSample) {
         self.sender.send(sample).unwrap();
+    }
+
+    fn sample_rate(&self) -> usize {
+        self.sample_rate
     }
 }
