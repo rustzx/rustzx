@@ -11,7 +11,9 @@ fn main() {
     let settings = Settings::from_args();
     let result = RustzxApp::from_config(settings)
         .and_then(|mut emulator| emulator.start())
-        .map_err(|e| log::error!("ERROR: {}", e));
+        .map_err(|e| {
+            log::error!("ERROR: {:#}", e);
+        });
 
     if result.is_err() {
         std::process::exit(1);

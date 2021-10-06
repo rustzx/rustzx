@@ -2,10 +2,16 @@ use rustzx_core::{
     zx::{machine::ZXMachine, sound::ay::ZXAYMode},
     EmulationMode, RustzxSettings,
 };
-
 use std::path::PathBuf;
-
 use structopt::StructOpt;
+use strum::{EnumString, EnumVariantNames, VariantNames};
+
+#[derive(Clone, Copy, Debug, EnumString, EnumVariantNames)]
+#[strum(serialize_all = "snake_case")]
+pub enum SoundBackend {
+    Sdl,
+    Cpal,
+}
 
 /// Structure to handle all emulator runtime settings
 #[derive(StructOpt)]
@@ -56,13 +62,15 @@ pub struct Settings {
     /// Disable sound
     #[structopt(long = "nosound")]
     pub disable_sound: bool,
-    /// Set custom sound latency. Defaults to 1024 samples
-    #[structopt(long, default_value = "1024", parse(try_from_str = sound_latency_from_str))]
-    pub sound_latency: usize,
-    /// Set custom sound sample rate. Defaults to 44100 samples per second
-    #[structopt(long, default_value = "44100", parse(try_from_str = sound_sample_rate_from_str))]
-    pub sound_sample_rate: usize,
-
+    /// Set custom sound latency
+    #[structopt(long, parse(try_from_str = sound_latency_from_str))]
+    pub sound_latency: Option<usize>,
+    /// Set custom sound sample rate
+    #[structopt(long, parse(try_from_str = sound_sample_rate_from_str))]
+    pub sound_sample_rate: Option<usize>,
+    /// Sound backend to use
+    #[structopt(long, default_value = "cpal", possible_values = &SoundBackend::VARIANTS)]
+    pub sound_backend: SoundBackend,
     /// Set path to custom rom file. in case of multipart ROMs for 128k, the first part file,
     /// extension of which should end with `.0`
     #[structopt(long, conflicts_with = "file-autodetect")]
@@ -151,7 +159,7 @@ fn sound_sample_rate_from_str(s: &str) -> Result<usize, anyhow::Error> {
 }
 
 impl Settings {
-    pub fn to_rustzx_settings(&self) -> RustzxSettings {
+    pub fn to_rustzx_settings(&self, sound_sample_rate: usize) -> RustzxSettings {
         let ay_enabled = (matches!(self.machine, ZXMachine::Sinclair128K) || self.force_enable_ay)
             && (!self.force_disable_ay);
 
@@ -167,7 +175,7 @@ impl Settings {
             sound_enabled: !self.disable_sound,
             sound_volume: 100,
             load_default_rom: self.rom.is_none(),
-            sound_sample_rate: self.sound_sample_rate,
+            sound_sample_rate,
             autoload_enabled: !self.disable_autoload,
         }
     }
