@@ -29,7 +29,7 @@ impl AudioCallback for SdlCallback {
 /// Represents SDL audio backend
 pub struct SoundSdl {
     sender: SyncSender<ZXSample>,
-    device: AudioDevice<SdlCallback>,
+    _device: AudioDevice<SdlCallback>, // Should be alive until Drop invocation
 }
 
 impl SoundSdl {
@@ -56,7 +56,7 @@ impl SoundSdl {
             // save device and cahnnel handles
             SoundSdl {
                 sender: tx,
-                device: device_handle,
+                _device: device_handle,
             }
         } else {
             panic!("[ERROR] Sdl audio error, try --nosound");

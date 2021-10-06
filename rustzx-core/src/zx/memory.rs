@@ -6,7 +6,6 @@ pub const PAGE_SIZE: usize = 16 * 1024;
 pub const SIZE_16K: usize = PAGE_SIZE;
 pub const SIZE_32K: usize = PAGE_SIZE * 2;
 pub const SIZE_48K: usize = PAGE_SIZE * 3;
-pub const SIZE_64K: usize = PAGE_SIZE * 4;
 pub const SIZE_128K: usize = PAGE_SIZE * 8;
 // count of all memory blocks
 pub const MEM_BLOCKS: usize = 4;
@@ -14,11 +13,9 @@ pub const MEM_BLOCKS: usize = 4;
 /// Rom can be:
 /// - 16K (Sinclair48K)
 /// - 32K (Sinclair128K, 2+)
-/// - 64k (Amstrad 3+)
 pub enum RomType {
     K16,
     K32,
-    K64,
 }
 
 /// Ram can be:
@@ -63,7 +60,6 @@ impl ZXMemory {
         let rom_size = match rom_type {
             RomType::K16 => SIZE_16K,
             RomType::K32 => SIZE_32K,
-            RomType::K64 => SIZE_64K,
         };
         ZXMemory {
             rom: vec![0; rom_size],
@@ -79,15 +75,6 @@ impl ZXMemory {
         match page {
             Page::Rom(page) => self.rom[(page as usize) * PAGE_SIZE + addr_rel],
             Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + addr_rel],
-        }
-    }
-
-    /// Returns value of data with relative `addr` at `bank`
-    pub fn paged_read(&self, page: Page, addr: u16) -> u8 {
-        assert!((addr as usize) < PAGE_SIZE);
-        match page {
-            Page::Rom(page) => self.rom[(page as usize) * PAGE_SIZE + addr as usize],
-            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + addr as usize],
         }
     }
 
@@ -154,14 +141,5 @@ impl ZXMemory {
         }
         let shift = page as usize * PAGE_SIZE;
         &self.ram[shift..shift + PAGE_SIZE]
-    }
-
-    /// Dumps current address space
-    pub fn dump(&self) -> Vec<u8> {
-        let mut out = Vec::new();
-        for n in 0..SIZE_64K {
-            out.push(self.read(n as u16));
-        }
-        out
     }
 }

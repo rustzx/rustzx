@@ -90,7 +90,6 @@ pub struct ZXScreen<FB: FrameBuffer> {
     back_buffer: FB,
     banks: [ScreenBank; 2],
     active_bank: usize,
-    next_bank: usize,
 }
 
 impl<FB: FrameBuffer> ZXScreen<FB> {
@@ -124,7 +123,6 @@ impl<FB: FrameBuffer> ZXScreen<FB> {
                 },
             ],
             active_bank: 0,
-            next_bank: 0,
         }
     }
 

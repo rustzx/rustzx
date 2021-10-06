@@ -64,6 +64,7 @@ pub(crate) struct ZXController<H: Host> {
 
 impl<H: Host> ZXController<H> {
     /// Returns new ZXController from settings
+    #[allow(clippy::let_and_return)]
     pub fn new(settings: &RustzxSettings, host_context: H::Context) -> Self {
         let (memory, paging, screen_bank);
         match settings.machine {
@@ -149,6 +150,7 @@ impl<H: Host> ZXController<H> {
     }
 
     /// returns current frame emulation pos in percents
+    #[cfg(feature = "sound")]
     fn frame_pos(&self) -> f64 {
         let val = self.frame_clocks as f64 / self.machine.specs().clocks_frame as f64;
         if val > 1.0 {
@@ -329,11 +331,6 @@ impl<H: Host> ZXController<H> {
         self.passed_frames = 0;
     }
 
-    /// Returns current clocks from frame start
-    pub fn clocks(&self) -> usize {
-        self.frame_clocks
-    }
-
     pub fn write_7ffd(&mut self, val: u8) {
         if !self.paging_enabled {
             return;
@@ -386,7 +383,8 @@ impl<H: Host> ZXController<H> {
 
     pub(crate) fn set_border_color(
         &mut self,
-        #[allow(unused_variables)] clocks: usize,
+        #[cfg(feature = "precise-border")] clocks: usize,
+        #[cfg(not(feature = "precise-border"))] _clocks: usize,
         color: ZXColor,
     ) {
         self.border_color = color;

@@ -17,7 +17,6 @@ impl ZXBeeper {
 
 impl SampleGenerator<f64> for ZXBeeper {
     fn gen_sample(&mut self) -> SoundSample<f64> {
-
         // - Beeper intentionally made produce only positive half-wave 0..0.5
         // range instead of -0.25..0.25) because of current emulator lack of
         // dc filtering.
