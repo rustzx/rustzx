@@ -1,7 +1,7 @@
 use crate::{
     app::{
         settings::Settings,
-        sound::{SoundDevice, ZXSample, CHANNEL_COUNT, DEFAULT_SAMPLE_RATE},
+        sound::{SoundDevice, ZXSample, CHANNEL_COUNT, DEFAULT_LATENCY, DEFAULT_SAMPLE_RATE},
     },
     backends::SDL_CONTEXT,
 };
@@ -51,10 +51,13 @@ impl SoundSdl {
         // Basically, SDL shits its pants if desired sound sample rate is not specified
         let sample_rate = settings.sound_sample_rate.unwrap_or(DEFAULT_SAMPLE_RATE);
 
+        // SDL sets awfully big latency by default
+        let latency = settings.sound_latency.unwrap_or(DEFAULT_LATENCY);
+
         let desired_spec = AudioSpecDesired {
             freq: Some(sample_rate as i32),
             channels: Some(CHANNEL_COUNT as u8),
-            samples: settings.sound_latency.map(|l| l as u16),
+            samples: Some(latency as u16),
         };
         let (tx, rx) = mpsc::channel();
         let device_handle = audio

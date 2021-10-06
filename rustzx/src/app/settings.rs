@@ -6,10 +6,17 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 use strum::{EnumString, EnumVariantNames, VariantNames};
 
+#[cfg(feature = "sound-cpal")]
+const DEFAULT_SOUND_BACKEND_VALUE: &str = "cpal";
+
+#[cfg(not(feature = "sound-cpal"))]
+const DEFAULT_SOUND_BACKEND_VALUE: &str = "sdl";
+
 #[derive(Clone, Copy, Debug, EnumString, EnumVariantNames)]
 #[strum(serialize_all = "snake_case")]
 pub enum SoundBackend {
     Sdl,
+    #[cfg(feature = "sound-cpal")]
     Cpal,
 }
 
@@ -69,7 +76,11 @@ pub struct Settings {
     #[structopt(long, parse(try_from_str = sound_sample_rate_from_str))]
     pub sound_sample_rate: Option<usize>,
     /// Sound backend to use
-    #[structopt(long, default_value = "cpal", possible_values = &SoundBackend::VARIANTS)]
+    #[structopt(
+        long,
+        default_value = DEFAULT_SOUND_BACKEND_VALUE,
+        possible_values = &SoundBackend::VARIANTS
+    )]
     pub sound_backend: SoundBackend,
     /// Set path to custom rom file. in case of multipart ROMs for 128k, the first part file,
     /// extension of which should end with `.0`

@@ -6,7 +6,7 @@ use crate::{
     app::{
         events::{Event, EventDevice, EventsSdl},
         settings::{Settings, SoundBackend},
-        sound::{SoundCpal, SoundDevice, SoundSdl, DEFAULT_SAMPLE_RATE},
+        sound::{SoundDevice, DEFAULT_SAMPLE_RATE},
         video::{Rect, TextureInfo, VideoDevice, VideoSdl},
     },
     host::{self, AppHost, AppHostContext, DetectedFileKind},
@@ -316,9 +316,12 @@ impl RustzxApp {
 }
 
 fn create_sound_backend(settings: &Settings) -> anyhow::Result<Box<dyn SoundDevice>> {
+    use crate::app::sound;
+
     let backend: Box<dyn SoundDevice> = match settings.sound_backend {
-        SoundBackend::Sdl => Box::new(SoundSdl::new(settings)?),
-        SoundBackend::Cpal => Box::new(SoundCpal::new(settings)?),
+        SoundBackend::Sdl => Box::new(sound::SoundSdl::new(settings)?),
+        #[cfg(feature = "sound-cpal")]
+        SoundBackend::Cpal => Box::new(sound::SoundCpal::new(settings)?),
     };
     Ok(backend)
 }
