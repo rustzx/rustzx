@@ -3,13 +3,11 @@ use core::{
     ops::{Add, Mul, MulAssign, Sub},
 };
 
-/// Raw Sample can be only f64 or i16
 pub trait RawSample: Clone + Copy + MulAssign + Mul + Add + Sub {}
 impl RawSample for f64 {}
 impl RawSample for f32 {}
 impl RawSample for i16 {}
 
-const ERROR_SIZE: u16 = 100;
 // Sound sample type
 // Have it's have two special cases: `SoundSample<f64>`
 // And `SoundSample<i16>`
