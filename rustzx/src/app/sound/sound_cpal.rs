@@ -1,7 +1,7 @@
 //! Real Audio SDL backend
 use crate::app::{
     settings::Settings,
-    sound::{SoundDevice, ZXSample},
+    sound::{SoundDevice, ZXSample, CHANNEL_COUNT},
 };
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::mpsc;
@@ -32,7 +32,7 @@ impl SoundCpal {
                     }
                 }
 
-                c.channels() == 2
+                c.channels() == CHANNEL_COUNT as u16
             })
             .ok_or_else(|| {
                 anyhow::anyhow!("Sound device does not support required configuration")
