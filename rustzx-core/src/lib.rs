@@ -1,5 +1,4 @@
 #![no_std]
-#![allow(dead_code)]
 
 pub(crate) mod emulator;
 pub(crate) mod settings;

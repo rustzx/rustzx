@@ -29,11 +29,6 @@ impl BeamInfo {
         BeamInfo { line, pixel, color }
     }
 
-    /// checks if beam is on first pixel
-    fn is_first_pixel(&self) -> bool {
-        (self.line == 0) && (self.pixel == 0)
-    }
-
     /// resets position
     fn reset(&mut self) {
         self.line = 0;

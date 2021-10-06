@@ -11,16 +11,13 @@ pub const SCREEN_HEIGHT: usize = CANVAS_HEIGHT + BORDER_ROWS * 8 * 2;
 /// Frames per second
 pub const FPS: usize = 50;
 
-/// addresses
-pub(crate) const BITMAP_BASE_ADDR: u16 = 0x4000;
-pub(crate) const ATTR_BASE_ADDR: u16 = 0x5800;
-pub(crate) const ATTR_MAX_ADDR: u16 = 0x5AFF;
 /// relative addresses
 pub(crate) const BITMAP_MAX_REL: u16 = 0x17FF;
 pub(crate) const ATTR_BASE_REL: u16 = 0x1800;
 pub(crate) const ATTR_MAX_REL: u16 = 0x1AFF;
 /// on all spectrums theese values are fixed
 pub(crate) const CLOCKS_PER_COL: usize = 4;
+#[cfg(feature = "precise-border")]
 pub(crate) const PIXELS_PER_CLOCK: usize = 2;
 /// size of screen in rows, cols
 pub(crate) const ATTR_COLS: usize = CANVAS_WIDTH / 8;
