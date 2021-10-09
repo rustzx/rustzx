@@ -1,6 +1,6 @@
 [package]
 name = "rustzx-z80"
-version = "0.14.0"
+version = "0.15.0"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 description = "Z80 CPU emulator library"
 repository = "https://github.com/pacmancoder/rustzx"
