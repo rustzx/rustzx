@@ -1,3 +1,7 @@
+### RustZX v0.15
+<!-- START_CHANGELOG|v0.15.0 -->
+<!-- END_CHANGELOG|v0.15.0 -->
+
 ### RustZX v0.14
 - **[Refactoring]** Moved z80 emulation to the separate crate (`rustzx-z80`)
 - **[Feature]** Added support for `*.scr` screenshot format loading

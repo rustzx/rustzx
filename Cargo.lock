@@ -79,7 +79,7 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "aym"
-version = "0.1.1"
+version = "0.15.0"
 dependencies = [
  "libm",
  "num-traits",
@@ -139,9 +139,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "bytes"
-version = "1.1.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4872d67bab6358e59559027aa3b9157c53d9358c51423c17554809a8858e0f8"
+checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 
 [[package]]
 name = "cc"
@@ -866,9 +866,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.7.2"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af8b08b04175473088b46763e51ee54da5f9a164bc162f615b91bc179dbf15a3"
+checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
 
 [[package]]
 name = "opaque-debug"
@@ -1078,7 +1078,7 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustzx"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "cpal",
@@ -1093,7 +1093,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-core"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "aym",
  "bitflags",
@@ -1107,7 +1107,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-test"
-version = "0.1.0"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1122,7 +1122,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-utils"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "flate2",
  "log",
@@ -1131,7 +1131,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-z80"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "paste",
 ]
@@ -1413,7 +1413,7 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 
 [[package]]
 name = "vtx"
-version = "0.1.2"
+version = "0.15.0"
 dependencies = [
  "aym",
  "byteorder",
@@ -1427,7 +1427,7 @@ dependencies = [
 
 [[package]]
 name = "vtx-bin"
-version = "0.1.2"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "structopt",
