@@ -1,5 +1,11 @@
 ### RustZX v0.15
 <!-- START_CHANGELOG|v0.15.0 -->
+- **[Feature]** Added new `cpal` sound backend (#101)
+- **[Feature]** Added support for `.gz`-compressed assets (#109)
+- **[Feature]** Added support for non-standard Kempston joy buttons in rustzx-core (#113)
+- **[Fix]** Fixed bug with integer overflow panic in tape loader (#100)
+- **[Testing]** Added integration tests for rustzx-core (#92)
+- **[Refactoring]** Removed cyclic dependencies between `rustzx-core` and `rustzx-utils`(#99)
 <!-- END_CHANGELOG|v0.15.0 -->
 
 ### RustZX v0.14
