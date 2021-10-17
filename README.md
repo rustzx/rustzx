@@ -30,18 +30,20 @@ ZX Spectrum emulator written in Rust
 - Kempston mouse emulation
 - Extended 128K keys emulation (arrows, backspace, caps lock)
 - Quick save/load
+- Compressed assets support (only `.gz` for now)
 - Separate `no_std` core library which can be used to port emulator
   almost anywhere.
     - Global allocator is still needed, but all dynamic
        allocations were minimized
     - All resource-heavy features are configurable via cargo `features`
 
-## Compiling from the latest master
+## Install
 1. Sure that you have C compiller and CMake to
 build bundled `sdl2`
-2. Install it with cargo
+2. (Linux-specific) Install required development packages: [`libasound2-dev`]
+3. Install it with cargo
 ```bash
-cargo install --path ./rustzx
+cargo install rustzx
 ```
 
 ## How to use
