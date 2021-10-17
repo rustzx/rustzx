@@ -1,0 +1,29 @@
+[workspace]
+root_crate = "rustzx"
+
+[github]
+repo = "pacmancoder/rustzx"
+
+[release]
+check_version_raised = true
+allow_non_path_dev_dependencies = false
+publish_interval_seconds = 60
+
+[release.github]
+create_tag = true
+create_release_page = true
+check_commit_pushed = true
+print_to_stdout = true
+tag_name_template = "v{{version}}"
+release_page_title_template = "RustZX v{{version}}"
+release_page_body_template = "{{changelog}}"
+release_page_upload_artifacts = true
+
+[artifacts]
+directory = "artifacts"
+
+[changelog]
+file = "CHANGELOG.md"
+start_marker_template = "<!-- START_CHANGELOG|v{{version}} -->"
+end_marker_template = "<!-- END_CHANGELOG|v{{version}} -->"
+print_to_stdout = true
