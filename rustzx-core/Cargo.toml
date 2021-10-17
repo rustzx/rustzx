@@ -25,4 +25,4 @@ from_variants = "0.6"
 enum_dispatch = "0.3"
 aym = { version = "0.15", path = "../aym", optional = true }
 rustzx-z80 = { version = "0.15", path = "../rustzx-z80" }
-strum = { version = "0.21", features = ["derive"], optional = true }
+strum = { version = "0.22", default-features = false, features = ["derive"], optional = true }

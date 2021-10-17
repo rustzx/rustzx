@@ -12,7 +12,6 @@ pub use emulator::Emulator;
 pub use settings::RustzxSettings;
 pub use utils::EmulationMode;
 
-// TODO(#118) Use no_std for strum in rustzx-core
 #[cfg(feature = "strum")]
 pub use strum::IntoEnumIterator as IterableEnum;
 
