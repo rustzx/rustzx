@@ -213,7 +213,8 @@ impl AymPrecise {
     }
 
     fn set_noise(&mut self, period: u16) {
-        self.noise_period = period & 0x1F;
+        let period = period & 0x1F;
+        self.noise_period = (period == 0) as u16 | period;
     }
 
     fn set_mixer(
