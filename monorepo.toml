@@ -2,7 +2,7 @@
 root_crate = "rustzx"
 
 [github]
-repo = "pacmancoder/rustzx"
+repo = "rustzx/rustzx"
 
 [release]
 check_version_raised = true
