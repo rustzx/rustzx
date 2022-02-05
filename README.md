@@ -1,9 +1,9 @@
 RustZX
 ===============================
 
-[![RustZX CI](https://github.com/pacmancoder/rustzx/actions/workflows/ci.yml/badge.svg)](https://github.com/pacmancoder/rustzx/actions/workflows/ci.yml)
+[![RustZX CI](https://github.com/rustzx/rustzx/actions/workflows/ci.yml/badge.svg)](https://github.com/rustzx/rustzx/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/rustzx)](https://crates.io/crates/rustzx)
-[![License](https://img.shields.io/crates/l/rustzx)](https://github.com/pacmancoder/rustzx/blob/master/LICENSE.md)
+[![License](https://img.shields.io/crates/l/rustzx)](https://github.com/rustzx/rustzx/blob/master/LICENSE.md)
 [![Discord](https://img.shields.io/discord/844696167794475009?logo=discord&logoColor=white)](https://discord.gg/aSHJh8UJre)
 
 ![logo](assets/logo_small.png)

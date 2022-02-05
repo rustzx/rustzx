@@ -5,7 +5,7 @@ version = "0.15.0"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 edition = "2018"
 license = "MIT"
-repository = "https://github.com/pacmancoder/rustzx"
+repository = "https://github.com/rustzx/rustzx"
 keywords = ["emulator", "ay", "sound", "vtx"]
 
 [[bin]]
