@@ -19,7 +19,6 @@ use rustzx_utils::{
 };
 use std::{
     collections::VecDeque,
-    env,
     io::Cursor,
     path::{Path, PathBuf},
     time::Duration,
@@ -370,6 +369,10 @@ impl RustZXTester {
         &mut self.emulator
     }
 
+    pub fn send_keypress(&mut self, key: ZXKey) {
+        self.emulator.send_key(key, true);
+    }
+
     pub fn send_keystrokes(&mut self, keystrokes: &[&[ZXKey]], keystroke_delay: Duration) {
         let mut first = true;
         for keys in keystrokes {
@@ -463,9 +466,7 @@ struct TestEnv;
 
 impl TestEnv {
     fn save_test_data_enabled() -> bool {
-        env::var("RUSTZX_SAVE_TEST_DATA")
-            .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
-            .unwrap_or(false)
+        cfg!(feature = "save-test-data")
     }
 }
 

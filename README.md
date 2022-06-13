@@ -116,6 +116,8 @@ defails about ZX Spectrum.
 - [Harlequin](http://www.zxdesign.info/harlequin.shtml)
 - And many other great material, which helped me to make rustzx!
 - [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
+- [YAZE test suite](https://www.mathematik.uni-ulm.de/users/ag/yaze-ag/)
+- [z80test test suite](https://github.com/raxoft/z80test)
 
 ## ROM's
 Emulator contains ROMs, created by by Sinclair Research Ltd (now owned by Amstrad plc),

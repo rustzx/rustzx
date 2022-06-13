@@ -5,6 +5,10 @@ edition = "2018"
 publish = false
 description = "RustZX emulator integration tests"
 
+[[bench]]
+name = "z80test"
+harness = false
+
 [dependencies]
 anyhow = "1.0"
 base64 = "0.13"
@@ -15,3 +19,11 @@ rustzx-core = { version = "0.15", path = "../rustzx-core", features = ["full"] }
 rustzx-utils = { version = "0.15", path =  "../rustzx-utils", features = ["std"] }
 sha2 = "0.9"
 wav = "1.0"
+
+[dev-dependencies]
+threadpool = "1.8"
+colored = "2.0"
+
+[features]
+default = []
+save-test-data = []
