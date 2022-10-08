@@ -4,3 +4,15 @@ rustzx-clippy = "clippy --workspace --all-features"
 rustzx-run = "run --release --bin rustzx --"
 rustzx-install = "install --path rustzx"
 rustzx-build-assets = "run -p rustzx-test --bin build-assets"
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
