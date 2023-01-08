@@ -73,6 +73,7 @@ pub enum RegName16 {
     AF, BC,
     DE, HL,
     IX, IY,
+    MemPtr
 }
 impl RegName16 {
     /// Returns 16 bit general purpose register name from its code. featuring AF
@@ -114,6 +115,7 @@ impl RegName16 {
 pub struct Regs {
     pc: u16,
     sp: u16,
+    mem_ptr: u16,
     ixh: u8, ixl: u8,
     iyh: u8, iyl: u8,
     r: u8,
@@ -173,6 +175,7 @@ impl Regs {
         match index {
             RegName16::PC => self.pc,
             RegName16::SP => self.sp,
+            RegName16::MemPtr => self.mem_ptr,
             _ => {
                 let word_bytes_le = match index {
                     RegName16::AF => [self.f, self.a],
@@ -193,6 +196,7 @@ impl Regs {
         match index {
             RegName16::PC => self.pc = value,
             RegName16::SP => self.sp = value,
+            RegName16::MemPtr => self.mem_ptr = value,
             RegName16::IX => {
                 self.ixh = h;
                 self.ixl = l;
@@ -258,6 +262,15 @@ impl Regs {
     pub fn inc_pc(&mut self) -> u16 {
         self.pc = self.pc.wrapping_add(1);
         self.pc
+    }
+
+    pub fn set_mem_ptr(&mut self, value: u16) -> u16 {
+        self.mem_ptr = value;
+        self.mem_ptr
+    }
+
+    pub fn get_mem_ptr(&self) -> u16 {
+        self.mem_ptr
     }
 
     pub fn dec_pc(&mut self) -> u16 {
