@@ -24,6 +24,8 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut impl Z80Bus, prefix: Prefix) {
         let addr = cpu
             .regs
             .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), displacement);
+        
+        cpu.regs.set_mem_ptr(addr);
         let opcode = Opcode::from_byte(bus.read(cpu.regs.get_pc(), 3));
         bus.wait_loop(cpu.regs.get_pc(), 2);
         cpu.regs.inc_pc();
