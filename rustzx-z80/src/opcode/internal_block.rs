@@ -36,8 +36,14 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) -> b
     let src = bus.read(cpu.regs.get_hl(), 3);
     bus.wait_loop(cpu.regs.get_hl(), 5);
     match dir {
-        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL),
-        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL),
+        BlockDir::Inc => {
+            cpu.regs.inc_reg_16(RegName16::HL);
+            cpu.regs.set_mem_ptr(cpu.regs.get_mem_ptr().wrapping_add(1));
+        },
+        BlockDir::Dec => {
+            cpu.regs.dec_reg_16(RegName16::HL);
+            cpu.regs.set_mem_ptr(cpu.regs.get_mem_ptr().wrapping_sub(1));
+        },
     };
     let bc = cpu.regs.dec_reg_16(RegName16::BC);
     let acc = cpu.regs.get_acc();
@@ -67,11 +73,17 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     bus.wait_no_mreq(cpu.regs.get_ir(), 1);
     let src = bus.read_io(cpu.regs.get_bc());
     bus.write(cpu.regs.get_hl(), src, 3);
-    let b = cpu.regs.dec_reg_8(RegName8::B);
     match dir {
-        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL),
-        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL),
+        BlockDir::Inc => {
+            cpu.regs.inc_reg_16(RegName16::HL);
+            cpu.regs.set_mem_ptr(cpu.regs.get_bc().wrapping_add(1));
+        },
+        BlockDir::Dec => {
+            cpu.regs.dec_reg_16(RegName16::HL);
+            cpu.regs.set_mem_ptr(cpu.regs.get_bc().wrapping_sub(1));
+        },
     };
+    let b = cpu.regs.dec_reg_8(RegName8::B);
     let mut flags = 0u8;
     flags |= SZF3F5_TABLE[b as usize];
     flags |= ((src & 0x80) != 0) as u8 * FLAG_SUB;
@@ -92,11 +104,20 @@ pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     bus.wait_no_mreq(cpu.regs.get_ir(), 1);
     let src = bus.read(cpu.regs.get_hl(), 3);
     let b = cpu.regs.dec_reg_8(RegName8::B);
-    bus.write_io(cpu.regs.get_bc(), src);
+
     match dir {
-        BlockDir::Inc => cpu.regs.inc_reg_16(RegName16::HL),
-        BlockDir::Dec => cpu.regs.dec_reg_16(RegName16::HL),
+        BlockDir::Inc => {
+            cpu.regs.inc_reg_16(RegName16::HL);
+            cpu.regs.set_mem_ptr(cpu.regs.get_bc().wrapping_add(1));
+        },
+        BlockDir::Dec => {
+            cpu.regs.dec_reg_16(RegName16::HL);
+            cpu.regs.set_mem_ptr(cpu.regs.get_bc().wrapping_sub(1));
+        },
     };
+
+    bus.write_io(cpu.regs.get_bc(), src);
+    
     let l = cpu.regs.get_l();
     let mut flags = 0u8;
     flags |= SZF3F5_TABLE[b as usize];
