@@ -504,7 +504,7 @@ impl Fingerprintable for Vec<u8> {
         use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::default();
-        hasher.update(&self);
+        hasher.update(self);
         let hash = hasher.finalize();
         base64::encode(hash)
     }

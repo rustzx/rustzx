@@ -69,7 +69,7 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
         // begining of the first line (first pixel timing minus border lines
         // minus left border columns)
         let clocks_origin = specs.clocks_first_pixel
-            - 8 * BORDER_ROWS * specs.clocks_line as usize
+            - 8 * BORDER_ROWS * specs.clocks_line
             - BORDER_COLS * CLOCKS_PER_COL
             + specs.clocks_ula_beam_shift;
         // return first pixel pos
@@ -78,9 +78,9 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
         }
         // get clocks relative to first pixel
         let clocks = clocks - clocks_origin;
-        let mut line = clocks / specs.clocks_line as usize;
+        let mut line = clocks / specs.clocks_line;
         // so, next pixel will be current + 2
-        let mut pixel = ((clocks % specs.clocks_line as usize) + 1) * PIXELS_PER_CLOCK as usize;
+        let mut pixel = ((clocks % specs.clocks_line) + 1) * PIXELS_PER_CLOCK;
         // if beam out of screen on horizontal pos.
         // pixel - 2 bacause we added 2 on prev line
         if pixel - PIXELS_PER_CLOCK >= SCREEN_WIDTH {

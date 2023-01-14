@@ -83,10 +83,10 @@ impl DockerContainer {
         let mut cmd = Command::new("docker");
         cmd.arg("run");
         if let Some(name) = self.name {
-            cmd.args(&["--name", &name]);
+            cmd.args(["--name", &name]);
         }
         for mount_point in self.mount_points {
-            cmd.args(&[
+            cmd.args([
                 "-v",
                 &format!("{}:{}", mount_point.dir.display(), mount_point.mount.0),
             ]);
@@ -101,7 +101,7 @@ impl DockerContainer {
         if let Some(action) = self.action {
             match action {
                 DockerAction::ShellScript { path } => {
-                    cmd.args(&["sh", &path.0]);
+                    cmd.args(["sh", &path.0]);
                 }
             }
         }
