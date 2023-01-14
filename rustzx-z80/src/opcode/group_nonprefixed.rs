@@ -656,7 +656,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     // read from port A*256 + operand to Acc
                     cpu.regs
                         .set_acc(bus.read_io(((acc as u16) << 8) | (data as u16)));
-                    cpu.regs.set_mem_ptr(((acc as u16) << 8) + (data as u16).wrapping_add(1));
+                    cpu.regs.set_mem_ptr(((acc as u16) << 8).wrapping_add(data as u16).wrapping_add(1));
                 }
                 // EX (SP), HL/IX/IY
                 // [0b11100011] : E3
