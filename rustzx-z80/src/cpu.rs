@@ -119,8 +119,8 @@ impl Z80 {
             // 3 x 2 clocks consumed
             execute_push_16(self, bus, RegName16::PC, 3);
             self.regs.set_pc(0x0066);
-            
-            //mem_ptr is set to PC
+
+            // mem_ptr is set to PC
             self.regs.set_mem_ptr(self.regs.get_pc());
 
             self.regs.inc_r();
@@ -143,8 +143,8 @@ impl Z80 {
 
                     // 3 + 3 + 7 = 13 clocks
                     bus.wait_internal(7);
-                    
-                    //mem_ptr is set to PC
+
+                    // mem_ptr is set to PC
                     self.regs.set_mem_ptr(self.regs.get_pc());
                 }
                 // jump using interrupt vector
@@ -158,7 +158,7 @@ impl Z80 {
                     bus.wait_internal(7);
                     // 3 + 3 + 3 + 3 + 7 = 19 clocks
 
-                    //mem_ptr is set to PC
+                    // mem_ptr is set to PC
                     self.regs.set_mem_ptr(self.regs.get_pc());
                 }
             }

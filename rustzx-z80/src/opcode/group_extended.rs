@@ -268,7 +268,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                         // CPI
                         U3::N4 => {
                             execute_cpi_cpd(cpu, bus, BlockDir::Inc);
-                            
                         }
                         // CPD
                         U3::N5 => {
