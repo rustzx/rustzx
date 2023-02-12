@@ -157,13 +157,19 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 // [0b00000010] : 0x02
                 U1::N0 if opcode.p == U2::N0 => {
                     bus.write(cpu.regs.get_bc(), cpu.regs.get_acc(), 3);
-                    cpu.regs.set_mem_ptr((cpu.regs.get_bc().wrapping_add(1) & 0xff) | ((cpu.regs.get_acc() as u16) << 8) );
+                    cpu.regs.set_mem_ptr(
+                        (cpu.regs.get_bc().wrapping_add(1) & 0xff)
+                            | ((cpu.regs.get_acc() as u16) << 8),
+                    );
                 }
                 // LD (DE), A // 4 + 3 = 7 clocks
                 // [0b00010010] : 0x12
                 U1::N0 if opcode.p == U2::N1 => {
                     bus.write(cpu.regs.get_de(), cpu.regs.get_acc(), 3);
-                    cpu.regs.set_mem_ptr((cpu.regs.get_de().wrapping_add(1) & 0xff)| ((cpu.regs.get_acc() as u16) << 8) );
+                    cpu.regs.set_mem_ptr(
+                        (cpu.regs.get_de().wrapping_add(1) & 0xff)
+                            | ((cpu.regs.get_acc() as u16) << 8),
+                    );
                 }
                 // LD (nn), HL/IX/IY // 4 + 3 + 3 + 3 + 3 = 16 clocks
                 // [0b00100010] : 0x22
@@ -178,7 +184,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 U1::N0 => {
                     let addr = cpu.fetch_word(bus, 3);
                     bus.write(addr, cpu.regs.get_acc(), 3);
-                    cpu.regs.set_mem_ptr(addr.wrapping_add(1) | (cpu.regs.get_acc() as u16) << 8);
+                    cpu.regs
+                        .set_mem_ptr(addr.wrapping_add(1) | (cpu.regs.get_acc() as u16) << 8);
                 }
                 // LD A, (BC) // 4 + 3 = 7 clocks
                 // [0b00001010] : 0x0A
@@ -525,7 +532,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
             let to = RegName8::from_u3(opcode.y).unwrap().with_prefix(prefix);
             let tmp = cpu.regs.get_reg_8(from);
             cpu.regs.set_reg_8(to, tmp);
-            cpu.regs.set_mem_ptr((cpu.regs.get_reg_8(to).wrapping_add(1)) as u16 | ((tmp as u16) << 8));
+            cpu.regs
+                .set_mem_ptr((cpu.regs.get_reg_8(to).wrapping_add(1)) as u16 | ((tmp as u16) << 8));
         }
         // ---------------------------------
         // [0b10yyyzzz] instruction section
@@ -646,7 +654,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let acc = cpu.regs.get_acc();
                     // write Acc to port A*256 + operand
                     bus.write_io(((acc as u16) << 8) | data as u16, acc);
-                    cpu.regs.set_mem_ptr((data as u16).wrapping_add(1) | (acc as u16) << 8);
+                    cpu.regs
+                        .set_mem_ptr((data as u16).wrapping_add(1) | (acc as u16) << 8);
                 }
                 // IN A, (n)
                 // [0b11011011] : DB
@@ -656,7 +665,11 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     // read from port A*256 + operand to Acc
                     cpu.regs
                         .set_acc(bus.read_io(((acc as u16) << 8) | (data as u16)));
-                    cpu.regs.set_mem_ptr(((acc as u16) << 8).wrapping_add(data as u16).wrapping_add(1));
+                    cpu.regs.set_mem_ptr(
+                        ((acc as u16) << 8)
+                            .wrapping_add(data as u16)
+                            .wrapping_add(1),
+                    );
                 }
                 // EX (SP), HL/IX/IY
                 // [0b11100011] : E3

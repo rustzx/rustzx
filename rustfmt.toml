@@ -2,8 +2,6 @@ use_field_init_shorthand = true
 use_try_shorthand = true
 # Available in nightly, but does not affect success of
 # stable rustfmt
-report_fixme = "Unnumbered"
-report_todo = "Unnumbered"
 imports_granularity = "Crate"
 normalize_comments = true
 condense_wildcard_suffixes = true
