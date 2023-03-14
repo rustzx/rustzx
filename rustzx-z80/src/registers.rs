@@ -115,7 +115,10 @@ impl RegName16 {
 pub struct Regs {
     pc: u16,
     sp: u16,
+    // Obscure Z80 feature which affects how F3/F5 flags are set in `BIT n, (HL)` instruction
     mem_ptr: u16,
+    // Obscure Z80 feature which affects how F3/F5 flags are set in `CCF` and `SCF` instructions
+    q: u8, last_q: u8,
     ixh: u8, ixl: u8,
     iyh: u8, iyl: u8,
     r: u8,
@@ -271,6 +274,23 @@ impl Regs {
 
     pub fn get_mem_ptr(&self) -> u16 {
         self.mem_ptr
+    }
+
+    pub fn set_q(&mut self, value: u8) {
+        self.q = value;
+    }
+
+    pub fn step_q(&mut self) {
+        self.last_q = self.q;
+        self.q = 0;
+    }
+
+    pub fn clear_q(&mut self) {
+        self.q = 0;
+    }
+
+    pub fn get_last_q(&self) -> u8 {
+        self.last_q
     }
 
     pub fn dec_pc(&mut self) -> u16 {
