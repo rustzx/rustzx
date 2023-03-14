@@ -8,7 +8,7 @@ use crate::{
         lookup16_r12, lookup8_r12, HALF_CARRY_ADD_TABLE, HALF_CARRY_SUB_TABLE, OVERFLOW_ADD_TABLE,
         OVERFLOW_SUB_TABLE, SZF3F5_TABLE, SZPF3F5_TABLE,
     },
-    IntMode, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_PV, FLAG_SUB, FLAG_ZERO, Z80,
+    IntMode, RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_PV, FLAG_SUB, FLAG_ZERO, Z80, registers::BlockIoOpcode,
 };
 
 /// Extended instruction group (ED-prefixed)
@@ -97,15 +97,14 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                         // LD (nn), rp[p]
                         U1::N0 => {
                             bus.write_word(addr, cpu.regs.get_reg_16(reg), 3);
-                            cpu.regs.set_mem_ptr(addr.wrapping_add(1));
                         }
                         // LD rp[p], (nn)
                         U1::N1 => {
                             let val = bus.read_word(addr, 3);
                             cpu.regs.set_reg_16(reg, val);
-                            cpu.regs.set_mem_ptr(addr.wrapping_add(1));
                         }
                     }
+                    cpu.regs.set_mem_ptr(addr.wrapping_add(1));
                 }
                 // NEG (A = 0 - A)
                 U3::N4 => {
@@ -250,6 +249,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                                 bus.wait_loop(cpu.regs.get_de().wrapping_sub(1), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_mem_cycle();
                             };
                         }
                         // LDDR
@@ -261,6 +261,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                                 bus.wait_loop(cpu.regs.get_de().wrapping_add(1), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_mem_cycle();
                             };
                         }
                         // NOP
@@ -289,6 +290,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_sub(1), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_mem_cycle();
                             };
                         }
                         // CPDR
@@ -299,6 +301,7 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_add(1), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_mem_cycle();
                             };
                         }
                         // NOP
@@ -311,25 +314,31 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                 U3::N2 => {
                     match opcode.y {
                         // INI
-                        U3::N4 => execute_ini_ind(cpu, bus, BlockDir::Inc),
+                        U3::N4 => {
+                            execute_ini_ind(cpu, bus, BlockDir::Inc);
+                        }
                         // IND
-                        U3::N5 => execute_ini_ind(cpu, bus, BlockDir::Dec),
+                        U3::N5 => {
+                            execute_ini_ind(cpu, bus, BlockDir::Dec);
+                        }
                         // INIR
                         U3::N6 => {
-                            execute_ini_ind(cpu, bus, BlockDir::Inc);
+                            let m = execute_ini_ind(cpu, bus, BlockDir::Inc);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_sub(1), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_io_cycle(BlockIoOpcode::Inir, m);
                             };
                         }
                         // INDR
                         U3::N7 => {
-                            execute_ini_ind(cpu, bus, BlockDir::Dec);
+                            let m = execute_ini_ind(cpu, bus, BlockDir::Dec);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_hl().wrapping_add(1), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_io_cycle(BlockIoOpcode::Indr, m);
                             };
                         }
                         // NOP
@@ -342,25 +351,31 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                 U3::N3 => {
                     match opcode.y {
                         // OUTI
-                        U3::N4 => execute_outi_outd(cpu, bus, BlockDir::Inc),
+                        U3::N4 => {
+                            execute_outi_outd(cpu, bus, BlockDir::Inc);
+                        }
                         // OUTD
-                        U3::N5 => execute_outi_outd(cpu, bus, BlockDir::Dec),
+                        U3::N5 => {
+                            execute_outi_outd(cpu, bus, BlockDir::Dec);
+                        }
                         // OTIR
                         U3::N6 => {
-                            execute_outi_outd(cpu, bus, BlockDir::Inc);
+                            let m = execute_outi_outd(cpu, bus, BlockDir::Inc);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_bc(), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_io_cycle(BlockIoOpcode::Otir, m);
                             };
                         }
                         // OTDR
                         U3::N7 => {
-                            execute_outi_outd(cpu, bus, BlockDir::Dec);
+                            let m = execute_outi_outd(cpu, bus, BlockDir::Dec);
                             if cpu.regs.get_reg_8(RegName8::B) != 0 {
                                 bus.wait_loop(cpu.regs.get_bc(), 5);
                                 cpu.regs.dec_pc();
                                 cpu.regs.dec_pc();
+                                cpu.regs.update_flags_block_io_cycle(BlockIoOpcode::Otdr, m);
                             };
                         }
                         // NOP
