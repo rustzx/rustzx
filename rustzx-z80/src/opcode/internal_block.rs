@@ -70,8 +70,10 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) -> b
     tmp == 0
 }
 
-/// ini/ind instruction group
-pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
+/// INI/IND instruction group
+///
+/// Returns last written value at (HL)
+pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) -> u8 {
     bus.wait_no_mreq(cpu.regs.get_ir(), 1);
     let src = bus.read_io(cpu.regs.get_bc());
     bus.write(cpu.regs.get_hl(), src, 3);
@@ -100,10 +102,13 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     flags |= PARITY_TABLE[((k & 0x07) ^ b) as usize];
     cpu.regs.set_flags(flags);
     cpu.regs.set_q(flags);
+
+    src
 }
 
-/// outi/outd instruction group
-pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
+/// OUTI/OUTD instruction group
+/// Returns last read value at (HL)
+pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) -> u8 {
     bus.wait_no_mreq(cpu.regs.get_ir(), 1);
     let src = bus.read(cpu.regs.get_hl(), 3);
     let b = cpu.regs.dec_reg_8(RegName8::B);
@@ -132,4 +137,6 @@ pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     flags |= PARITY_TABLE[((k & 0x07) ^ b) as usize];
     cpu.regs.set_flags(flags);
     cpu.regs.set_q(flags);
+
+    src
 }

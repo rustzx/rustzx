@@ -263,8 +263,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                     bus.wait_loop(cpu.regs.get_pc(), 5);
                     cpu.regs.inc_pc();
-                    cpu.regs
-                        .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
+                    let addr = cpu.regs
+                        .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
+                    addr
                 };
                 // read data
                 data = bus.read(addr, 3);
@@ -323,8 +324,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 } else {
                     // LD (IX+d/ IY+d)
                     let d = cpu.fetch_byte(bus, 3) as i8;
-                    cpu.regs
-                        .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
+                    let addr = cpu.regs
+                        .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
+                    addr
                 };
                 LoadOperand8::Indirect(addr)
             };
@@ -512,9 +514,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 cpu.regs.inc_pc();
 
                 let addr = cpu.regs
-                    .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d);
-                // Memptr is set because displacement is used
-                cpu.regs.set_mem_ptr(addr);
+                    .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
                 addr
             };
             cpu.regs
@@ -531,8 +531,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                 bus.wait_loop(cpu.regs.get_pc(), 5);
                 cpu.regs.inc_pc();
-                cpu.regs
-                    .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
+                let addr = cpu.regs
+                    .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
+                addr
             };
             bus.write(
                 dst_addr,
@@ -549,9 +550,6 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
             let to = RegName8::from_u3(opcode.y).unwrap().with_prefix(prefix);
             let tmp = cpu.regs.get_reg_8(from);
             cpu.regs.set_reg_8(to, tmp);
-            // TODO(critical): why added?
-            // cpu.regs
-            //     .set_mem_ptr((cpu.regs.get_reg_8(to).wrapping_add(1)) as u16 | ((tmp as u16) << 8));
         }
         // ---------------------------------
         // [0b10yyyzzz] instruction section
@@ -571,7 +569,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     cpu.regs.inc_pc();
                     let addr = cpu
                         .regs
-                        .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d);
+                        .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
                     bus.read(addr, 3)
                 }
             };
@@ -614,10 +612,11 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 // [0b11pp1001] instruction group (assorted)
                 U1::N1 => {
                     match opcode.p {
-                        // RET ; return
+                        // RET
                         // [0b11001001] : C9;
                         U2::N0 => {
                             execute_pop_16(cpu, bus, RegName16::PC, 3);
+                            cpu.regs.set_mem_ptr(cpu.regs.get_pc());
                             // Clocks: 10
                         }
                         // EXX
@@ -773,6 +772,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                             cpu.regs.inc_pc();
                             execute_push_16(cpu, bus, RegName16::PC, 3);
                             cpu.regs.set_pc(addr);
+                            cpu.regs.set_mem_ptr(cpu.regs.get_pc());
                         }
                         // [0b11011101] : DD
                         U2::N1 => {
@@ -804,8 +804,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
             // CALL y*8
             cpu.regs
                 .set_reg_16(RegName16::PC, (opcode.y.as_byte() as u16) * 8);
-            // 4 + 1 + 3 + 3 = 11
             cpu.regs.set_mem_ptr(cpu.regs.get_pc());
+            // Clocks: 4 + 1 + 3 + 3 = 11
         }
     };
 }

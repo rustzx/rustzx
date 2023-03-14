@@ -1,7 +1,7 @@
 //! Module which contains Z80 registers implementation
 use crate::{
     opcode::Prefix,
-    smallnum::{U2, U3},
+    smallnum::{U2, U3}, tables::PARITY_TABLE,
 };
 
 pub const FLAG_CARRY: u8 = 0b00000001;
@@ -12,6 +12,11 @@ pub const FLAG_HALF_CARRY: u8 = 0b00010000;
 pub const FLAG_F5: u8 = 0b00100000;
 pub const FLAG_ZERO: u8 = 0b01000000;
 pub const FLAG_SIGN: u8 = 0b10000000;
+
+// Returns flag position in binary. Useful for making binary shifts in code more obvious.
+pub const fn flag_pos(flag: u8) -> u8 {
+    flag.trailing_zeros() as u8
+}
 
 /// 8-bit register names
 #[derive(Clone,Copy)]
@@ -248,9 +253,11 @@ impl Regs {
         self.set_reg_16(reg, data)
     }
 
-    pub(crate) fn get_reg_16_with_displacement(&self, reg: RegName16, displacement: i8) -> u16 {
-        let word = self.get_reg_16(reg);
-        (word as i32).wrapping_add(displacement as i32) as u16
+    pub(crate) fn build_addr_with_offset(&mut self, reg: RegName16, displacement: i8) -> u16 {
+        let word = (self.get_reg_16(reg) as i32).wrapping_add(displacement as i32) as u16;
+        // Any (REG + d) access changes MEMPTR to calculated value
+        self.set_mem_ptr(word);
+        word
     }
 
     pub fn get_pc(&self) -> u16 {
@@ -300,7 +307,7 @@ impl Regs {
 
     /// Displaces program counter with signed value
     pub fn shift_pc(&mut self, displacement: i8) -> u16 {
-        self.pc = self.get_reg_16_with_displacement(RegName16::PC, displacement);
+        self.pc = (self.pc as i32).wrapping_add(displacement as i32) as u16;
         self.pc
     }
 
@@ -523,4 +530,80 @@ impl Regs {
         core::mem::swap(&mut self.h, &mut self.h_alt);
         core::mem::swap(&mut self.l, &mut self.l_alt);
     }
+
+    /// Sets F3 and F5 flags to 11th and and 15th bit of PC respectively. This obscurity is used by
+    /// block memory operations when performing repeated execution cycle
+    pub fn update_flags_block_mem_cycle(&mut self) {
+        self.f &= !(FLAG_F3 | FLAG_F5);
+        self.f |= (self.pc >> 8) as u8 & (FLAG_F3 | FLAG_F5);
+    }
+
+    /// Obscure logic for changing flags after block io opcode iteration,
+    /// which changes F3, F5, HF and PV.
+    ///
+    /// Implementation was derived based on the followng
+    /// research: https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags
+    ///
+    /// ### Original calculation algorithm:
+    /// M is the value written to or read from the I/O port == (HL), Co/Lo/Bo are "output" values of
+    /// registers C/L/B
+    /// ```
+    /// if instruction == INIR
+    ///     T = M + ((Co + 1) & 0xFF)
+    /// else if instruction == INDR
+    ///     T = M + ((Co - 1) & 0xFF)
+    ///     WARNING: to verify the "& 0xFF" part (ie. bit-width of (C-1) intermediate) one would
+    ///     need to read value 00 from port 00, which is not possible on regular ZX machine with
+    ///     common peripherals -> giving up.
+    /// else if (instruction == OTIR) || (instruction == OTDR)
+    ///     T = M + Lo
+    ///
+    /// TMP = Bo + (NF ? -CF : CF);
+    /// HF = (TMP ^ Bo).4;
+    /// PV = ((T & 7) ^ Bo ^ (TMP & 7)).parity
+    /// ```
+    /// ### RustZX notes
+    /// RustZX code improves further, removing need for ternary operator during
+    /// TMP calculation
+    pub fn update_flags_block_io_cycle(&mut self, opcode: BlockIoOpcode, m: u8) {
+        let t = match opcode {
+            BlockIoOpcode::Inir => m + self.c.wrapping_add(1),
+            BlockIoOpcode::Indr =>  m + self.c.wrapping_sub(1),
+            BlockIoOpcode::Otir | BlockIoOpcode::Otdr => m.wrapping_add(self.l),
+        };
+
+        let cf = self.f & FLAG_CARRY;
+        let b = self.b;
+        let f = self.f;
+        // Explanation of faster "TMP = Bo + (NF ? -CF : CF)" calculation logic without branch:
+        //
+        // Basically, when CF is 1, it either stays 1 if NF is 0, or subtracted by 2 if NF
+        // is 1 (Which makes -CF part) - NF and CF shofts will produce bit at position 1 which will
+        // result in either 2 or 0.
+        //
+        // When CF is 0, no mater NF result will be 0
+        let tmp = b.wrapping_add(
+            cf.wrapping_sub(
+                (f >> flag_pos(FLAG_SIGN - 1)) & (cf << flag_pos(FLAG_CARRY + 1))
+            )
+        );
+        // HF = (TMP ^ Bo).4;
+        let hf = (tmp ^ b) & FLAG_HALF_CARRY;
+        // PV = ((T & 7) ^ Bo ^ (TMP & 7)).parity
+        let pv = PARITY_TABLE[(((t & 0x07) ^ b ^ (tmp & 0x07))) as usize];
+
+        // Set flags
+        self.f &= !(FLAG_HALF_CARRY | FLAG_PV | FLAG_F3 | FLAG_F5);
+        let f3f5 = (self.pc >> 8) as u8 & (FLAG_F3 | FLAG_F5);
+        self.f |=  f3f5 | hf | pv;
+        // Instruction changes F, therefore update Q
+        self.q = self.f;
+    }
+}
+
+pub enum BlockIoOpcode {
+    Inir,
+    Indr,
+    Otir,
+    Otdr,
 }
