@@ -147,6 +147,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     flags |= F3F5_TABLE[((temp >> 8) as u8) as usize];
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_reg_16(reg_acc, temp as u16);
+                    cpu.regs.set_q(flags);
                 }
             };
         }
@@ -291,6 +292,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
             }
             flags |= SZF3F5_TABLE[result as usize];
             cpu.regs.set_flags(flags);
+            cpu.regs.set_q(flags);
             // ------------
             //  write data
             // ------------
@@ -367,6 +369,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                     cpu.regs.set_acc(data);
                 }
                 // RRCA ; Rotate right; lsb will become msb; carry = lsb
@@ -384,6 +387,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                     cpu.regs.set_acc(data);
                 }
                 // RLA Rotate left trough carry
@@ -401,6 +405,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                     cpu.regs.set_acc(data);
                 }
                 // RRA Rotate right trough carry
@@ -418,6 +423,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     flags |= carry as u8 * FLAG_CARRY;
                     flags |= F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                     cpu.regs.set_acc(data);
                 }
                 // DAA [0b00100111] [link to the algorithm in header]
@@ -446,6 +452,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     };
                     flags |= SZPF3F5_TABLE[acc_new as usize];
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                     cpu.regs.set_acc(acc_new);
                 }
                 // CPL Invert (Complement)
@@ -455,6 +462,7 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let mut flags = cpu.regs.get_flags() & !(FLAG_F3 | FLAG_F5);
                     flags |= FLAG_HALF_CARRY | FLAG_SUB | F3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                     cpu.regs.set_acc(data);
                 }
                 // SCF  Set carry flag
@@ -462,8 +470,11 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 U3::N6 => {
                     let data = cpu.regs.get_acc();
                     let mut flags = cpu.regs.get_flags() & (FLAG_ZERO | FLAG_PV | FLAG_SIGN);
-                    flags |= F3F5_TABLE[data as usize] | FLAG_CARRY;
+                    // TODO(critical): docs
+                    flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data) & (FLAG_F3 | FLAG_F5);
+                    flags |= FLAG_CARRY;
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                 }
                 // CCF Invert carry flag
                 // [0b00111111] : 0x3F
@@ -471,10 +482,12 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let data = cpu.regs.get_acc();
                     let old_carry = (cpu.regs.get_flags() & FLAG_CARRY) != 0;
                     let mut flags = cpu.regs.get_flags() & (FLAG_SIGN | FLAG_PV | FLAG_ZERO);
-                    flags |= F3F5_TABLE[data as usize];
+                    // TODO(critical): docs
+                    flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data) & (FLAG_F3 | FLAG_F5);
                     flags |= old_carry as u8 * FLAG_HALF_CARRY;
                     flags |= (!old_carry) as u8 * FLAG_CARRY;
                     cpu.regs.set_flags(flags);
+                    cpu.regs.set_q(flags);
                 }
             }
         }
@@ -497,8 +510,12 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                 bus.wait_loop(cpu.regs.get_pc(), 5);
                 cpu.regs.inc_pc();
-                cpu.regs
-                    .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d)
+
+                let addr = cpu.regs
+                    .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), d);
+                // Memptr is set because displacement is used
+                cpu.regs.set_mem_ptr(addr);
+                addr
             };
             cpu.regs
                 .set_reg_8(RegName8::from_u3(opcode.y).unwrap(), bus.read(src_addr, 3));
@@ -532,8 +549,9 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
             let to = RegName8::from_u3(opcode.y).unwrap().with_prefix(prefix);
             let tmp = cpu.regs.get_reg_8(from);
             cpu.regs.set_reg_8(to, tmp);
-            cpu.regs
-                .set_mem_ptr((cpu.regs.get_reg_8(to).wrapping_add(1)) as u16 | ((tmp as u16) << 8));
+            // TODO(critical): why added?
+            // cpu.regs
+            //     .set_mem_ptr((cpu.regs.get_reg_8(to).wrapping_add(1)) as u16 | ((tmp as u16) << 8));
         }
         // ---------------------------------
         // [0b10yyyzzz] instruction section

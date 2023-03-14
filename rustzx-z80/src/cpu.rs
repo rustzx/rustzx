@@ -107,6 +107,8 @@ impl Z80 {
 
     fn handle_interrupt(&mut self, bus: &mut impl Z80Bus) {
         if bus.nmi_active() {
+            // q resets during interrupt
+            self.regs.clear_q();
             // Release halt line on the bus
             if self.halted {
                 bus.halt(false);
@@ -126,6 +128,8 @@ impl Z80 {
             self.regs.inc_r();
             // 5 + 3 + 3 = 11 clocks
         } else if bus.int_active() && self.regs.get_iff1() {
+            // q resets during interrupt
+            self.regs.clear_q();
             // Release halt line on the bus
             if self.halted {
                 bus.halt(false);
@@ -143,9 +147,6 @@ impl Z80 {
 
                     // 3 + 3 + 7 = 13 clocks
                     bus.wait_internal(7);
-
-                    // mem_ptr is set to PC
-                    self.regs.set_mem_ptr(self.regs.get_pc());
                 }
                 // jump using interrupt vector
                 IntMode::Im2 => {
@@ -157,11 +158,10 @@ impl Z80 {
                     self.regs.set_pc(addr);
                     bus.wait_internal(7);
                     // 3 + 3 + 3 + 3 + 7 = 19 clocks
-
-                    // mem_ptr is set to PC
-                    self.regs.set_mem_ptr(self.regs.get_pc());
                 }
             }
+            // mem_ptr is set to PC
+            self.regs.set_mem_ptr(self.regs.get_pc());
         }
     }
 
@@ -195,28 +195,34 @@ impl Z80 {
                             self.skip_interrupt = true;
                         }
                         Prefix::CB => {
+                            // TODO(critical): Refactor duplication
+                            self.regs.step_q();
                             execute_bits(self, bus, prefix_single);
                         }
                         Prefix::None => {
                             let opcode = Opcode::from_byte(byte2);
+                            self.regs.step_q();
                             execute_normal(self, bus, opcode, prefix_single);
                         }
                     };
                 }
                 Prefix::CB => {
                     // opcode will be read in the called
+                    self.regs.step_q();
                     execute_bits(self, bus, Prefix::None);
                 }
                 Prefix::ED => {
                     let byte2 = self.fetch_byte(bus, 4);
                     self.regs.inc_r();
                     let opcode = Opcode::from_byte(byte2);
+                    self.regs.step_q();
                     execute_extended(self, bus, opcode);
                 }
                 _ => unreachable!(),
             };
         } else {
             let opcode = Opcode::from_byte(byte1);
+            self.regs.step_q();
             execute_normal(self, bus, opcode, Prefix::None);
         };
         // Allow bus implementation to process pc-based events

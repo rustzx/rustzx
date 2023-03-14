@@ -28,6 +28,7 @@ pub fn execute_ldi_ldd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     flags |= (src_plus_a & 0x08 != 0) as u8 * FLAG_F3;
     flags |= (src_plus_a & 0x02 != 0) as u8 * FLAG_F5;
     cpu.regs.set_flags(flags);
+    cpu.regs.set_q(flags);
     // Clocks: <4 + 4> + 3 + 3 + 2 = 16
 }
 
@@ -64,6 +65,7 @@ pub fn execute_cpi_cpd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) -> b
     flags |= ((tmp2 & 0x08) != 0) as u8 * FLAG_F3;
     flags |= ((tmp2 & 0x02) != 0) as u8 * FLAG_F5;
     cpu.regs.set_flags(flags);
+    cpu.regs.set_q(flags);
     // Clocks: <4 + 4> + 3 + 5 = 16
     tmp == 0
 }
@@ -97,6 +99,7 @@ pub fn execute_ini_ind(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     // Parity of (k & 7) xor B is PV flag
     flags |= PARITY_TABLE[((k & 0x07) ^ b) as usize];
     cpu.regs.set_flags(flags);
+    cpu.regs.set_q(flags);
 }
 
 /// outi/outd instruction group
@@ -128,4 +131,5 @@ pub fn execute_outi_outd(cpu: &mut Z80, bus: &mut impl Z80Bus, dir: BlockDir) {
     // Parity of (k & 7) xor B is PV flag
     flags |= PARITY_TABLE[((k & 0x07) ^ b) as usize];
     cpu.regs.set_flags(flags);
+    cpu.regs.set_q(flags);
 }
