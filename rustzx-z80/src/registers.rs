@@ -1,7 +1,8 @@
 //! Module which contains Z80 registers implementation
 use crate::{
     opcode::Prefix,
-    smallnum::{U2, U3}, tables::PARITY_TABLE,
+    smallnum::{U2, U3},
+    tables::PARITY_TABLE,
 };
 
 pub const FLAG_CARRY: u8 = 0b00000001;
@@ -565,7 +566,7 @@ impl Regs {
     pub fn update_flags_block_io_cycle(&mut self, opcode: BlockIoOpcode, m: u8) {
         let t = match opcode {
             BlockIoOpcode::Inir => m + self.c.wrapping_add(1),
-            BlockIoOpcode::Indr =>  m + self.c.wrapping_sub(1),
+            BlockIoOpcode::Indr => m + self.c.wrapping_sub(1),
             BlockIoOpcode::Otir | BlockIoOpcode::Otdr => m.wrapping_add(self.l),
         };
 
@@ -580,19 +581,17 @@ impl Regs {
         //
         // When CF is 0, no mater NF result will be 0
         let tmp = b.wrapping_add(
-            cf.wrapping_sub(
-                (f >> flag_pos(FLAG_SIGN - 1)) & (cf << flag_pos(FLAG_CARRY + 1))
-            )
+            cf.wrapping_sub((f >> flag_pos(FLAG_SIGN - 1)) & (cf << flag_pos(FLAG_CARRY + 1))),
         );
         // HF = (TMP ^ Bo).4;
         let hf = (tmp ^ b) & FLAG_HALF_CARRY;
         // PV = ((T & 7) ^ Bo ^ (TMP & 7)).parity
-        let pv = PARITY_TABLE[(((t & 0x07) ^ b ^ (tmp & 0x07))) as usize];
+        let pv = PARITY_TABLE[((t & 0x07) ^ b ^ (tmp & 0x07)) as usize];
 
         // Set flags
         self.f &= !(FLAG_HALF_CARRY | FLAG_PV | FLAG_F3 | FLAG_F5);
         let f3f5 = (self.pc >> 8) as u8 & (FLAG_F3 | FLAG_F5);
-        self.f |=  f3f5 | hf | pv;
+        self.f |= f3f5 | hf | pv;
         // Instruction changes F, therefore update Q
         self.q = self.f;
     }

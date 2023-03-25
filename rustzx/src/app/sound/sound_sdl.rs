@@ -1,7 +1,10 @@
 use crate::{
     app::{
         settings::Settings,
-        sound::{SoundDevice, ZXSample, CHANNEL_COUNT, DEFAULT_LATENCY, DEFAULT_SAMPLE_RATE, ringbuf_size_from_sample_rate},
+        sound::{
+            ringbuf_size_from_sample_rate, SoundDevice, ZXSample, CHANNEL_COUNT, DEFAULT_LATENCY,
+            DEFAULT_SAMPLE_RATE,
+        },
     },
     backends::SDL_CONTEXT,
 };
@@ -10,7 +13,7 @@ use std::sync::Arc;
 
 /// Struct which used in SDL audio callback
 struct SdlCallback {
-    samples: ringbuf::Consumer<ZXSample, Arc<ringbuf::HeapRb::<ZXSample>>>,
+    samples: ringbuf::Consumer<ZXSample, Arc<ringbuf::HeapRb<ZXSample>>>,
 }
 
 impl AudioCallback for SdlCallback {
@@ -33,7 +36,7 @@ impl AudioCallback for SdlCallback {
 
 /// Represents SDL audio backend
 pub struct SoundSdl {
-    sender: ringbuf::Producer<ZXSample, Arc<ringbuf::HeapRb::<ZXSample>>>,
+    sender: ringbuf::Producer<ZXSample, Arc<ringbuf::HeapRb<ZXSample>>>,
     sample_rate: usize,
     _device: AudioDevice<SdlCallback>, // Should be alive until Drop invocation
 }
