@@ -545,7 +545,7 @@ impl Regs {
     /// ### Original calculation algorithm:
     /// M is the value written to or read from the I/O port == (HL), Co/Lo/Bo are "output" values of
     /// registers C/L/B
-    /// ```
+    /// ```text
     /// if instruction == INIR
     ///     T = M + ((Co + 1) & 0xFF)
     /// else if instruction == INDR
