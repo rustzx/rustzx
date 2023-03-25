@@ -35,7 +35,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                     };
                     let flags = cpu.regs.get_flags() & FLAG_CARRY | SZPF3F5_TABLE[data as usize];
                     cpu.regs.set_flags(flags);
-                    cpu.regs.set_q(flags);
                 }
                 // OUT
                 // [0b01yyy001] : 41 49 51 59 61 69 71 79
@@ -86,7 +85,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                     flags |= ((result as u16) == 0) as u8 * FLAG_ZERO;
                     cpu.regs.set_flags(flags);
                     cpu.regs.set_hl(result as u16);
-                    cpu.regs.set_q(flags);
                     // Clocks 4 + 4 + 7 = 15
                 }
                 // LD
@@ -118,7 +116,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                     flags |= (acc == 0x80) as u8 * FLAG_PV;
                     flags |= (acc != 0x00) as u8 * FLAG_CARRY;
                     cpu.regs.set_flags(flags);
-                    cpu.regs.set_q(flags);
                 }
                 // RETN, RETI
                 U3::N5 => {
@@ -164,7 +161,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                             flags |= SZF3F5_TABLE[i as usize];
                             flags |= iff2 as u8 * FLAG_PV;
                             cpu.regs.set_flags(flags);
-                            cpu.regs.set_q(flags);
                         }
                         // LD A, R
                         U3::N3 => {
@@ -176,7 +172,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                             flags |= SZF3F5_TABLE[r as usize];
                             flags |= iff2 as u8 * FLAG_PV;
                             cpu.regs.set_flags(flags);
-                            cpu.regs.set_q(flags);
                         }
                         // RRD
                         U3::N4 => {
@@ -196,7 +191,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                             let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
                             flags |= SZPF3F5_TABLE[acc as usize];
                             cpu.regs.set_flags(flags);
-                            cpu.regs.set_q(flags);
                             // Clocks: 4 + 4 + 3 + 4 + 3 = 18
                         }
                         // RLD
@@ -216,7 +210,6 @@ pub fn execute_extended(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode) {
                             let mut flags = cpu.regs.get_flags() & FLAG_CARRY;
                             flags |= SZPF3F5_TABLE[acc as usize];
                             cpu.regs.set_flags(flags);
-                            cpu.regs.set_q(flags);
                             // Clocks: 4 + 4 + 3 + 4 + 3 = 18
                         }
                         // NOP
