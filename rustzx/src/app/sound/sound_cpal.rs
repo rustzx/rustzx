@@ -1,13 +1,13 @@
 //! Real Audio SDL backend
 use crate::app::{
     settings::Settings,
-    sound::{SoundDevice, ZXSample, CHANNEL_COUNT, ringbuf_size_from_sample_rate},
+    sound::{ringbuf_size_from_sample_rate, SoundDevice, ZXSample, CHANNEL_COUNT},
 };
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::sync::Arc;
 
 pub struct SoundCpal {
-    tx: ringbuf::Producer<ZXSample, Arc<ringbuf::HeapRb::<ZXSample>>>,
+    tx: ringbuf::Producer<ZXSample, Arc<ringbuf::HeapRb<ZXSample>>>,
     sample_rate: usize,
     // Keep stream alive until Drop
     _stream: cpal::Stream,
@@ -38,13 +38,11 @@ impl SoundCpal {
                 anyhow::anyhow!("Sound device does not support required configuration")
             })?;
 
-
         let config = if let Some(sample_rate) = settings.sound_sample_rate {
             config.with_sample_rate(cpal::SampleRate(sample_rate as u32))
         } else {
             config.with_max_sample_rate()
         };
-
 
         let sample_rate = config.sample_rate().0 as usize;
 
@@ -65,8 +63,7 @@ impl SoundCpal {
             cpal::SampleFormat::F64 => create_stream::<f64>(&device, &config.into(), rx)?,
             _ => {
                 anyhow::bail!("Device has unsupported audio sample format")
-            },
-
+            }
         };
 
         Ok(SoundCpal {
@@ -91,7 +88,7 @@ impl SoundDevice for SoundCpal {
 fn create_stream<T>(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
-    mut samples_rx: ringbuf::Consumer<ZXSample, Arc<ringbuf::HeapRb::<ZXSample>>>,
+    mut samples_rx: ringbuf::Consumer<ZXSample, Arc<ringbuf::HeapRb<ZXSample>>>,
 ) -> anyhow::Result<cpal::Stream>
 where
     T: cpal::FromSample<f32> + cpal::SizedSample,

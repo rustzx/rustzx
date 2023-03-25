@@ -262,9 +262,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                     bus.wait_loop(cpu.regs.get_pc(), 5);
                     cpu.regs.inc_pc();
-                    let addr = cpu.regs
-                        .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
-                    addr
+                    cpu.regs
+                        .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d)
                 };
                 // read data
                 data = bus.read(addr, 3);
@@ -322,9 +321,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 } else {
                     // LD (IX+d/ IY+d)
                     let d = cpu.fetch_byte(bus, 3) as i8;
-                    let addr = cpu.regs
-                        .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
-                    addr
+                    cpu.regs
+                        .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d)
                 };
                 LoadOperand8::Indirect(addr)
             };
@@ -465,7 +463,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let data = cpu.regs.get_acc();
                     let mut flags = cpu.regs.get_flags() & (FLAG_ZERO | FLAG_PV | FLAG_SIGN);
                     // TODO(critical): docs
-                    flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data) & (FLAG_F3 | FLAG_F5);
+                    flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data)
+                        & (FLAG_F3 | FLAG_F5);
                     flags |= FLAG_CARRY;
                     cpu.regs.set_flags(flags);
                 }
@@ -476,7 +475,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let old_carry = (cpu.regs.get_flags() & FLAG_CARRY) != 0;
                     let mut flags = cpu.regs.get_flags() & (FLAG_SIGN | FLAG_PV | FLAG_ZERO);
                     // TODO(critical): docs
-                    flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data) & (FLAG_F3 | FLAG_F5);
+                    flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data)
+                        & (FLAG_F3 | FLAG_F5);
                     flags |= old_carry as u8 * FLAG_HALF_CARRY;
                     flags |= (!old_carry) as u8 * FLAG_CARRY;
                     cpu.regs.set_flags(flags);
@@ -503,9 +503,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 bus.wait_loop(cpu.regs.get_pc(), 5);
                 cpu.regs.inc_pc();
 
-                let addr = cpu.regs
-                    .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
-                addr
+                cpu.regs
+                    .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d)
             };
             cpu.regs
                 .set_reg_8(RegName8::from_u3(opcode.y).unwrap(), bus.read(src_addr, 3));
@@ -521,9 +520,8 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 let d = bus.read(cpu.regs.get_pc(), 3) as i8;
                 bus.wait_loop(cpu.regs.get_pc(), 5);
                 cpu.regs.inc_pc();
-                let addr = cpu.regs
-                    .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d);
-                addr
+                cpu.regs
+                    .build_addr_with_offset(RegName16::HL.with_prefix(prefix), d)
             };
             bus.write(
                 dst_addr,
