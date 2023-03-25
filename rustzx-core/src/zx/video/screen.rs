@@ -178,7 +178,7 @@ impl<FB: FrameBuffer> ZXScreen<FB> {
                     );
                 }
             }
-            // cahnge last block to current
+            // change last block to current
             self.last_blocks = blocks;
         }
     }

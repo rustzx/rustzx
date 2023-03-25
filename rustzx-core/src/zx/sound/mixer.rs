@@ -1,4 +1,4 @@
-//! Module implemets zx spectrum audio devices mixer
+//! Module implements zx spectrum audio devices mixer
 use crate::zx::{
     constants::FPS,
     sound::{

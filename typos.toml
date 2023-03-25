@@ -1,0 +1,9 @@
+[files]
+extend-exclude = [
+    # Ignore third-party software comment typos
+    "**/assets/*.z80",
+]
+
+[default.extend-words]
+# DAA is a valid Z80 instruction word
+DAA = "DAA"

@@ -2,7 +2,7 @@
 name = "rustzx-core"
 version = "0.15.0"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
-description = "ZX Spectum emulator core library"
+description = "ZX Spectrum emulator core library"
 repository = "https://github.com/rustzx/rustzx"
 keywords = ["emulator", "game", "z80", "no_std"]
 license = "MIT"

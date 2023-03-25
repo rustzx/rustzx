@@ -145,7 +145,7 @@ impl DebugPort {
         String::from_utf8(s).expect("Invalid debug port stdout")
     }
 
-    pub fn take_bufer(&mut self) -> Vec<u8> {
+    pub fn take_buffer(&mut self) -> Vec<u8> {
         Vec::from(std::mem::take(&mut self.stdout))
     }
 
@@ -450,7 +450,7 @@ impl RustZXTester {
                 panic!("Timeout reached when trying to sync host with target");
             }
 
-            // Try to consume incomming signal and finish sync
+            // Try to consume incoming signal and finish sync
             if self.debug_port().take_byte().is_some() {
                 break;
             }

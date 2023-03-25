@@ -96,7 +96,7 @@ pub trait DataRecorder {
     /// destination asset was reached (e.g. buffer filled)
     fn write(&mut self, buf: &[u8]) -> Result<usize>;
 
-    /// Writes all bytes to the destiantion or returns
+    /// Writes all bytes to the destination or returns
     /// [IoError::WriteZero] if destination refused to accept
     /// more bytes
     fn write_all(&mut self, mut buf: &[u8]) -> Result<()> {
