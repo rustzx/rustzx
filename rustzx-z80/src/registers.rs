@@ -283,10 +283,6 @@ impl Regs {
         self.mem_ptr
     }
 
-    pub fn set_q(&mut self, value: u8) {
-        self.q = value;
-    }
-
     pub fn step_q(&mut self) {
         self.last_q = self.q;
         self.q = 0;
@@ -415,6 +411,7 @@ impl Regs {
 
     pub fn set_flags(&mut self, value: u8) -> u8 {
         self.f = value;
+        self.q = value;
         self.f
     }
 

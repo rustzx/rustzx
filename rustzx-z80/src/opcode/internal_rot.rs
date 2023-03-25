@@ -79,6 +79,5 @@ pub fn execute_rot(cpu: &mut Z80, bus: &mut impl Z80Bus, rot_code: U3, operand: 
         }
     };
     cpu.regs.set_flags(flags);
-    cpu.regs.set_q(flags);
     data
 }

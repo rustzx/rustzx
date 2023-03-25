@@ -66,7 +66,6 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut impl Z80Bus, prefix: Prefix) {
                         flags |= F3F5_TABLE[data as usize];
                     }
                     cpu.regs.set_flags(flags);
-                    cpu.regs.set_q(flags);
                     // retuned `0` value actually will not be used
                     0
                 }

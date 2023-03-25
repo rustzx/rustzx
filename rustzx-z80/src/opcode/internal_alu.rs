@@ -85,5 +85,4 @@ pub fn execute_alu_8(cpu: &mut Z80, alu_code: U3, operand: u8) {
     flags |= (result == 0) as u8 * FLAG_ZERO;
     flags |= result & FLAG_SIGN;
     cpu.regs.set_flags(flags);
-    cpu.regs.set_q(flags);
 }
