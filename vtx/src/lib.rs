@@ -91,7 +91,7 @@ pub enum VtxError {
     Io(#[from] std::io::Error),
     #[error("Invalid VTX header: {}", message)]
     InvalidHeader { message: &'static str },
-    #[error("Faield to decode lh5 compressed data")]
+    #[error("Failed to decode lh5 compressed data")]
     DecompressFailure,
 }
 

@@ -57,7 +57,7 @@ pub trait IoExtender {
     /// Read byte value from io extender
     fn read(&mut self, port: u16) -> u8;
     /// Return true if io externder can process
-    /// incomming read/write operation for a
+    /// incoming read/write operation for a
     /// given port
     fn extends_port(&self, port: u16) -> bool;
 }

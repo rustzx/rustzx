@@ -1,4 +1,4 @@
-//! Contains ZX Spectrum System contrller (like ula or so) of emulator
+//! Contains ZX Spectrum System controller (like ula or so) of emulator
 use crate::{
     error::Error,
     host::{Host, HostContext, IoExtender},
@@ -30,7 +30,7 @@ use crate::zx::video::border::ZXBorder;
 
 /// ZX System controller
 pub(crate) struct ZXController<H: Host> {
-    // parts of ZX Spectum.
+    // parts of ZX Spectrum.
     pub machine: ZXMachine,
     pub memory: ZXMemory,
     pub screen: ZXScreen<H::FrameBuffer>,
@@ -50,7 +50,7 @@ pub(crate) struct ZXController<H: Host> {
     pub border_color: ZXColor,
     // clocls count from frame start
     frame_clocks: usize,
-    // frames count, which passed during emulation invokation
+    // frames count, which passed during emulation invocation
     passed_frames: usize,
     events: EmulationEvents,
     paging_enabled: bool,
@@ -450,7 +450,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         }
     }
 
-    /// Cahnges internal state on clocks count change (emualtion processing)
+    /// Changes internal state on clocks count change (emulation processing)
     fn wait_internal(&mut self, clk: usize) {
         self.frame_clocks += clk;
         if let Err(e) = self.tape.process_clocks(clk) {

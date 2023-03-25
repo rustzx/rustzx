@@ -32,7 +32,7 @@ pub struct Tap<A: LoadableAsset + SeekableAsset> {
     state: TapeState,
     prev_state: TapeState,
     buffer: [u8; BUFFER_SIZE],
-    bufer_offset: usize,
+    buffer_offset: usize,
     block_bytes_read: usize,
     current_block_size: Option<usize>,
     tape_ended: bool,
@@ -50,7 +50,7 @@ impl<A: LoadableAsset + SeekableAsset> Tap<A> {
             curr_bit: false,
             curr_byte: 0x00,
             buffer: [0u8; BUFFER_SIZE],
-            bufer_offset: 0,
+            buffer_offset: 0,
             block_bytes_read: 0,
             current_block_size: None,
             delay: 0,
@@ -76,13 +76,13 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
                 return Ok(None);
             }
 
-            let mut buffer_read_pos = self.block_bytes_read - self.bufer_offset;
+            let mut buffer_read_pos = self.block_bytes_read - self.buffer_offset;
 
             // Read new buffer if required
             if buffer_read_pos >= BUFFER_SIZE {
-                let bytes_to_read = (block_size - self.bufer_offset - BUFFER_SIZE).min(BUFFER_SIZE);
+                let bytes_to_read = (block_size - self.buffer_offset - BUFFER_SIZE).min(BUFFER_SIZE);
                 self.asset.read_exact(&mut self.buffer[0..bytes_to_read])?;
-                self.bufer_offset += BUFFER_SIZE;
+                self.buffer_offset += BUFFER_SIZE;
                 buffer_read_pos = 0;
             }
 
@@ -120,7 +120,7 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
         self.asset
             .read_exact(&mut self.buffer[0..block_bytes_to_read])?;
 
-        self.bufer_offset = 0;
+        self.buffer_offset = 0;
         self.block_bytes_read = 0;
         self.current_block_size = Some(block_size);
 
@@ -264,7 +264,7 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
         self.curr_bit = false;
         self.curr_byte = 0x00;
         self.block_bytes_read = 0;
-        self.bufer_offset = 0;
+        self.buffer_offset = 0;
         self.current_block_size = None;
         self.delay = 0;
         self.asset.seek(SeekFrom::Start(0))?;

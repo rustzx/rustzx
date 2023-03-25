@@ -42,7 +42,7 @@ pub struct ZXMemory {
 }
 
 impl ZXMemory {
-    /// Returns new Memory with coresponding rom and ram types
+    /// Returns new Memory with corresponding rom and ram types
     pub fn new(rom_type: RomType, ram_type: RamType) -> ZXMemory {
         let ram_size;
         let mem_map;

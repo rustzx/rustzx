@@ -167,7 +167,7 @@ impl<H: Host> Emulator<H> {
     }
 
     /// Rewinds tape. May return error if underlying tape asset failed to
-    /// perform seek operaion to go back to the the beginning of the tape
+    /// perform seek operation to go back to the the beginning of the tape
     pub fn rewind_tape(&mut self) -> Result<()> {
         self.controller.tape.rewind()
     }
@@ -238,7 +238,7 @@ impl<H: Host> Emulator<H> {
         Ok(())
     }
 
-    /// Perform emulatio up to `emulation_limit` duration, returns actuall elapsed duration
+    /// Perform emulatio up to `emulation_limit` duration, returns actual elapsed duration
     pub fn emulate_frames(&mut self, emulation_limit: Duration) -> Result<Duration> {
         let stopwatch = H::EmulationStopwatch::new();
         // frame loop

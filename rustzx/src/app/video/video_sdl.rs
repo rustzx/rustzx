@@ -36,7 +36,7 @@ impl VideoSdl {
                 .position_centered()
                 .opengl()
                 .build()
-                .expect("[ERROR] Sdl window buil fail");
+                .expect("[ERROR] Sdl window build fail");
             let renderer = window
                 .into_canvas()
                 .present_vsync()

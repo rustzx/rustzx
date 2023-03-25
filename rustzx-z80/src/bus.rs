@@ -40,7 +40,7 @@ pub trait Z80Bus {
     fn read_io(&mut self, port: u16) -> u8;
     // Method for writing to io port.
     fn write_io(&mut self, port: u16, data: u8);
-    /// Provided metod to write word, LSB first (clk - clocks per byte)
+    /// Provided method to write word, LSB first (clk - clocks per byte)
     fn write_word(&mut self, addr: u16, data: u16, clk: usize) {
         let [l, h] = data.to_le_bytes();
         self.write(addr, l, clk);
@@ -53,7 +53,7 @@ pub trait Z80Bus {
         u16::from_le_bytes([l, h])
     }
     /// Reads value from bus during interrupt.
-    /// mutable bacause on interrupt read some internal system attributes may be changed
+    /// mutable because on interrupt read some internal system attributes may be changed
     fn read_interrupt(&mut self) -> u8;
     /// Method, invoked by Z80 in case of RETI instruction. Default implementation is empty
     fn reti(&mut self);

@@ -25,7 +25,7 @@ ringbuf = { version = "0.3", optional = true }
 
 [features]
 default = ["sound-cpal"]
-# cpal requries ALSA development headers on Linux, if this feature
+# cpal requires ALSA development headers on Linux, if this feature
 # is disabled, RustZX will be built only with SDL audio backend support
 sound-cpal = ["cpal", "ringbuf"]
 

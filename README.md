@@ -39,7 +39,7 @@ ZX Spectrum emulator written in Rust
 - Obscure Z80 features emulation:
     - `WZ/memptr` register (`F3/F5` flags obscure behavior in `BIT n, (HL)`)
     - `Q` register (`F3/F5` flags obscure behavior in `SCF` and `CCF`)
-    - Block instruction flags [oddities](https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags) (`LD*R`/`CP*R`/`IN*R`/`OT*R`)
+    - Block instruction flags [oddities](https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags) (`LDxR`/`CPxR`/`INxR`/`OTxR`)
 
 ## Install
 1. Sure that you have C compiller and CMake to

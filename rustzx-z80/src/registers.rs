@@ -539,7 +539,7 @@ impl Regs {
     /// Obscure logic for changing flags after block io opcode iteration,
     /// which changes F3, F5, HF and PV.
     ///
-    /// Implementation was derived based on the followng
+    /// Implementation was derived based on the following
     /// research: https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags
     ///
     /// ### Original calculation algorithm:

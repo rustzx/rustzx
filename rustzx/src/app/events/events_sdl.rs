@@ -19,7 +19,7 @@ use sdl2::{
     EventPump,
 };
 
-/// Represents SDL Envets bakend
+/// Represents SDL Envets backend
 pub struct EventsSdl {
     event_pump: EventPump,
     mouse: MouseUtil,
@@ -77,7 +77,7 @@ impl EventsSdl {
         }
     }
 
-    /// returns ZX Spectum key form scancode of None if not found
+    /// returns ZX Spectrum key form scancode of None if not found
     fn scancode_to_zxkey_event(&self, scancode: Option<Scancode>, pressed: bool) -> Option<Event> {
         let zxkey_event = match scancode? {
             // FEFE
@@ -261,7 +261,7 @@ impl EventDevice for EventsSdl {
                         .or_else(|| self.scancode_to_compound_key_event(scancode, pressed))
                 }
                 SdlEvent::MouseMotion { xrel, yrel, .. } => {
-                    // Change of direction  requires counter reset to elimiate lag
+                    // Change of direction  requires counter reset to eliminate lag
                     if self.mouse_x_counter.signum() != xrel.signum() {
                         self.mouse_x_counter = xrel;
                     } else {
@@ -273,7 +273,7 @@ impl EventDevice for EventsSdl {
                         self.mouse_y_counter += yrel;
                     }
 
-                    // Depending on sensitivity, diffent distance is required to move
+                    // Depending on sensitivity, different distance is required to move
                     // kempston mouse
                     let ticks_to_move =
                         sensitivity_to_mouse_counter_ticks(self.mouse_sensitivity) as i32;
