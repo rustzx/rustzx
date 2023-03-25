@@ -20,13 +20,14 @@ anyhow = "1.0"
 structopt = "0.3"
 strum = { version = "0.22", default-features = false, features = ["derive", "std"] }
 simple_logger = "2"
-cpal = { version = "0.13", default-features = false, optional = true }
+cpal = { version = "0.15", default-features = false, optional = true }
+ringbuf = { version = "0.3", optional = true }
 
 [features]
 default = ["sound-cpal"]
 # cpal requries ALSA development headers on Linux, if this feature
 # is disabled, RustZX will be built only with SDL audio backend support
-sound-cpal = ["cpal"]
+sound-cpal = ["cpal", "ringbuf"]
 
 
 #[dev-dependencies]

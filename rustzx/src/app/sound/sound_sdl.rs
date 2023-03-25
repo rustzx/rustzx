@@ -1,16 +1,16 @@
 use crate::{
     app::{
         settings::Settings,
-        sound::{SoundDevice, ZXSample, CHANNEL_COUNT, DEFAULT_LATENCY, DEFAULT_SAMPLE_RATE},
+        sound::{SoundDevice, ZXSample, CHANNEL_COUNT, DEFAULT_LATENCY, DEFAULT_SAMPLE_RATE, ringbuf_size_from_sample_rate},
     },
     backends::SDL_CONTEXT,
 };
 use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
-use std::sync::mpsc;
+use std::sync::Arc;
 
 /// Struct which used in SDL audio callback
 struct SdlCallback {
-    samples: mpsc::Receiver<ZXSample>,
+    samples: ringbuf::Consumer<ZXSample, Arc<ringbuf::HeapRb::<ZXSample>>>,
 }
 
 impl AudioCallback for SdlCallback {
@@ -20,7 +20,7 @@ impl AudioCallback for SdlCallback {
     fn callback(&mut self, out: &mut [f32]) {
         for chunk in out.chunks_mut(CHANNEL_COUNT) {
             // recieve samples from channel
-            if let Ok(sample) = self.samples.try_recv() {
+            if let Some(sample) = self.samples.pop() {
                 chunk[0] = sample.left;
                 chunk[1] = sample.right;
             } else {
@@ -33,7 +33,7 @@ impl AudioCallback for SdlCallback {
 
 /// Represents SDL audio backend
 pub struct SoundSdl {
-    sender: mpsc::Sender<ZXSample>,
+    sender: ringbuf::Producer<ZXSample, Arc<ringbuf::HeapRb::<ZXSample>>>,
     sample_rate: usize,
     _device: AudioDevice<SdlCallback>, // Should be alive until Drop invocation
 }
@@ -59,7 +59,10 @@ impl SoundSdl {
             channels: Some(CHANNEL_COUNT as u8),
             samples: Some(latency as u16),
         };
-        let (tx, rx) = mpsc::channel();
+        let ringbuf_size = ringbuf_size_from_sample_rate(sample_rate);
+        let ringbuf = ringbuf::HeapRb::<ZXSample>::new(ringbuf_size);
+        let (tx, rx) = ringbuf.split();
+
         let device_handle = audio
             .open_playback(None, &desired_spec, |_| SdlCallback { samples: rx })
             .map_err(|e| anyhow::anyhow!("Failed to start SDL sound stream: {}", e))?;
@@ -75,7 +78,8 @@ impl SoundSdl {
 
 impl SoundDevice for SoundSdl {
     fn send_sample(&mut self, sample: ZXSample) {
-        self.sender.send(sample).unwrap();
+        // Ignore sample push errors
+        let _ = self.sender.push(sample);
     }
 
     fn sample_rate(&self) -> usize {
