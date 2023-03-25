@@ -80,7 +80,8 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
 
             // Read new buffer if required
             if buffer_read_pos >= BUFFER_SIZE {
-                let bytes_to_read = (block_size - self.buffer_offset - BUFFER_SIZE).min(BUFFER_SIZE);
+                let bytes_to_read =
+                    (block_size - self.buffer_offset - BUFFER_SIZE).min(BUFFER_SIZE);
                 self.asset.read_exact(&mut self.buffer[0..bytes_to_read])?;
                 self.buffer_offset += BUFFER_SIZE;
                 buffer_read_pos = 0;
