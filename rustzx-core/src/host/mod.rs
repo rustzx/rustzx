@@ -63,7 +63,7 @@ pub trait IoExtender {
 }
 
 /// Does not extend any IO
-pub struct StubIoExtender {}
+pub struct StubIoExtender;
 
 impl IoExtender for StubIoExtender {
     fn write(&mut self, _: u16, _: u8) {}
@@ -73,6 +73,17 @@ impl IoExtender for StubIoExtender {
     }
 
     fn extends_port(&self, _: u16) -> bool {
+        false
+    }
+}
+
+pub trait DebugInterface {
+    fn check_pc_breakpoint(&mut self, addr: u16) -> bool;
+}
+
+pub struct StubDebugInterface;
+impl DebugInterface for StubDebugInterface {
+    fn check_pc_breakpoint(&mut self, _addr: u16) -> bool {
         false
     }
 }
@@ -91,4 +102,6 @@ pub trait Host {
     type EmulationStopwatch: Stopwatch;
     /// RustZX debug port implementation
     type IoExtender: IoExtender;
+    /// Debug interface logic (e.g. breakpoints)
+    type DebugInterface: DebugInterface;
 }

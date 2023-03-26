@@ -565,8 +565,8 @@ impl Regs {
     /// TMP calculation
     pub fn update_flags_block_io_cycle(&mut self, opcode: BlockIoOpcode, m: u8) {
         let t = match opcode {
-            BlockIoOpcode::Inir => m + self.c.wrapping_add(1),
-            BlockIoOpcode::Indr => m + self.c.wrapping_sub(1),
+            BlockIoOpcode::Inir => m.wrapping_add(self.c.wrapping_add(1)),
+            BlockIoOpcode::Indr => m.wrapping_add(self.c.wrapping_sub(1)),
             BlockIoOpcode::Otir | BlockIoOpcode::Otdr => m.wrapping_add(self.l),
         };
 
@@ -580,9 +580,10 @@ impl Regs {
         // result in either 2 or 0.
         //
         // When CF is 0, no mater NF result will be 0
-        let tmp = b.wrapping_add(
-            cf.wrapping_sub((f >> flag_pos(FLAG_SIGN - 1)) & (cf << flag_pos(FLAG_CARRY + 1))),
-        );
+        let tmp = b.wrapping_add(cf.wrapping_sub(
+            (f >> flag_pos(FLAG_SIGN.wrapping_sub(1)))
+                & (cf << flag_pos(FLAG_CARRY.wrapping_add(1))),
+        ));
         // HF = (TMP ^ Bo).4;
         let hf = (tmp ^ b) & FLAG_HALF_CARRY;
         // PV = ((T & 7) ^ Bo ^ (TMP & 7)).parity

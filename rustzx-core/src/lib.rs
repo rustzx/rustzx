@@ -8,7 +8,7 @@ pub mod error;
 pub mod host;
 pub mod zx;
 
-pub use emulator::Emulator;
+pub use emulator::{poke, EmulationInfo, EmulationStopReason, Emulator};
 pub use settings::RustzxSettings;
 pub use utils::EmulationMode;
 

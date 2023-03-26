@@ -1,5 +1,6 @@
 //! Platform-independent high-level Emulator interaction module
 mod fastload;
+pub mod poke;
 mod screenshot;
 mod snapshot;
 
@@ -32,6 +33,21 @@ use rustzx_z80::Z80;
 use crate::zx::sound::sample::SoundSample;
 #[cfg(feature = "autoload")]
 use crate::{host::BufferCursor, zx::machine::ZXMachine};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum EmulationStopReason {
+    /// Requested frames count have been emulated successfully
+    Completed,
+    /// Emulation time limit has been reached
+    Timeout,
+    /// Breakpoint has beed encountered
+    Breakpoint,
+}
+
+pub struct EmulationInfo {
+    pub duration: Duration,
+    pub stop_reason: EmulationStopReason,
+}
 
 /// Represents main Emulator structure
 pub struct Emulator<H: Host> {
@@ -189,6 +205,18 @@ impl<H: Host> Emulator<H> {
         self.controller.io_extender.as_mut()
     }
 
+    pub fn set_debug_interface(&mut self, debug_interface: H::DebugInterface) {
+        self.controller.debug_interface = Some(debug_interface);
+    }
+
+    pub fn debug_interface(&mut self) -> Option<&mut H::DebugInterface> {
+        self.controller.debug_interface.as_mut()
+    }
+
+    pub fn peek(&self, addr: u16) -> u8 {
+        self.controller.memory.read(addr)
+    }
+
     pub fn border_color(&self) -> ZXColor {
         self.controller.border_color
     }
@@ -228,18 +256,26 @@ impl<H: Host> Emulator<H> {
         self.controller.mixer.pop()
     }
 
-    fn process_events(&mut self, event: EmulationEvents) -> Result<()> {
-        if event.contains(EmulationEvents::TAPE_FAST_LOAD_TRIGGER_DETECTED)
-            && self.controller.tape.can_fast_load()
-            && self.fast_load
-        {
+    fn process_fast_load_event(&mut self) -> Result<()> {
+        if self.controller.tape.can_fast_load() && self.fast_load {
             fastload::tap::fast_load_tap(self)?;
         }
         Ok(())
     }
 
+    // Poke memory in emulator
+    pub fn execute_poke(&mut self, poke: impl poke::Poke) {
+        for action in poke.actions().iter().copied() {
+            match action {
+                poke::PokeAction::Mem { addr, value } => {
+                    self.controller.memory.force_write(addr, value);
+                }
+            }
+        }
+    }
+
     /// Perform emulatio up to `emulation_limit` duration, returns actual elapsed duration
-    pub fn emulate_frames(&mut self, emulation_limit: Duration) -> Result<Duration> {
+    pub fn emulate_frames(&mut self, emulation_limit: Duration) -> Result<EmulationInfo> {
         let stopwatch = H::EmulationStopwatch::new();
         // frame loop
         loop {
@@ -251,15 +287,27 @@ impl<H: Host> Emulator<H> {
                 if let Some(e) = self.controller.take_last_emulation_error() {
                     return Err(e);
                 }
-                if !self.controller.events().is_empty() {
-                    self.process_events(self.controller.events())?;
-                    self.controller.clear_events();
+
+                let events = self.controller.take_events();
+                if !events.is_empty() {
+                    if events.contains(EmulationEvents::TAPE_FAST_LOAD_TRIGGER_DETECTED) {
+                        self.process_fast_load_event()?;
+                    }
+                    if events.contains(EmulationEvents::PC_BREAKPOINT) {
+                        return Ok(EmulationInfo {
+                            duration: stopwatch.measure(),
+                            stop_reason: EmulationStopReason::Breakpoint,
+                        });
+                    }
                 }
 
                 match self.mode {
                     EmulationMode::FrameCount(frames) => {
                         if self.controller.frames_count() >= frames {
-                            return Ok(stopwatch.measure());
+                            return Ok(EmulationInfo {
+                                duration: stopwatch.measure(),
+                                stop_reason: EmulationStopReason::Completed,
+                            });
                         };
                     }
                     EmulationMode::Max => {
@@ -271,7 +319,10 @@ impl<H: Host> Emulator<H> {
             }
             // if time is bigger than `max_time` then stop emulation cycle
             if stopwatch.measure() > emulation_limit {
-                return Ok(stopwatch.measure());
+                return Ok(EmulationInfo {
+                    duration: stopwatch.measure(),
+                    stop_reason: EmulationStopReason::Timeout,
+                });
             }
         }
     }

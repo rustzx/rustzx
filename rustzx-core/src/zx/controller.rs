@@ -1,7 +1,7 @@
 //! Contains ZX Spectrum System controller (like ula or so) of emulator
 use crate::{
     error::Error,
-    host::{Host, HostContext, IoExtender},
+    host::{DebugInterface, Host, HostContext, IoExtender},
     settings::RustzxSettings,
     utils::screen::bitmap_line_addr,
     zx::{
@@ -40,6 +40,7 @@ pub(crate) struct ZXController<H: Host> {
     pub kempston: Option<KempstonJoy>,
     pub mouse: Option<KempstonMouse>,
     pub io_extender: Option<H::IoExtender>,
+    pub debug_interface: Option<H::DebugInterface>,
     #[cfg(feature = "sound")]
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
@@ -108,6 +109,7 @@ impl<H: Host> ZXController<H> {
             kempston,
             mouse,
             io_extender: None,
+            debug_interface: None,
             #[cfg(feature = "sound")]
             mixer,
             keyboard: [0xFF; 8],
@@ -312,14 +314,9 @@ impl<H: Host> ZXController<H> {
         self.mixer.new_frame();
     }
 
-    /// Clears all detected
-    pub fn clear_events(&mut self) {
-        self.events.clear();
-    }
-
     /// Returns last events
-    pub fn events(&self) -> EmulationEvents {
-        self.events
+    pub fn take_events(&mut self) -> EmulationEvents {
+        self.events.take()
     }
 
     /// Returns true if all frame clocks has been passed
@@ -431,6 +428,11 @@ impl<H: Host> Z80Bus for ZXController<H> {
                 // Add event (Fast tape loading request) it must be executed
                 // by emulator immediately
                 self.events |= EmulationEvents::TAPE_FAST_LOAD_TRIGGER_DETECTED;
+            }
+        }
+        if let Some(debug) = &mut self.debug_interface {
+            if debug.check_pc_breakpoint(addr) {
+                self.events |= EmulationEvents::PC_BREAKPOINT;
             }
         }
     }

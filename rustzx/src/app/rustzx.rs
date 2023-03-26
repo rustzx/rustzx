@@ -146,7 +146,8 @@ impl RustzxApp {
             let emulator_dt = self
                 .emulator
                 .emulate_frames(MAX_FRAME_TIME)
-                .map_err(|e| anyhow!("Emulation step failed: {:#?}", e))?;
+                .map_err(|e| anyhow!("Emulation step failed: {:#?}", e))?
+                .duration;
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime

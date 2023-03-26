@@ -4,7 +4,8 @@ use anyhow::{anyhow, bail, Context};
 use frame_buffer::{FrameBufferContext, RgbaFrameBuffer};
 use rustzx_core::{
     host::{
-        FrameBuffer, Host, HostContext, RomFormat, RomSet, Screen, Snapshot, StubIoExtender, Tape,
+        FrameBuffer, Host, HostContext, RomFormat, RomSet, Screen, Snapshot, StubDebugInterface,
+        StubIoExtender, Tape,
     },
     zx::machine::ZXMachine,
 };
@@ -22,6 +23,7 @@ pub struct AppHost;
 
 impl Host for AppHost {
     type Context = AppHostContext;
+    type DebugInterface = StubDebugInterface;
     type EmulationStopwatch = InstantStopwatch;
     type FrameBuffer = RgbaFrameBuffer;
     type IoExtender = StubIoExtender;

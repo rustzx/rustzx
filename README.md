@@ -122,6 +122,7 @@ defails about ZX Spectrum.
 - [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
 - [YAZE test suite](https://www.mathematik.uni-ulm.de/users/ag/yaze-ag/)
 - [z80test test suite](https://github.com/raxoft/z80test)
+- [ROM routines](https://skoolkid.github.io/rom/maps/routines.html)
 
 ## ROM's
 Emulator contains ROMs, created by by Sinclair Research Ltd (now owned by Amstrad plc),
