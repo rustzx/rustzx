@@ -1,16 +1,17 @@
 use expect_test::Expect;
 use rustzx_core::{
     host::{
-        BufferCursor, FrameBuffer, FrameBufferSource, Host, HostContext, IoExtender, RomFormat,
-        RomSet, Snapshot, Tape,
+        BufferCursor, DebugInterface, FrameBuffer, FrameBufferSource, Host, HostContext,
+        IoExtender, RomFormat, RomSet, Snapshot, Tape,
     },
+    poke,
     zx::{
         keys::ZXKey,
         machine::ZXMachine,
         sound::ay::ZXAYMode,
         video::colors::{ZXBrightness, ZXColor},
     },
-    EmulationMode, Emulator, RustzxSettings,
+    EmulationMode, EmulationStopReason, Emulator, RustzxSettings,
 };
 use rustzx_utils::{
     io::{DynamicAsset, GzipAsset},
@@ -155,10 +156,42 @@ impl DebugPort {
     }
 }
 
+#[derive(Default)]
+struct TestDebugInterface {
+    breakpoints: std::collections::HashSet<u16>,
+    last_hit: Option<u16>,
+}
+
+impl TestDebugInterface {
+    pub fn add_breakpoint(&mut self, address: u16) {
+        self.breakpoints.insert(address);
+    }
+
+    pub fn clear_breakpoints(&mut self) {
+        self.breakpoints.clear();
+        self.last_hit = None;
+    }
+
+    pub fn last_hit(&self) -> Option<u16> {
+        self.last_hit
+    }
+}
+
+impl DebugInterface for TestDebugInterface {
+    fn check_pc_breakpoint(&mut self, addr: u16) -> bool {
+        if self.breakpoints.contains(&addr) {
+            self.last_hit = Some(addr);
+            return true;
+        }
+        false
+    }
+}
+
 struct TesterHost;
 
 impl Host for TesterHost {
     type Context = TesterContext;
+    type DebugInterface = TestDebugInterface;
     type EmulationStopwatch = InstantStopwatch;
     type FrameBuffer = FrameContent;
     type IoExtender = DebugPort;
@@ -316,19 +349,51 @@ impl RustZXTester {
         }
     }
 
-    pub fn emulate_for(&mut self, duration: Duration) {
+    pub fn emulate_until_breakpoint(&mut self, breakpoint_addr: u16, timeout: Duration) {
+        self.clear_breakpoints();
+        self.add_breakpoint(breakpoint_addr);
+
+        let result = self.emulate_for(timeout);
+        if let EmulationStopReason::Breakpoint = result {
+            return;
+        }
+        panic!("Emulator failed to hit breakpoint before reaching timeout");
+    }
+
+    pub fn emulate_for(&mut self, duration: Duration) -> EmulationStopReason {
         let mut emulated_duration = Duration::from_secs(0);
         while emulated_duration < duration {
-            self.emulator
+            let result = self
+                .emulator
                 .emulate_frames(FRAME_HOST_DURATION_LIMIT)
                 .expect("Emulation failed");
+
             self.update_sound();
             emulated_duration += FRAME_EMULATED_DURATION;
+
+            if result.stop_reason == EmulationStopReason::Breakpoint {
+                eprintln!(
+                    "Requested {} duration, emulated for {}",
+                    duration.as_millis(),
+                    emulated_duration.as_millis()
+                );
+
+                return result.stop_reason;
+            }
         }
+        EmulationStopReason::Completed
     }
 
     pub fn emulate_frame(&mut self) {
         self.emulate_for(FRAME_EMULATED_DURATION);
+    }
+
+    pub fn last_breakpoint(&mut self) -> u16 {
+        self.emulator
+            .debug_interface()
+            .expect("no breakpoints were set")
+            .last_hit()
+            .expect("No breapoints were triggered")
     }
 
     pub fn compare_buffer_with_file(
@@ -459,6 +524,30 @@ impl RustZXTester {
 
     pub fn set_sync_timeout(&mut self, timeout: Duration) {
         self.sync_timeout = timeout;
+    }
+
+    pub fn disable_scroll_message(&mut self) {
+        self.emulator.execute_poke(poke::DisableScrollMessageRom48);
+    }
+
+    pub fn add_breakpoint(&mut self, address: u16) {
+        if let Some(interface) = self.emulator.debug_interface() {
+            interface.add_breakpoint(address);
+        } else {
+            let mut interface = TestDebugInterface::default();
+            interface.add_breakpoint(address);
+            self.emulator.set_debug_interface(interface);
+        }
+    }
+
+    pub fn clear_breakpoints(&mut self) {
+        if let Some(interface) = self.emulator.debug_interface() {
+            interface.clear_breakpoints();
+        }
+    }
+
+    pub fn peek(&mut self, addr: u16) -> u8 {
+        self.emulator.peek(addr)
     }
 }
 

@@ -7,7 +7,7 @@ fn z80test_setup() -> RustZXTester {
     let settings = presets::settings_48k();
     let mut tester = RustZXTester::new("z80full", settings);
     tester.load_tap("z80full.tap.gz");
-    tester.send_keypress(ZXKey::Enter);
+    tester.disable_scroll_message();
 
     tester
 }
