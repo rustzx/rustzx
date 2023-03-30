@@ -77,4 +77,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -p rustzx-test -- --nocapture z80memptr --ignored
+          args: -p rustzx-test -- --nocapture --ignored z80full z80ccf z80memptr
