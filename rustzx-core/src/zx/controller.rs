@@ -314,7 +314,7 @@ impl<H: Host> ZXController<H> {
         self.mixer.new_frame();
     }
 
-    /// Returns last events
+    /// Collects all events from the last emulation step
     pub fn take_events(&mut self) -> EmulationEvents {
         self.events.take()
     }

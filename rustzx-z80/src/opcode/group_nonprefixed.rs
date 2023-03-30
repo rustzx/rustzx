@@ -462,7 +462,6 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                 U3::N6 => {
                     let data = cpu.regs.get_acc();
                     let mut flags = cpu.regs.get_flags() & (FLAG_ZERO | FLAG_PV | FLAG_SIGN);
-                    // TODO(critical): docs
                     flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data)
                         & (FLAG_F3 | FLAG_F5);
                     flags |= FLAG_CARRY;
@@ -474,7 +473,6 @@ pub fn execute_normal(cpu: &mut Z80, bus: &mut impl Z80Bus, opcode: Opcode, pref
                     let data = cpu.regs.get_acc();
                     let old_carry = (cpu.regs.get_flags() & FLAG_CARRY) != 0;
                     let mut flags = cpu.regs.get_flags() & (FLAG_SIGN | FLAG_PV | FLAG_ZERO);
-                    // TODO(critical): docs
                     flags |= ((cpu.regs.get_last_q() ^ cpu.regs.get_flags()) | data)
                         & (FLAG_F3 | FLAG_F5);
                     flags |= old_carry as u8 * FLAG_HALF_CARRY;

@@ -58,8 +58,6 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut impl Z80Bus, prefix: Prefix) {
                     // NOTE: according to FUSE.
                     // maybe must be based on current bit or something?
                     flags |= ((data & 0x80 != 0) && (bit_number == 7)) as u8 * FLAG_SIGN;
-                    // TODO(critical): Not sure that this is relevant for
-                    // non-(HL) (prefixed) operand
                     if let BitOperand8::Indirect(_addr) = operand {
                         flags |= ((cpu.regs.get_mem_ptr() >> 8) as u8) & (FLAG_F3 | FLAG_F5);
                     } else {
@@ -89,7 +87,6 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut impl Z80Bus, prefix: Prefix) {
                     let result = data | (0x01 << bit_number);
                     match operand {
                         BitOperand8::Indirect(addr) => {
-                            // TODO(critical): Check memptr impl against FUSE
                             bus.write(addr, result, 3);
                         }
                         BitOperand8::Reg(reg) => {
