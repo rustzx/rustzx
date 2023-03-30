@@ -9,3 +9,20 @@ members = [
     "vtx",
     "vtx/vtx-bin",
 ]
+
+[workspace.package]
+version = "0.16.0"
+license = "MIT"
+edition = "2021"
+authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
+repository = "https://github.com/rustzx/rustzx"
+
+
+
+
+[workspace.dependencies]
+aym = { path = "aym" }
+rustzx-core = { path = "rustzx-core" }
+rustzx-utils = { path = "rustzx-utils" }
+rustzx-z80 = { path = "rustzx-z80" }
+vtx = { path = "vtx" }
