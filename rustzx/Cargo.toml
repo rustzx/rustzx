@@ -1,20 +1,21 @@
 [package]
 name = "rustzx"
-version = "0.15.0"
-authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 description = "ZX Spectrum emulator"
-repository = "https://github.com/rustzx/rustzx"
 readme = "../README.md"
 keywords = ["emulator", "game", "z80"]
-license = "MIT"
-edition = "2018"
+
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 sdl2 = { version = "0.35", features = ["unsafe_textures", "bundled", "static-link"] }
-rustzx-core = { version = "0.15", path =  "../rustzx-core", features = ["full"] }
-rustzx-utils = { version = "0.15", path =  "../rustzx-utils", features = ["std"] }
+rustzx-core = { workspace = true, features = ["full"] }
+rustzx-utils = { workspace = true, features = ["std"] }
 log = "0.4"
 anyhow = "1.0"
 structopt = "0.3"

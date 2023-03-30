@@ -70,7 +70,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "aym"
-version = "0.15.1"
+version = "0.16.0"
 dependencies = [
  "libm",
  "num-traits",
@@ -1045,7 +1045,7 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustzx"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "cpal",
@@ -1061,7 +1061,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-core"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "aym",
  "bitflags",
@@ -1075,7 +1075,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-test"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -1092,7 +1092,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-utils"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "flate2",
  "log",
@@ -1101,7 +1101,7 @@ dependencies = [
 
 [[package]]
 name = "rustzx-z80"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "paste",
 ]
@@ -1383,7 +1383,7 @@ checksum = "5fecdca9a5291cc2b8dcf7dc02453fee791a280f3743cb0905f8822ae463b3fe"
 
 [[package]]
 name = "vtx"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "aym",
  "byteorder",
@@ -1397,7 +1397,7 @@ dependencies = [
 
 [[package]]
 name = "vtx-bin"
-version = "0.15.0"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "structopt",
