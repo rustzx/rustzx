@@ -150,6 +150,7 @@ impl ZXMemory {
         &self.ram[shift..shift + PAGE_SIZE]
     }
 
+    /// Calculates [Page] and local offset from memory address
     fn paged_address(&self, addr: u16) -> (Page, usize) {
         let page = self.map[(addr as usize) / PAGE_SIZE];
         let offset = addr as usize % PAGE_SIZE;

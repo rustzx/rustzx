@@ -156,6 +156,7 @@ impl DebugPort {
     }
 }
 
+/// A simple debug interface that allows to set breakpoints and check if they were hit.
 #[derive(Default)]
 struct TestDebugInterface {
     breakpoints: std::collections::HashSet<u16>,
@@ -172,7 +173,7 @@ impl TestDebugInterface {
         self.last_hit = None;
     }
 
-    pub fn last_hit(&self) -> Option<u16> {
+    pub fn last_breakpoint_hit(&self) -> Option<u16> {
         self.last_hit
     }
 }
@@ -349,17 +350,27 @@ impl RustZXTester {
         }
     }
 
+    /// Sets the breakpoint and emulates until it is hit or the timeout is reached
     pub fn emulate_until_breakpoint(&mut self, breakpoint_addr: u16, timeout: Duration) {
         self.clear_breakpoints();
         self.add_breakpoint(breakpoint_addr);
 
         let result = self.emulate_for(timeout);
         if let EmulationStopReason::Breakpoint = result {
+            // Check if last breakpoint is the one we requested
+            let last_breakpoint = self.last_breakpoint();
+            assert_eq!(
+                last_breakpoint, breakpoint_addr,
+                "Emulator stopped at breakpoint {:04X}, expected {:04X}",
+                last_breakpoint, breakpoint_addr
+            );
+
             return;
         }
         panic!("Emulator failed to hit breakpoint before reaching timeout");
     }
 
+    ///  Emulates for the given duration or until the breakpoint is hit
     pub fn emulate_for(&mut self, duration: Duration) -> EmulationStopReason {
         let mut emulated_duration = Duration::from_secs(0);
         while emulated_duration < duration {
@@ -392,7 +403,7 @@ impl RustZXTester {
         self.emulator
             .debug_interface()
             .expect("no breakpoints were set")
-            .last_hit()
+            .last_breakpoint_hit()
             .expect("No breapoints were triggered")
     }
 
@@ -526,6 +537,7 @@ impl RustZXTester {
         self.sync_timeout = timeout;
     }
 
+    /// Disables the message and key press prompt after a few lines of scroll in BASIC
     pub fn disable_scroll_message(&mut self) {
         self.emulator.execute_poke(poke::DisableScrollMessageRom48);
     }

@@ -174,6 +174,14 @@ impl Z80 {
             // allow interrupts again
             self.skip_interrupt = false;
         };
+
+        // Actions to be performed before any opcode execution
+        let before_execute_opcode = |cpu: &mut Self| {
+            // Save Q register value from previous emulation step, which is later used to
+            // properly calculate flags in some instructions
+            cpu.regs.step_q();
+        };
+
         let byte1 = if self.active_prefix != Prefix::None {
             let tmp = self.active_prefix.to_byte().unwrap();
             self.active_prefix = Prefix::None;
@@ -195,34 +203,33 @@ impl Z80 {
                             self.skip_interrupt = true;
                         }
                         Prefix::CB => {
-                            // TODO(critical): Refactor duplication
-                            self.regs.step_q();
+                            before_execute_opcode(self);
                             execute_bits(self, bus, prefix_single);
                         }
                         Prefix::None => {
                             let opcode = Opcode::from_byte(byte2);
-                            self.regs.step_q();
+                            before_execute_opcode(self);
                             execute_normal(self, bus, opcode, prefix_single);
                         }
                     };
                 }
                 Prefix::CB => {
                     // opcode will be read in the called
-                    self.regs.step_q();
+                    before_execute_opcode(self);
                     execute_bits(self, bus, Prefix::None);
                 }
                 Prefix::ED => {
                     let byte2 = self.fetch_byte(bus, 4);
                     self.regs.inc_r();
                     let opcode = Opcode::from_byte(byte2);
-                    self.regs.step_q();
+                    before_execute_opcode(self);
                     execute_extended(self, bus, opcode);
                 }
                 _ => unreachable!(),
             };
         } else {
             let opcode = Opcode::from_byte(byte1);
-            self.regs.step_q();
+            before_execute_opcode(self);
             execute_normal(self, bus, opcode, Prefix::None);
         };
         // Allow bus implementation to process pc-based events

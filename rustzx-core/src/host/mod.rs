@@ -62,7 +62,7 @@ pub trait IoExtender {
     fn extends_port(&self, port: u16) -> bool;
 }
 
-/// Does not extend any IO
+/// IO externder which does nothing
 pub struct StubIoExtender;
 
 impl IoExtender for StubIoExtender {
@@ -77,11 +77,15 @@ impl IoExtender for StubIoExtender {
     }
 }
 
+/// Allows to externd RustZX emulator with custom debug logic
 pub trait DebugInterface {
+    /// Returns true if breakpoint at given address is set and emulation should be stopped
     fn check_pc_breakpoint(&mut self, addr: u16) -> bool;
 }
 
+/// Debug interface which does nothing
 pub struct StubDebugInterface;
+
 impl DebugInterface for StubDebugInterface {
     fn check_pc_breakpoint(&mut self, _addr: u16) -> bool {
         false

@@ -34,18 +34,22 @@ use crate::zx::sound::sample::SoundSample;
 #[cfg(feature = "autoload")]
 use crate::{host::BufferCursor, zx::machine::ZXMachine};
 
+/// Represents emulator stop reason
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EmulationStopReason {
     /// Requested frames count have been emulated successfully
     Completed,
     /// Emulation time limit has been reached
     Timeout,
-    /// Breakpoint has beed encountered
+    /// Emulator has reached breakpoint address
     Breakpoint,
 }
 
+/// Represents emulator emulation result
 pub struct EmulationInfo {
+    /// Emulation duration in emulated time (not real time)
     pub duration: Duration,
+    /// Emulation stop reason, see [EmulationStopReason]
     pub stop_reason: EmulationStopReason,
 }
 
@@ -205,14 +209,17 @@ impl<H: Host> Emulator<H> {
         self.controller.io_extender.as_mut()
     }
 
+    /// Sets [Host::DebugInterface] for the emulator instance
     pub fn set_debug_interface(&mut self, debug_interface: H::DebugInterface) {
         self.controller.debug_interface = Some(debug_interface);
     }
 
+    /// Returns current [Host::DebugInterface] instance
     pub fn debug_interface(&mut self) -> Option<&mut H::DebugInterface> {
         self.controller.debug_interface.as_mut()
     }
 
+    /// Reads byte from memory
     pub fn peek(&self, addr: u16) -> u8 {
         self.controller.memory.read(addr)
     }
@@ -263,7 +270,7 @@ impl<H: Host> Emulator<H> {
         Ok(())
     }
 
-    // Poke memory in emulator
+    /// Execute `poke::Poke` action on the emulator
     pub fn execute_poke(&mut self, poke: impl poke::Poke) {
         for action in poke.actions().iter().copied() {
             match action {
