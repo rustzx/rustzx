@@ -24,12 +24,10 @@ jobs:
             os_name: windows
             executable_suffix: ".exe"
             arch: amd64
-          # Temporartly disabled until sdl2-rs updates to
-          # be buildable on the MacOS
-          # - os: macos-11
-            # os_name: macos
-            # executable_suffix: ""
-            # arch: amd64
+          - os: macos-11
+            os_name: macos
+            executable_suffix: ""
+            arch: amd64
     env:
       RUSTFLAGS: -D warnings
     steps:
