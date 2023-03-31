@@ -21,8 +21,8 @@ repository = "https://github.com/rustzx/rustzx"
 
 
 [workspace.dependencies]
-aym = { path = "aym" }
-rustzx-core = { path = "rustzx-core" }
-rustzx-utils = { path = "rustzx-utils" }
-rustzx-z80 = { path = "rustzx-z80" }
-vtx = { path = "vtx" }
+aym = { version = "0.16.0", path = "aym" }
+rustzx-core = { version = "0.16.0", path = "rustzx-core" }
+rustzx-utils = { version = "0.16.0", path = "rustzx-utils" }
+rustzx-z80 = { version = "0.16.0", path = "rustzx-z80" }
+vtx = { version = "0.16.0", path = "vtx" }

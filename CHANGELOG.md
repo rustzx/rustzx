@@ -1,12 +1,24 @@
 ### RustZX v0.15
-<!-- START_CHANGELOG|v0.15.0 -->
+<!-- START_CHANGELOG|v0.16.0 -->
+- **[Feature]** Implemented internal Q register emulation
+- **[Feature]** Implemented internal MEMPTR register emulation
+- **[Feature]** Implemented obscure block instruction flags behavior
+- **[Feature]** Added possibility to stop emulation via PC breakpoints in `rustzx-core`
+- **[Testing]** Added z80test project based tests (#97)
+- **[Testing]** Added block instruction flags tests
+- **[Fix]** Switched to ringbuffer from channel to deliver sound samples
+- **[Fix]** Fixed sound initialization logic for output devices with more than 2 channels
+- **[Refactoring]** Updated crates and Rust language edition
+- **[Refactoring]** Fixed A LOT of typos accumulated from 2016
+<!-- END_CHANGELOG|v0.16.0 -->
+
+### RustZX v0.15
 - **[Feature]** Added new `cpal` sound backend (#101)
 - **[Feature]** Added support for `.gz`-compressed assets (#109)
 - **[Feature]** Added support for non-standard Kempston joy buttons in rustzx-core (#113)
 - **[Fix]** Fixed bug with integer overflow panic in tape loader (#100)
 - **[Testing]** Added integration tests for rustzx-core (#92)
 - **[Refactoring]** Removed cyclic dependencies between `rustzx-core` and `rustzx-utils`(#99)
-<!-- END_CHANGELOG|v0.15.0 -->
 
 ### RustZX v0.14
 - **[Refactoring]** Moved z80 emulation to the separate crate (`rustzx-z80`)
