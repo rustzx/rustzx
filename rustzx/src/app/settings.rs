@@ -6,17 +6,11 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 use strum::{EnumString, EnumVariantNames, VariantNames};
 
-#[cfg(feature = "sound-cpal")]
 const DEFAULT_SOUND_BACKEND_VALUE: &str = "cpal";
-
-#[cfg(not(feature = "sound-cpal"))]
-const DEFAULT_SOUND_BACKEND_VALUE: &str = "sdl";
 
 #[derive(Clone, Copy, Debug, EnumString, EnumVariantNames)]
 #[strum(serialize_all = "snake_case")]
 pub enum SoundBackend {
-    Sdl,
-    #[cfg(feature = "sound-cpal")]
     Cpal,
 }
 

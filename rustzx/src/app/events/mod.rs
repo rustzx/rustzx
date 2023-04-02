@@ -1,6 +1,7 @@
 //! platform-independent traits. Submodules with backends will be selectable
 //! via cargo features in future
-mod events_sdl;
+
+pub mod winit;
 
 use rustzx_core::{
     zx::{
@@ -14,8 +15,6 @@ use rustzx_core::{
     EmulationMode,
 };
 use std::path::PathBuf;
-
-pub use events_sdl::EventsSdl;
 
 // Event type
 pub enum Event {
