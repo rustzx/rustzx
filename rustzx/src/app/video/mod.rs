@@ -4,7 +4,7 @@ mod palette;
 
 pub mod wgpu;
 
-pub use palette::Palette;
+pub use palette::{Palette, ColorRgba, ColorIndexed, PALETTE_SIZE, zx_color_to_index};
 
 /// Texture id binging
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
@@ -33,8 +33,6 @@ impl Rect {
 pub trait VideoDevice {
     /// generates and returns texture handle
     fn gen_texture(&mut self, width: u32, height: u32) -> TextureInfo;
-    /// changes window title TODO: MOVE TO AppInterface
-    fn set_title(&mut self, title: &str);
     /// updates texture data
     fn update_texture(&mut self, tex: TextureInfo, buffer: &[u8]);
     /// starts render block

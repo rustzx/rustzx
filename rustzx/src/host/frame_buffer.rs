@@ -1,21 +1,18 @@
-use crate::app::video::Palette;
+use crate::app::video::{Palette, zx_color_to_index};
 use rustzx_core::{
     host::{FrameBuffer, FrameBufferSource},
     zx::video::colors::{ZXBrightness, ZXColor},
 };
 
-const RGBA_PIXEL_SIZE: usize = 4;
-
 #[derive(Clone)]
 pub struct FrameBufferContext;
 
-pub struct RgbaFrameBuffer {
+pub struct IndexedFrameBuffer {
     buffer: Vec<u8>,
-    palette: Palette,
-    buffer_row_size: usize,
+    row_size: usize,
 }
 
-impl FrameBuffer for RgbaFrameBuffer {
+impl FrameBuffer for IndexedFrameBuffer {
     type Context = FrameBufferContext;
 
     fn new(
@@ -25,26 +22,18 @@ impl FrameBuffer for RgbaFrameBuffer {
         _context: Self::Context,
     ) -> Self {
         Self {
-            buffer: vec![0u8; width * height * RGBA_PIXEL_SIZE],
-            palette: Palette::default(),
-            buffer_row_size: width * RGBA_PIXEL_SIZE,
+            buffer: vec![0u8; width * height],
+            row_size: width,
         }
     }
 
     fn set_color(&mut self, x: usize, y: usize, color: ZXColor, brightness: ZXBrightness) {
-        let buffer_pos = y * self.buffer_row_size + x * RGBA_PIXEL_SIZE;
-
-        self.palette
-            .get_rgba(color, brightness)
-            .iter()
-            .copied()
-            .zip(&mut self.buffer[buffer_pos..buffer_pos + RGBA_PIXEL_SIZE])
-            .for_each(|(source, dest)| *dest = source);
+        self.buffer[ y * self.row_size + x] = zx_color_to_index(color, brightness);
     }
 }
 
-impl RgbaFrameBuffer {
-    pub fn rgba_data(&self) -> &[u8] {
+impl IndexedFrameBuffer {
+    pub fn data(&self) -> &[u8] {
         &self.buffer
     }
 }
