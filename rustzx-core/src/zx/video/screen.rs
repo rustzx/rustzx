@@ -51,7 +51,7 @@ impl BlocksCount {
                 columns = 0;
             };
             if lines >= CANVAS_HEIGHT {
-                lines = 0;
+                lines = CANVAS_HEIGHT;
                 columns = 0;
             }
         };
