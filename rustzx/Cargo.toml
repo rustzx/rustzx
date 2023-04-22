@@ -13,23 +13,20 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sdl2 = { version = "0.35", features = ["unsafe_textures", "bundled", "static-link"] }
+anyhow = "1.0"
+bytemuck = { version = "1.13", features = ["derive"] }
+cpal = { version = "0.15", default-features = false }
+log = "0.4"
+pollster = "0.3"
+ringbuf = "0.3"
 rustzx-core = { workspace = true, features = ["full"] }
 rustzx-utils = { workspace = true, features = ["std"] }
-log = "0.4"
-anyhow = "1.0"
+simple_logger = "2"
 structopt = "0.3"
 strum = { version = "0.22", default-features = false, features = ["derive", "std"] }
-simple_logger = "2"
-cpal = { version = "0.15", default-features = false, optional = true }
-ringbuf = { version = "0.3", optional = true }
+thiserror = "1"
+wgpu = { version = "0.15", features = ["trace"] }
+winit = "0.28"
 
 [features]
-default = ["sound-cpal"]
-# cpal requires ALSA development headers on Linux, if this feature
-# is disabled, RustZX will be built only with SDL audio backend support
-sound-cpal = ["cpal", "ringbuf"]
-
-
-#[dev-dependencies]
-#cmake = "0.1.48"
+default = []

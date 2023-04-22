@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "aym",
     "rustzx-core",
@@ -16,9 +17,6 @@ license = "MIT"
 edition = "2021"
 authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
 repository = "https://github.com/rustzx/rustzx"
-
-
-
 
 [workspace.dependencies]
 aym = { version = "0.16.0", path = "aym" }

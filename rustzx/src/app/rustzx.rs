@@ -1,13 +1,17 @@
 //! Main application class module
 //! Handles all platform-related, hardware-related stuff
 //! and command-line interface
+//!
+//! TODO
+//! UNDER CONSTRUCTION
+//! Will be refactored
 
 use crate::{
     app::{
-        events::{Event, EventDevice, EventsSdl},
+        events::{self, Event, EventDevice},
         settings::{Settings, SoundBackend},
         sound::{SoundDevice, DEFAULT_SAMPLE_RATE},
-        video::{Rect, TextureInfo, VideoDevice, VideoSdl},
+        video::{self, Rect, TextureInfo, VideoDevice},
     },
     host::{self, AppHost, AppHostContext, DetectedFileKind},
 };
@@ -64,15 +68,19 @@ impl RustzxApp {
         } else {
             None
         };
-        let mut video = Box::new(VideoSdl::new(&settings));
-        let tex_border = video.gen_texture(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32);
-        let tex_canvas = video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32);
-        let scale = settings.scale as u32;
-        let events = Box::new(EventsSdl::new(&settings));
+
         let sample_rate = snd
             .as_ref()
             .map(|s| s.sample_rate())
             .unwrap_or(DEFAULT_SAMPLE_RATE);
+
+        let mut video = Box::new(video::wgpu::Device::default());
+        let tex_border = video.gen_texture(SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32);
+        let tex_canvas = video.gen_texture(CANVAS_WIDTH as u32, CANVAS_HEIGHT as u32);
+
+        let events  = Box::new(events::winit::Device::default());
+
+        let scale = settings.scale as u32;
 
         let mut emulator = Emulator::new(settings.to_rustzx_settings(sample_rate), AppHostContext)
             .map_err(|e| anyhow!("Failed to construct emulator: {}", e))?;
@@ -320,8 +328,6 @@ fn create_sound_backend(settings: &Settings) -> anyhow::Result<Box<dyn SoundDevi
     use crate::app::sound;
 
     let backend: Box<dyn SoundDevice> = match settings.sound_backend {
-        SoundBackend::Sdl => Box::new(sound::SoundSdl::new(settings)?),
-        #[cfg(feature = "sound-cpal")]
         SoundBackend::Cpal => Box::new(sound::SoundCpal::new(settings)?),
     };
     Ok(backend)

@@ -1,7 +1,7 @@
 mod frame_buffer;
 
 use anyhow::{anyhow, bail, Context};
-use frame_buffer::{FrameBufferContext, RgbaFrameBuffer};
+use frame_buffer::{FrameBufferContext, IndexedFrameBuffer};
 use rustzx_core::{
     host::{
         FrameBuffer, Host, HostContext, RomFormat, RomSet, Screen, Snapshot, StubDebugInterface,
@@ -25,7 +25,7 @@ impl Host for AppHost {
     type Context = AppHostContext;
     type DebugInterface = StubDebugInterface;
     type EmulationStopwatch = InstantStopwatch;
-    type FrameBuffer = RgbaFrameBuffer;
+    type FrameBuffer = IndexedFrameBuffer;
     type IoExtender = StubIoExtender;
     type TapeAsset = DynamicAsset;
 }
