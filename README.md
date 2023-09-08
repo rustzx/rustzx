@@ -42,7 +42,7 @@ ZX Spectrum emulator written in Rust
     - Block instruction flags [oddities](https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags) (`LDxR`/`CPxR`/`INxR`/`OTxR`)
 
 ## Install
-1. Sure that you have C compiller and CMake to
+1. Sure that you have C compiler and CMake to
 build bundled `sdl2`
 2. (Linux-specific) Install required development packages: [`libasound2-dev`]
 3. Install it with cargo
@@ -97,15 +97,15 @@ If you have choppy audio, try `--sound-latency` option with bigger values.
 ![](screenshots/sentinel.png)
 
 ## References
-Many resources were used to find out, how to buildthis emulator.
+Many resources were used to find out, how to build this emulator.
 Huge thanks to the following resources which helped to figure out a lot of
-defails about ZX Spectrum.
+details about ZX Spectrum.
 - Of course [z80.info](http://www.z80.info/)
     - [Decoding Z80 opcodes](http://www.z80.info/decoding.htm)
     - [Opcodes list](http://www.z80.info/z80code.txt)
     - [CPU user manual](http://www.z80.info/zip/z80cpu_um.pdf)
     - [CPU architecture](http://www.z80.info/z80arki.htm)
-    - [Interrupt behaviour](http://www.z80.info/interrup.htm)
+    - [Interrupt behavior](http://www.z80.info/interrup.htm)
     - [Z80 undocumented documented](http://www.z80.info/zip/z80-documented.pdf)
 - Instruction table from [ClrHome](http://clrhome.org/table/)
 - "Floating bus explained!" by [Ramsoft](http://ramsoft.bbk.org.omegahg.com/floatingbus.html)
@@ -128,5 +128,5 @@ defails about ZX Spectrum.
 Emulator contains ROMs, created by by Sinclair Research Ltd (now owned by Amstrad plc),
 Amstrad has [given](https://groups.google.com/forum/?hl=en#!msg/comp.sys.amstrad.8bit/HtpBU2Bzv_U/HhNDSU3MksAJ)
 permission to distribute their ROM's in conjunction with emulators.
-In RustZX these ROMs included in source of the core emulator library `mod rustzx_core::zx::roms`. Embedded roms
-can be opted-out from the core library by disabling feature `embedded-roms`.
+In RustZX these ROMs are included in the source of the core emulator library `mod rustzx_core::zx::roms`. Embedded roms
+can be opted-out from the core library by disabling the feature `embedded-roms`.
