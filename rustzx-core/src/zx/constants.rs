@@ -15,7 +15,7 @@ pub const FPS: usize = 50;
 pub(crate) const BITMAP_MAX_REL: u16 = 0x17FF;
 pub(crate) const ATTR_BASE_REL: u16 = 0x1800;
 pub(crate) const ATTR_MAX_REL: u16 = 0x1AFF;
-/// on all spectrums theese values are fixed
+/// on all spectrums these values are fixed
 pub(crate) const CLOCKS_PER_COL: usize = 4;
 #[cfg(feature = "precise-border")]
 pub(crate) const PIXELS_PER_CLOCK: usize = 2;

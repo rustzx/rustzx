@@ -40,7 +40,7 @@ where
         self
     }
 
-    /// multiplies self channels separatly
+    /// multiplies self channels separately
     pub fn mul(&mut self, val_left: T, val_right: T) -> &mut Self {
         self.left *= val_left;
         self.right *= val_right;

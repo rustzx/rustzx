@@ -107,6 +107,8 @@ impl Z80 {
 
     fn handle_interrupt(&mut self, bus: &mut impl Z80Bus) {
         if bus.nmi_active() {
+            // q resets during interrupt
+            self.regs.clear_q();
             // Release halt line on the bus
             if self.halted {
                 bus.halt(false);
@@ -119,9 +121,15 @@ impl Z80 {
             // 3 x 2 clocks consumed
             execute_push_16(self, bus, RegName16::PC, 3);
             self.regs.set_pc(0x0066);
+
+            // mem_ptr is set to PC
+            self.regs.set_mem_ptr(self.regs.get_pc());
+
             self.regs.inc_r();
             // 5 + 3 + 3 = 11 clocks
         } else if bus.int_active() && self.regs.get_iff1() {
+            // q resets during interrupt
+            self.regs.clear_q();
             // Release halt line on the bus
             if self.halted {
                 bus.halt(false);
@@ -136,8 +144,9 @@ impl Z80 {
                 IntMode::Im0 | IntMode::Im1 => {
                     execute_push_16(self, bus, RegName16::PC, 3);
                     self.regs.set_pc(0x0038);
-                    bus.wait_internal(7);
+
                     // 3 + 3 + 7 = 13 clocks
+                    bus.wait_internal(7);
                 }
                 // jump using interrupt vector
                 IntMode::Im2 => {
@@ -151,6 +160,8 @@ impl Z80 {
                     // 3 + 3 + 3 + 3 + 7 = 19 clocks
                 }
             }
+            // mem_ptr is set to PC
+            self.regs.set_mem_ptr(self.regs.get_pc());
         }
     }
 
@@ -163,6 +174,14 @@ impl Z80 {
             // allow interrupts again
             self.skip_interrupt = false;
         };
+
+        // Actions to be performed before any opcode execution
+        let before_execute_opcode = |cpu: &mut Self| {
+            // Save Q register value from previous emulation step, which is later used to
+            // properly calculate flags in some instructions
+            cpu.regs.step_q();
+        };
+
         let byte1 = if self.active_prefix != Prefix::None {
             let tmp = self.active_prefix.to_byte().unwrap();
             self.active_prefix = Prefix::None;
@@ -184,28 +203,33 @@ impl Z80 {
                             self.skip_interrupt = true;
                         }
                         Prefix::CB => {
+                            before_execute_opcode(self);
                             execute_bits(self, bus, prefix_single);
                         }
                         Prefix::None => {
                             let opcode = Opcode::from_byte(byte2);
+                            before_execute_opcode(self);
                             execute_normal(self, bus, opcode, prefix_single);
                         }
                     };
                 }
                 Prefix::CB => {
                     // opcode will be read in the called
+                    before_execute_opcode(self);
                     execute_bits(self, bus, Prefix::None);
                 }
                 Prefix::ED => {
                     let byte2 = self.fetch_byte(bus, 4);
                     self.regs.inc_r();
                     let opcode = Opcode::from_byte(byte2);
+                    before_execute_opcode(self);
                     execute_extended(self, bus, opcode);
                 }
                 _ => unreachable!(),
             };
         } else {
             let opcode = Opcode::from_byte(byte1);
+            before_execute_opcode(self);
             execute_normal(self, bus, opcode, Prefix::None);
         };
         // Allow bus implementation to process pc-based events

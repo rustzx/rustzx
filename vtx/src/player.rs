@@ -200,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn precise_player_wroks_normally() {
+    fn precise_player_works_normally() {
         // This test also doubles as test for `aym` crate with AymPrecise backend selected
         expect![[r#"65127ad0e493b23b43e838b6281d7f8d07a47549efd0c9d1eda3d3ccaf0b7e5c"#]].assert_eq(
             &generate_samples_hash_for_vtx::<aym::AymPrecise>(include_bytes!("test/csoon.vtx")),

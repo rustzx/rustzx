@@ -42,7 +42,7 @@ pub struct ZXMemory {
 }
 
 impl ZXMemory {
-    /// Returns new Memory with coresponding rom and ram types
+    /// Returns new Memory with corresponding rom and ram types
     pub fn new(rom_type: RomType, ram_type: RamType) -> ZXMemory {
         let ram_size;
         let mem_map;
@@ -70,20 +70,27 @@ impl ZXMemory {
 
     /// Returns value form memory
     pub fn read(&self, addr: u16) -> u8 {
-        let page = self.map[(addr as usize) / PAGE_SIZE];
-        let addr_rel = addr as usize % PAGE_SIZE;
+        let (page, offset) = self.paged_address(addr);
         match page {
-            Page::Rom(page) => self.rom[(page as usize) * PAGE_SIZE + addr_rel],
-            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + addr_rel],
+            Page::Rom(page) => self.rom[(page as usize) * PAGE_SIZE + offset],
+            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + offset],
         }
     }
 
-    /// Writes value to memory
+    /// Writes value to writable memory
     pub fn write(&mut self, addr: u16, value: u8) {
-        let page = self.map[(addr as usize) / PAGE_SIZE];
-        let addr_rel = addr as usize % PAGE_SIZE;
+        let (page, offset) = self.paged_address(addr);
         if let Page::Ram(page) = page {
-            self.ram[(page as usize) * PAGE_SIZE + addr_rel] = value;
+            self.ram[(page as usize) * PAGE_SIZE + offset] = value;
+        }
+    }
+
+    /// Writes to memory space, overriding even ROM routines. Useful for testing and ROM poke's
+    pub(crate) fn force_write(&mut self, addr: u16, value: u8) {
+        let (page, offset) = self.paged_address(addr);
+        match page {
+            Page::Ram(page) => self.ram[(page as usize) * PAGE_SIZE + offset] = value,
+            Page::Rom(page) => self.rom[(page as usize) * PAGE_SIZE + offset] = value,
         }
     }
 
@@ -141,5 +148,12 @@ impl ZXMemory {
         }
         let shift = page as usize * PAGE_SIZE;
         &self.ram[shift..shift + PAGE_SIZE]
+    }
+
+    /// Calculates [Page] and local offset from memory address
+    fn paged_address(&self, addr: u16) -> (Page, usize) {
+        let page = self.map[(addr as usize) / PAGE_SIZE];
+        let offset = addr as usize % PAGE_SIZE;
+        (page, offset)
     }
 }

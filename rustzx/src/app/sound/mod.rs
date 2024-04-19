@@ -19,3 +19,9 @@ pub trait SoundDevice {
     /// Return selected device sample rate
     fn sample_rate(&self) -> usize;
 }
+
+pub fn ringbuf_size_from_sample_rate(sample_rate: usize) -> usize {
+    // Around 5 frames of buffering is available
+    const RINGBUF_LENGTH_MS: usize = 100;
+    (sample_rate as f32 * (RINGBUF_LENGTH_MS as f32 / 1000f32)) as usize
+}

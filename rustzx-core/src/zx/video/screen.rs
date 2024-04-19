@@ -51,7 +51,7 @@ impl BlocksCount {
                 columns = 0;
             };
             if lines >= CANVAS_HEIGHT {
-                lines = 0;
+                lines = CANVAS_HEIGHT;
                 columns = 0;
             }
         };
@@ -178,7 +178,7 @@ impl<FB: FrameBuffer> ZXScreen<FB> {
                     );
                 }
             }
-            // cahnge last block to current
+            // change last block to current
             self.last_blocks = blocks;
         }
     }
