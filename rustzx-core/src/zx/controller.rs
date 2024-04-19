@@ -49,7 +49,7 @@ pub(crate) struct ZXController<H: Host> {
     // current border color
     pub border_color: ZXColor,
     // clocls count from frame start
-    frame_clocks: usize,
+    pub frame_clocks: usize,
     // frames count, which passed during emulation invokation
     passed_frames: usize,
     events: EmulationEvents,

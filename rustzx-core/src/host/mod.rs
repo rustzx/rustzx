@@ -12,7 +12,7 @@ pub trait Stopwatch {
 
 pub enum Snapshot<LoadableAssetImpl: LoadableAsset> {
     Sna(LoadableAssetImpl),
-    // TODO(#55): Implement SLT snapshot format support
+    Szx(LoadableAssetImpl), // TODO(#55): Implement SLT snapshot format support
 }
 
 pub enum SnapshotRecorder<DataRecorderImpl: DataRecorder> {

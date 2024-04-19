@@ -1,4 +1,4 @@
-#![no_std]
+//#![no_std]
 
 pub(crate) mod emulator;
 pub(crate) mod settings;

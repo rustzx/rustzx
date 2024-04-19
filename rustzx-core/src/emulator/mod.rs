@@ -100,6 +100,7 @@ impl<H: Host> Emulator<H> {
     pub fn load_snapshot(&mut self, snapshot: Snapshot<impl SnapshotAsset>) -> Result<()> {
         match snapshot {
             Snapshot::Sna(asset) => snapshot::sna::load(self, asset),
+            Snapshot::Szx(asset) => snapshot::szx::load(self, asset),
         }
     }
 

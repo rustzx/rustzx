@@ -273,6 +273,13 @@ impl RustZXTester {
             .expect("Failed to load test SNA")
     }
 
+    pub fn load_szx(&mut self, name: impl AsRef<Path>) {
+        let asset = self.load_asset(name);
+        self.emulator
+            .load_snapshot(Snapshot::Szx(asset))
+            .expect("Failed to load test SZX")
+    }
+
     pub fn load_single_page_rom(&mut self, name: impl AsRef<Path>) {
         let rom_data = self.load_asset_data(name);
         struct DiagRomSet {

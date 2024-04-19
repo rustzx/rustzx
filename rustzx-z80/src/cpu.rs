@@ -31,9 +31,9 @@ pub struct Z80 {
     /// Contains Z80 registers data
     pub regs: Regs,
     /// active if Z80 waiting for interrupt
-    pub(crate) halted: bool,
+    pub halted: bool,
     /// enabled if interrupt check will be skipped nex time
-    pub(crate) skip_interrupt: bool,
+    pub skip_interrupt: bool,
     /// type of interrupt
     pub(crate) int_mode: IntMode,
     active_prefix: Prefix,

@@ -11,6 +11,8 @@ pub enum Error {
     TapeLoad(TapeLoadError),
     /// Failed to load screen
     ScreenLoad(ScreenLoadError),
+    /// Failed to load snapshot
+    SnapshotLoad(SnapshotLoadError),
 }
 
 #[derive(Debug, Display)]
@@ -35,6 +37,14 @@ pub enum RomLoadError {
 pub enum TapeLoadError {
     /// Provided tap file is invalid
     InvalidTapFile,
+}
+
+#[derive(Debug, Display)]
+pub enum SnapshotLoadError {
+    /// Provided SNA file is invalid
+    InvalidSNAFile,
+    /// Provided SZX file is invalid
+    InvalidSZXFile,
 }
 
 #[derive(Debug, Display)]

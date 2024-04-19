@@ -14,7 +14,7 @@ use rustzx_utils::{
 };
 use std::{collections::VecDeque, fs::File, path::Path};
 
-const SUPPORTED_SNAPSHOT_FORMATS: [&str; 1] = ["sna"];
+const SUPPORTED_SNAPSHOT_FORMATS: [&str; 2] = ["sna", "szx"];
 const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
 const SUPPORTED_SCREEN_FORMATS: [&str; 1] = ["scr"];
 
@@ -66,7 +66,7 @@ pub enum DetectedContainerKind {
 pub fn load_asset(path: &Path) -> anyhow::Result<DynamicAsset> {
     let container_kind = detect_container(path);
 
-    let file = File::open(path).with_context(|| "Failed to open tape file")?;
+    let file = File::open(path).with_context(|| "Failed to open file")?;
 
     match container_kind {
         DetectedContainerKind::None => Ok(FileAsset::from(file).into()),
@@ -100,9 +100,25 @@ pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<DynamicAsset>> {
         bail!("Provided snapshot file does not exist");
     }
 
-    load_asset(path)
-        .map(Snapshot::Sna)
-        .with_context(|| "Failed to load snapshot file")
+    match path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or_default()
+        .to_lowercase()
+        .as_str()
+    {
+        "sna" => load_asset(path)
+            .map(Snapshot::Sna)
+            .with_context(|| "Failed to load SNA file"),
+        "szx" => load_asset(path)
+            .map(Snapshot::Szx)
+            .with_context(|| "Failed to load SZX file"),
+        _ => Err(anyhow!("Not supported file format")),
+    }
+    /*load_asset(path)
+    .map(Snapshot::Sna)
+    .with_context(|| "Failed to load snapshot file")**/
 }
 
 pub fn load_screen(path: &Path) -> anyhow::Result<Screen<DynamicAsset>> {
