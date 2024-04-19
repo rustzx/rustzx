@@ -677,6 +677,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "miniz_oxide"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87dfd01fe195c66b572b37921ad8803d010623c0aca821bea2302239d155cdae"
+dependencies = [
+ "adler",
+]
+
+[[package]]
 name = "nanoid"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1069,6 +1078,7 @@ dependencies = [
  "enum_dispatch",
  "from_variants",
  "lazy_static",
+ "miniz_oxide 0.7.3",
  "rustzx-z80",
  "strum",
 ]

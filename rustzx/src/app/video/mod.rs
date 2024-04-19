@@ -39,7 +39,7 @@ pub trait VideoDevice {
     fn update_texture(&mut self, tex: TextureInfo, buffer: &[u8]);
     /// starts render block
     fn begin(&mut self);
-    /// draws plain texure into destination rect
+    /// draws plain texture into destination rect
     fn draw_texture_2d(&mut self, tex: TextureInfo, rect: Option<Rect>);
     /// finishes rendering
     fn end(&mut self);

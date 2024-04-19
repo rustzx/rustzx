@@ -106,6 +106,13 @@ impl<H: Host> Emulator<H> {
         self.sound_enabled = value;
     }
 
+    /// enables/disables AY
+    #[cfg(all(feature = "sound", feature = "ay"))]
+    pub fn set_ay_enabled(&mut self, value: bool) {
+        self.controller.mixer.use_ay = value;
+        self.settings.ay_enabled = value;
+    }
+
     /// function for sound generation request check
     #[cfg(feature = "sound")]
     pub fn have_sound(&self) -> bool {
@@ -120,6 +127,7 @@ impl<H: Host> Emulator<H> {
     pub fn load_snapshot(&mut self, snapshot: Snapshot<impl SnapshotAsset>) -> Result<()> {
         match snapshot {
             Snapshot::Sna(asset) => snapshot::sna::load(self, asset),
+            Snapshot::Szx(asset) => snapshot::szx::load(self, asset),
         }
     }
 
@@ -129,6 +137,7 @@ impl<H: Host> Emulator<H> {
     {
         match recorder {
             SnapshotRecorder::Sna(recorder) => snapshot::sna::save(self, recorder),
+            SnapshotRecorder::Szx(recorder) => snapshot::szx::save(self, recorder),
         }
     }
 
