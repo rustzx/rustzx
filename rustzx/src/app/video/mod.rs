@@ -29,13 +29,13 @@ impl Rect {
     }
 }
 
-/// provides video functionality trough rela backend to emulator
+/// provides video functionality through real backend to emulator
 pub trait VideoDevice {
     /// generates and returns texture handle
     fn gen_texture(&mut self, width: u32, height: u32) -> TextureInfo;
     /// changes window title
     fn set_title(&mut self, title: &str);
-    /// udpates texture data
+    /// updates texture data
     fn update_texture(&mut self, tex: TextureInfo, buffer: &[u8]);
     /// starts render block
     fn begin(&mut self);

@@ -1,7 +1,7 @@
 const WHEEL_MASK: u8 = 0xF0;
 const WHEEL_SHIFT: usize = 4;
 
-// non_exhaustive allows to restrict struct instantiation only to `Default::deafault`
+// non_exhaustive allows to restrict struct instantiation only to `Default::defaault`
 #[non_exhaustive]
 pub(crate) struct KempstonMouse {
     pub buttons_port: u8,

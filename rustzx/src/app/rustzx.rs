@@ -146,7 +146,8 @@ impl RustzxApp {
             let emulator_dt = self
                 .emulator
                 .emulate_frames(MAX_FRAME_TIME)
-                .map_err(|e| anyhow!("Emulation step failed: {:#?}", e))?;
+                .map_err(|e| anyhow!("Emulation step failed: {:#?}", e))?
+                .duration;
             // if sound enabled sound ganeration allowed then move samples to sound thread
             if let Some(ref mut snd) = self.snd {
                 // if can be turned off even on speed change, so check it everytime
@@ -214,8 +215,8 @@ impl RustzxApp {
                     Event::MouseMove { x, y } => {
                         self.emulator.send_mouse_pos_diff(x, y);
                     }
-                    Event::MouseButton(buton, pressed) => {
-                        self.emulator.send_mouse_button(buton, pressed);
+                    Event::MouseButton(button, pressed) => {
+                        self.emulator.send_mouse_button(button, pressed);
                     }
                     Event::MouseWheel(direction) => {
                         self.emulator.send_mouse_wheel(direction);
@@ -231,7 +232,7 @@ impl RustzxApp {
             let emulation_dt = frame_start.elapsed();
             if emulation_dt < frame_target_dt {
                 let wait_koef = if self.emulator.have_sound() { 9 } else { 10 };
-                // sleep untill frame sync
+                // sleep until frame sync
                 thread::sleep((frame_target_dt - emulation_dt) * wait_koef / 10);
             };
             // get exceed clocks and use them on next iteration

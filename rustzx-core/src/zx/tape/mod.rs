@@ -29,7 +29,7 @@ pub trait TapeImpl {
     fn can_fast_load(&self) -> bool;
     /// Returns byte of current block or `None` if block has ended
     fn next_block_byte(&mut self) -> Result<Option<u8>>;
-    /// Loads next block. Retruns false if end of the tape is reached
+    /// Loads next block. Returns false if end of the tape is reached
     fn next_block(&mut self) -> Result<bool>;
     /// Returns current tape (`ear`) bit
     fn current_bit(&self) -> bool;

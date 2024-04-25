@@ -91,7 +91,7 @@ loop:	ld	a,(hl)		; end of list ?
 	dec	hl
 	call	stt
 	jp	loop
-	
+
 done:	ld	de,msg2
 	ld	c,9
 	call	bdos
@@ -462,7 +462,7 @@ ld162:	db	0ffh		; flag mask
 	tstr	0,-1,0,0,0,0,0,0,0,0			; (16 cycles)
 	db	05fh,097h,024h,087h			; expected crc
 	tmsg	'ld hl,(nnnn)'
-	
+
 ; ld sp,(nnnn) (16 cycles)
 ld163:	db	0ffh		; flag mask
 	tstr	<0edh,07bh,low msbt,high msbt>,08dfch,057d7h,02161h,0ca18h,0c185h,027dah,083h,01eh,0f460h
@@ -478,7 +478,7 @@ ld164:	db	0ffh		; flag mask
 	tstr	0,-1,0,0,0,0,0,0,0,0			; (16 cycles)
 	db	085h,08bh,0f1h,06dh			; expected crc
 	tmsg	'ld <ix,iy>,(nnnn)'
-	
+
 ; ld (nnnn),<bc,de> (64 cycles)
 ld165:	db	0ffh		; flag mask
 	tstr	<0edh,043h,low msbt,high msbt>,01f98h,0844dh,0e8ach,0c9edh,0c95dh,08f61h,080h,03fh,0c7bfh
@@ -898,7 +898,7 @@ ncb1:	ld	a,b
 	ret	z
 	ld	a,1
 	ret
-	
+
 ; get next shifter bit in low bit of a
 shfbit:	ds	1
 shfbyt:	ds	2
@@ -924,7 +924,7 @@ nsb1:	ld	a,b
 	ret	z
 	ld	a,1
 	ret
-	
+
 
 ; clear memory at hl, bc bytes
 clrmem:	push	af
@@ -1017,7 +1017,7 @@ cntend:	pop	bc
 cntlp1:	inc	hl
 	inc	de
 	jp	cntlp
-	
+
 
 ; multi-byte shifter
 shift:	push	bc
@@ -1073,7 +1073,7 @@ test:	push	af
 	ld	b,16
 	ld	hl,msbt
 	call	hexstr
-      endif	
+      endif
 	di			; disable interrupts
 	ld	(spsav),sp	; save stack pointer
 	ld	sp,msbt+2	; point to test-case machine state
@@ -1170,7 +1170,7 @@ phex2:	push	af
 	rrca
 	call	phex1
 	pop	af
-; fall through	
+; fall through
 
 ; display low nibble in a
 phex1:	push	af
@@ -1543,4 +1543,3 @@ crctab:	db	000h,000h,000h,000h
 	db	0c3h,00ch,08eh,0a1h
 	db	05ah,005h,0dfh,01bh
 	db	02dh,002h,0efh,08dh
-

@@ -2,7 +2,8 @@ use crate::{
     opcode::{execute_rot, BitOperand8, Opcode, Prefix},
     smallnum::U2,
     tables::F3F5_TABLE,
-    RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN, FLAG_ZERO, Z80,
+    RegName16, RegName8, Z80Bus, FLAG_CARRY, FLAG_F3, FLAG_F5, FLAG_HALF_CARRY, FLAG_PV, FLAG_SIGN,
+    FLAG_ZERO, Z80,
 };
 
 /// Instruction group which operates on bits
@@ -23,7 +24,7 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut impl Z80Bus, prefix: Prefix) {
         let displacement = cpu.fetch_byte(bus, 3) as i8;
         let addr = cpu
             .regs
-            .get_reg_16_with_displacement(RegName16::HL.with_prefix(prefix), displacement);
+            .build_addr_with_offset(RegName16::HL.with_prefix(prefix), displacement);
         let opcode = Opcode::from_byte(bus.read(cpu.regs.get_pc(), 3));
         bus.wait_loop(cpu.regs.get_pc(), 2);
         cpu.regs.inc_pc();
@@ -57,8 +58,8 @@ pub fn execute_bits(cpu: &mut Z80, bus: &mut impl Z80Bus, prefix: Prefix) {
                     // NOTE: according to FUSE.
                     // maybe must be based on current bit or something?
                     flags |= ((data & 0x80 != 0) && (bit_number == 7)) as u8 * FLAG_SIGN;
-                    if let BitOperand8::Indirect(addr) = operand {
-                        flags |= F3F5_TABLE[(addr >> 8) as usize];
+                    if let BitOperand8::Indirect(_addr) = operand {
+                        flags |= ((cpu.regs.get_mem_ptr() >> 8) as u8) & (FLAG_F3 | FLAG_F5);
                     } else {
                         flags |= F3F5_TABLE[data as usize];
                     }

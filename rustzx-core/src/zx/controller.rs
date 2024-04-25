@@ -1,7 +1,7 @@
-//! Contains ZX Spectrum System contrller (like ula or so) of emulator
+//! Contains ZX Spectrum System controller (like ula or so) of emulator
 use crate::{
     error::Error,
-    host::{Host, HostContext, IoExtender},
+    host::{DebugInterface, Host, HostContext, IoExtender},
     settings::RustzxSettings,
     utils::screen::bitmap_line_addr,
     zx::{
@@ -30,7 +30,7 @@ use crate::zx::video::border::ZXBorder;
 
 /// ZX System controller
 pub(crate) struct ZXController<H: Host> {
-    // parts of ZX Spectum.
+    // parts of ZX Spectrum.
     pub machine: ZXMachine,
     pub memory: ZXMemory,
     pub screen: ZXScreen<H::FrameBuffer>,
@@ -40,6 +40,7 @@ pub(crate) struct ZXController<H: Host> {
     pub kempston: Option<KempstonJoy>,
     pub mouse: Option<KempstonMouse>,
     pub io_extender: Option<H::IoExtender>,
+    pub debug_interface: Option<H::DebugInterface>,
     #[cfg(feature = "sound")]
     pub mixer: ZXMixer,
     pub keyboard: [u8; 8],
@@ -50,7 +51,7 @@ pub(crate) struct ZXController<H: Host> {
     pub border_color: ZXColor,
     // clocls count from frame start
     pub frame_clocks: usize,
-    // frames count, which passed during emulation invokation
+    // frames count, which passed during emulation invocation
     passed_frames: usize,
     events: EmulationEvents,
     paging_enabled: bool,
@@ -108,6 +109,7 @@ impl<H: Host> ZXController<H> {
             kempston,
             mouse,
             io_extender: None,
+            debug_interface: None,
             #[cfg(feature = "sound")]
             mixer,
             keyboard: [0xFF; 8],
@@ -312,14 +314,9 @@ impl<H: Host> ZXController<H> {
         self.mixer.new_frame();
     }
 
-    /// Clears all detected
-    pub fn clear_events(&mut self) {
-        self.events.clear();
-    }
-
-    /// Returns last events
-    pub fn events(&self) -> EmulationEvents {
-        self.events
+    /// Collects all events from the last emulation step
+    pub fn take_events(&mut self) -> EmulationEvents {
+        self.events.take()
     }
 
     /// Returns true if all frame clocks has been passed
@@ -433,6 +430,11 @@ impl<H: Host> Z80Bus for ZXController<H> {
                 self.events |= EmulationEvents::TAPE_FAST_LOAD_TRIGGER_DETECTED;
             }
         }
+        if let Some(debug) = &mut self.debug_interface {
+            if debug.check_pc_breakpoint(addr) {
+                self.events |= EmulationEvents::PC_BREAKPOINT;
+            }
+        }
     }
 
     /// read data without taking onto account contention
@@ -450,7 +452,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         }
     }
 
-    /// Cahnges internal state on clocks count change (emualtion processing)
+    /// Changes internal state on clocks count change (emulation processing)
     fn wait_internal(&mut self, clk: usize) {
         self.frame_clocks += clk;
         if let Err(e) = self.tape.process_clocks(clk) {

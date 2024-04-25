@@ -4,7 +4,7 @@ use rustzx_z80::{RegName16, Z80Bus, FLAG_CARRY, FLAG_ZERO};
 
 pub fn fast_load_tap<H: Host>(emulator: &mut Emulator<H>) -> Result<()> {
     // So, at current moment we at 0x056C in 48K Rom.
-    // AF contains some garbage. so we need to swap if wtih A'F'
+    // AF contains some garbage. so we need to swap if with A'F'
     emulator.cpu.regs.swap_af_alt();
     // now we have type of block at A and flags before LD-BYTES at F
     let mut f = emulator.cpu.regs.get_flags();

@@ -36,6 +36,10 @@ ZX Spectrum emulator written in Rust
     - Global allocator is still needed, but all dynamic
        allocations were minimized
     - All resource-heavy features are configurable via cargo `features`
+- Obscure Z80 features emulation:
+    - `WZ/memptr` register (`F3/F5` flags obscure behavior in `BIT n, (HL)`)
+    - `Q` register (`F3/F5` flags obscure behavior in `SCF` and `CCF`)
+    - Block instruction flags [oddities](https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags) (`LDxR`/`CPxR`/`INxR`/`OTxR`)
 
 ## Install
 1. Sure that you have C compiller and CMake to
@@ -118,6 +122,7 @@ defails about ZX Spectrum.
 - [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
 - [YAZE test suite](https://www.mathematik.uni-ulm.de/users/ag/yaze-ag/)
 - [z80test test suite](https://github.com/raxoft/z80test)
+- [ROM routines](https://skoolkid.github.io/rom/maps/routines.html)
 
 ## ROM's
 Emulator contains ROMs, created by by Sinclair Research Ltd (now owned by Amstrad plc),

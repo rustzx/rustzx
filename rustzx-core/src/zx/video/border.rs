@@ -66,7 +66,7 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
     /// and bool value, which signals end of frame
     fn next_border_pixel(&self, clocks: usize) -> (usize, usize, bool) {
         let specs = self.machine.specs();
-        // begining of the first line (first pixel timing minus border lines
+        // beginning of the first line (first pixel timing minus border lines
         // minus left border columns)
         let clocks_origin = specs.clocks_first_pixel
             - 8 * BORDER_ROWS * specs.clocks_line
@@ -82,7 +82,7 @@ impl<FB: FrameBuffer> ZXBorder<FB> {
         // so, next pixel will be current + 2
         let mut pixel = ((clocks % specs.clocks_line) + 1) * PIXELS_PER_CLOCK;
         // if beam out of screen on horizontal pos.
-        // pixel - 2 bacause we added 2 on prev line
+        // pixel - 2 because we added 2 on prev line
         if pixel - PIXELS_PER_CLOCK >= SCREEN_WIDTH {
             // first pixel of next line
             pixel = 0;

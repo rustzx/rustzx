@@ -50,13 +50,13 @@ pub enum BitOperand8 {
     Reg(RegName8),
 }
 
-/// Direction of address cahange in block functions
+/// Direction of address change in block functions
 pub enum BlockDir {
     Inc,
     Dec,
 }
 
-/// Opcode, devided in parts
+/// Opcode, divided in parts
 /// ```text
 /// xxyyyzzz
 /// xxppqzzz

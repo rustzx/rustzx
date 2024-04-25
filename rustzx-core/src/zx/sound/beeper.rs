@@ -20,7 +20,7 @@ impl SampleGenerator<f64> for ZXBeeper {
         // - Beeper intentionally made produce only positive half-wave 0..0.5
         // range instead of -0.25..0.25) because of current emulator lack of
         // dc filtering.
-        // - Beeper only produces a quater of available sample
+        // - Beeper only produces a quarter of available sample
         // range because relatively to AY chip, square wave of a beeper is
         // too loud
 

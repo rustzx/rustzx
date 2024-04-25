@@ -9,7 +9,7 @@ use num_traits::Num;
 /// AY/YM Sound chip register count
 pub const AY_REGISTER_COUNT: usize = 14;
 
-/// Samples, returned by `aym` implemnt this trait; It allows to correctly convert
+/// Samples, returned by `aym` implement this trait; It allows to correctly convert
 /// the sound sample between different types. e.g.
 /// [to_f32](AySample::to_f32)/[to_f64](AySample::to_f64) will always return sample in the
 /// correct range `[-1.0; 1.0]`, while for example [to_i8](AySample::to_i8)

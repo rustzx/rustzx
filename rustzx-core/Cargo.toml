@@ -1,12 +1,13 @@
 [package]
 name = "rustzx-core"
-version = "0.15.0"
-authors = ["The RustZX contributors", "Vladyslav Nikonov <mail@pacmancoder.xyz>"]
-description = "ZX Spectum emulator core library"
-repository = "https://github.com/rustzx/rustzx"
+description = "ZX Spectrum emulator core library"
 keywords = ["emulator", "game", "z80", "no_std"]
-license = "MIT"
-edition = "2018"
+
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
 
 [features]
 default = []
@@ -23,6 +24,6 @@ lazy_static = { version = "1.1", features = ["spin_no_std"] }
 displaydoc = { version = "0.2", default-features = false }
 from_variants = "0.6"
 enum_dispatch = "0.3"
-aym = { version = "0.15", path = "../aym", optional = true }
-rustzx-z80 = { version = "0.15", path = "../rustzx-z80" }
+aym = { workspace = true, optional = true }
+rustzx-z80 = { workspace = true }
 strum = { version = "0.22", default-features = false, features = ["derive"], optional = true }

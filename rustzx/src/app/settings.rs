@@ -32,7 +32,7 @@ pub struct Settings {
     pub machine: ZXMachine,
     /// Set emulation speed at emualtor start-up. Can be specified as deciamal non-zero
     /// value or as a special value `MAX` to run emulator as fast as possible
-    #[structopt(long, default_value = "0", parse(try_from_str = emualtion_speed_from_str))]
+    #[structopt(long, default_value = "1", parse(try_from_str = emulation_speed_from_str))]
     pub speed: EmulationMode,
     /// Disable fast tape loading
     #[structopt(long = "nofastload")]
@@ -110,7 +110,7 @@ fn machine_from_str(s: &str) -> Result<ZXMachine, anyhow::Error> {
     }
 }
 
-fn emualtion_speed_from_str(s: &str) -> Result<EmulationMode, anyhow::Error> {
+fn emulation_speed_from_str(s: &str) -> Result<EmulationMode, anyhow::Error> {
     match s.to_lowercase().as_str() {
         "max" => Ok(EmulationMode::Max),
         s => {
