@@ -71,7 +71,7 @@ pub const ZXST_HEADER_SIZE: usize = 8; // The zx-state header
 pub const ZXST_BLOCK_HEADER_SIZE: usize = 8; // The header for each block
 
 // Process Creator (CRTR) block
-fn process_crtr_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>) {
+fn process_crtr_block<H: Host>(emulator: &mut Emulator<H>, block_data: &[u8]) {
     let crtr_name_bytes = &block_data[0..33];
     let crtr_str = from_utf8(crtr_name_bytes).unwrap();
     println!("\tCreator name: {crtr_str}");
@@ -81,7 +81,7 @@ fn process_crtr_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>)
 }
 
 // Process ZXSTZ80REGS (Z80R) block
-fn process_z80r_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>) {
+fn process_z80r_block<H: Host>(emulator: &mut Emulator<H>, block_data: &[u8]) {
     // AF
     emulator
         .cpu
@@ -210,7 +210,7 @@ fn process_z80r_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>)
 }
 
 // Process ZXSTSPECREGS (SPCR) block
-fn process_spcr_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, block_data: &Vec<u8>) {
+fn process_spcr_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, block_data: &[u8]) {
     // ch7ffd
     if machine_id < ZxType::Zxstmid128k as u32 {
         emulator.controller.write_7ffd(0); // Always 0 for 16k and 48k
@@ -237,7 +237,7 @@ fn process_spcr_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, bloc
 
 // Process ZXSTAYBLOCK (AY00)
 #[cfg(all(feature = "sound", feature = "ay"))]
-fn process_ay_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, block_data: &Vec<u8>) {
+fn process_ay_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, block_data: &[u8]) {
     // chFlags
     let flags = block_data[0] as u32;
     if machine_id < ZxType::Zxstmid128k as u32 {
@@ -264,7 +264,7 @@ fn process_ay_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, block_
 }
 
 // Process ZXSTKEYB (KEYB)
-fn process_keyb_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>) {
+fn process_keyb_block<H: Host>(emulator: &mut Emulator<H>, block_data: &[u8]) {
     // dwFlags
     // ignored for now as only issue 2 is emulated
     let _flags = u32::from_le_bytes([block_data[0], block_data[1], block_data[2], block_data[3]]);
@@ -279,7 +279,7 @@ fn process_keyb_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>)
 }
 
 // Process ZXSTMOUSE (AMXM)
-fn process_amxm_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>) {
+fn process_amxm_block<H: Host>(emulator: &mut Emulator<H>, block_data: &[u8]) {
     // chType
     // Only Kempston mouse is supported
     let mouse = block_data[0] as u32;
@@ -298,7 +298,7 @@ fn process_amxm_block<H: Host>(emulator: &mut Emulator<H>, block_data: &Vec<u8>)
 fn process_ramp_block<H: Host>(
     emulator: &mut Emulator<H>,
     machine_id: u32,
-    block_data: &Vec<u8>,
+    block_data: &[u8],
 ) -> Result<()> {
     // wFlags
     let flags = u16::from_le_bytes([block_data[0], block_data[1]]) as u32;
@@ -325,17 +325,13 @@ fn process_ramp_block<H: Host>(
         #[cfg(feature = "zlib")]
         {
             //let compressed_size = block_data[3..].len();
-            let compressed_data: Vec<u8> = block_data[3..].iter().copied().collect();
+            let compressed_data: Vec<u8> = block_data[3..].to_vec();
             let data = decode_zlib_stream(compressed_data).unwrap();
-            for i in 0..page_data.len() {
-                page_data[i] = data[i];
-            }
+            page_data.copy_from_slice(&data[..page_data.len()]);
         }
     } else {
-        let uncompressed_data: Vec<u8> = block_data[3..].iter().copied().collect();
-        for i in 0..page_data.len() {
-            page_data[i] = uncompressed_data[i];
-        }
+        let uncompressed_data: Vec<u8> = block_data[3..].to_vec();
+        page_data.copy_from_slice(&uncompressed_data[..page_data.len()]);
     }
 
     Ok(())
@@ -382,7 +378,7 @@ where
     // ZXST Block Header
     asset.seek(SeekFrom::Start(cursor_pos))?;
     let mut block_header = [0u8; ZXST_BLOCK_HEADER_SIZE];
-    while !asset.read_exact(&mut block_header).is_err() {
+    while asset.read_exact(&mut block_header).is_ok() {
         let id: u32 = u32::from_le_bytes([
             block_header[0],
             block_header[1],

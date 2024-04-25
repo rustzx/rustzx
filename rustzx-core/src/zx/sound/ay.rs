@@ -53,9 +53,7 @@ impl ZXAyChip {
     }
 
     pub fn set_regs(&mut self, regs: &[u8]) {
-        for i in 0..16 {
-            self.regs[i] = regs[i];
-        }
+        self.regs.copy_from_slice(&regs[..16]);
     }
 }
 

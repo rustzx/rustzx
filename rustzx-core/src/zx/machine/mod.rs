@@ -70,7 +70,7 @@ impl ZXMachine {
         if clocks_trough_line >= specs.clocks_screen_row {
             return 0;
         }
-        return self.specs().contention_pattern[clocks_trough_line % 8];
+        self.specs().contention_pattern[clocks_trough_line % 8]
     }
 
     /// Checks port contention on machine

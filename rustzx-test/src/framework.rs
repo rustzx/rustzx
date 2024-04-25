@@ -253,8 +253,8 @@ pub mod presets {
 
 impl RustZXTester {
     pub fn new(test_name: &str, settings: RustzxSettings) -> Self {
-        let emulator = Emulator::new(settings, TesterContext::default())
-            .expect("Failed to initialize emulator");
+        let emulator =
+            Emulator::new(settings, TesterContext).expect("Failed to initialize emulator");
 
         Self {
             emulator,
