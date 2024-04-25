@@ -45,6 +45,10 @@ pub enum SnapshotLoadError {
     InvalidSNAFile,
     /// Provided SZX file is invalid
     InvalidSZXFile,
+    /// Machine required by snapshot isn't supported
+    MachineNotSupported,
+    /// Zlib not supported
+    ZlibNotSupported,
 }
 
 #[derive(Debug, Display)]

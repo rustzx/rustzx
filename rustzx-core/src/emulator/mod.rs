@@ -106,6 +106,12 @@ impl<H: Host> Emulator<H> {
         self.sound_enabled = value;
     }
 
+    /// enables/disables AY
+    #[cfg(all(feature = "sound", feature = "ay"))]
+    pub fn enable_ay(&mut self, value: bool) {
+        self.settings.ay_enabled = value;
+    }
+
     /// function for sound generation request check
     #[cfg(feature = "sound")]
     pub fn have_sound(&self) -> bool {

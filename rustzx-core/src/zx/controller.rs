@@ -151,6 +151,20 @@ impl<H: Host> ZXController<H> {
         mixer
     }
 
+    #[cfg(feature = "sound")]
+    pub fn change_mixer(&mut self, settings: &RustzxSettings) {
+        let mut mixer = ZXMixer::new(
+            settings.beeper_enabled,
+            #[cfg(feature = "ay")]
+            settings.ay_enabled,
+            #[cfg(feature = "ay")]
+            settings.ay_mode,
+            settings.sound_sample_rate,
+        );
+        mixer.volume(settings.sound_volume as f64 / 200.0);
+        self.mixer = mixer;
+    }
+
     /// returns current frame emulation pos in percents
     #[cfg(feature = "sound")]
     fn frame_pos(&self) -> f64 {

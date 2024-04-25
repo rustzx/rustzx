@@ -293,6 +293,10 @@ impl Regs {
         self.q = 0;
     }
 
+    pub fn set_q(&mut self) {
+        self.q = self.f;
+    }
+
     pub fn get_last_q(&self) -> u8 {
         self.last_q
     }

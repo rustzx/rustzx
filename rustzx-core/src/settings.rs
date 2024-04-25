@@ -3,6 +3,7 @@ use crate::{utils::EmulationMode, zx::machine::ZXMachine};
 #[cfg(all(feature = "sound", feature = "ay"))]
 use crate::zx::sound::ay::ZXAYMode;
 
+#[derive(Copy, Clone)]
 pub struct RustzxSettings {
     pub machine: ZXMachine,
     pub emulation_mode: EmulationMode,

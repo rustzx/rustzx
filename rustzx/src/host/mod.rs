@@ -118,9 +118,6 @@ pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<DynamicAsset>> {
             .with_context(|| "Failed to load SZX file"),
         _ => Err(anyhow!("Not supported file format")),
     }
-    /*load_asset(path)
-    .map(Snapshot::Sna)
-    .with_context(|| "Failed to load snapshot file")**/
 }
 
 pub fn load_screen(path: &Path) -> anyhow::Result<Screen<DynamicAsset>> {

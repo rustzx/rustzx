@@ -51,6 +51,12 @@ impl ZXAyChip {
     pub fn read(&self) -> u8 {
         self.regs[self.current_reg]
     }
+
+    pub fn set_regs(&mut self, regs: &[u8]) {
+        for i in 0..16 {
+            self.regs[i] = regs[i];
+        }
+    }
 }
 
 impl SampleGenerator<f64> for ZXAyChip {
