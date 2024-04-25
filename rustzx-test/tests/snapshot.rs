@@ -8,5 +8,5 @@ use rustzx_test::framework::{presets, RustZXTester};
 fn load_szx() {
     let mut t = RustZXTester::new("standard_keys", presets::settings_48k_nosound());
     t.enable_debug_port();
-    t.load_szx("nmi.szx");
+    t.load_szx("Overscan.szx");
 }
