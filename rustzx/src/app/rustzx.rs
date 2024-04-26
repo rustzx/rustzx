@@ -238,13 +238,13 @@ impl RustzxApp {
             // get exceed clocks and use them on next iteration
             let frame_dt = frame_start.elapsed();
             // change window header
-            /*if self.enable_frame_trace {
+            if self.enable_frame_trace {
                 log::trace!(
                     "EMUALTOR: {:7.3}ms; FRAME:{:7.3}ms",
                     emulator_dt.as_millis(),
                     frame_dt.as_millis()
                 );
-            }*/
+            }
         }
         Ok(())
     }
