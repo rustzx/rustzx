@@ -19,6 +19,7 @@ const ZXSTZF_EILAST: u32 = 1;
 const ZXSTZF_HALTED: u32 = 2;
 const ZXSTZF_FSET: u32 = 4;
 
+#[cfg(all(feature = "sound", feature = "ay"))]
 const ZXSTAYF_128AY: u32 = 2;
 
 const ZXSTKJT_KEMPSTON: u32 = 1;
