@@ -108,7 +108,8 @@ impl<H: Host> Emulator<H> {
 
     /// enables/disables AY
     #[cfg(all(feature = "sound", feature = "ay"))]
-    pub fn enable_ay(&mut self, value: bool) {
+    pub fn set_ay_enabled(&mut self, value: bool) {
+        self.controller.mixer.use_ay = value;
         self.settings.ay_enabled = value;
     }
 
@@ -136,6 +137,7 @@ impl<H: Host> Emulator<H> {
     {
         match recorder {
             SnapshotRecorder::Sna(recorder) => snapshot::sna::save(self, recorder),
+            SnapshotRecorder::Szx(recorder) => snapshot::szx::save(self, recorder),
         }
     }
 

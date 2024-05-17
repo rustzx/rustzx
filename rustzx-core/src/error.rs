@@ -13,6 +13,8 @@ pub enum Error {
     ScreenLoad(ScreenLoadError),
     /// Failed to load snapshot
     SnapshotLoad(SnapshotLoadError),
+    /// Failed to save snapshot
+    SnapshotSave(SnapshotSaveError),
 }
 
 #[derive(Debug, Display)]
@@ -49,6 +51,12 @@ pub enum SnapshotLoadError {
     MachineNotSupported,
     /// Zlib not supported
     ZlibNotSupported,
+}
+
+#[derive(Debug, Display)]
+pub enum SnapshotSaveError {
+    /// Save not supported
+    NotSupported,
 }
 
 #[derive(Debug, Display)]

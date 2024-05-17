@@ -1,83 +1,41 @@
-// SZX File support
-// Arjun Nair 2024
-// https://www.spectaculator.com/docs/svn/zx-state/intro.shtml
-//
-
-// Ignore some variables defined for reference/future.
-
-#![allow(unused)]
-#![no_std]
 use crate::{
     emulator::Emulator,
-    error::SnapshotLoadError,
+    error::{SnapshotLoadError, SnapshotSaveError},
     host::{DataRecorder, Host, LoadableAsset, SeekFrom, SeekableAsset},
-    zx::{
-        joy::kempston, machine::ZXMachine, mouse::kempston::KempstonMouse, video::colors::ZXColor,
-    },
+    zx::{joy::kempston, mouse::kempston::KempstonMouse, video::colors::ZXColor},
     Result,
 };
 
-use alloc::str::from_utf8;
+use alloc::vec::Vec;
+use alloc::{str::from_utf8, vec};
 #[cfg(feature = "zlib")]
-use flate2::read::ZlibDecoder;
+use miniz_oxide::inflate::decompress_to_vec_zlib_with_limit;
+
 use rustzx_z80::Z80Bus;
 
-pub enum ZxType {
-    Zxstmid16k = 0,
-    Zxstmid48k,
-    Zxstmid128k,
-    ZxstmidPlus2,
-    ZxstmidPlus2a,
-    ZxstmidPlus3,
-    ZxstmidPlus3e,
-    ZxstmidPentagon128,
-    ZxstmidTc2048,
-    ZxstmidTc2068,
-    ZxstmidScorpion,
-    ZxstmidSe,
-    ZxstmidTs2068,
-    ZxstmidPentagon512,
-    ZxstmidPentagon1024,
-    ZxstmidNtsc48k,
-    Zxstmid128ke,
-}
+const ZXST_MID_128K: u32 = 2;
 
-pub const ZXSTZF_EILAST: u32 = 1;
-pub const ZXSTZF_HALTED: u32 = 2;
-pub const ZXSTZF_FSET: u32 = 4;
+const ZXSTZF_EILAST: u32 = 1;
+const ZXSTZF_HALTED: u32 = 2;
+const ZXSTZF_FSET: u32 = 4;
 
-pub const ZXSTAYF_FULLERBOX: u32 = 1;
-pub const ZXSTAYF_128AY: u32 = 2;
+const ZXSTAYF_128AY: u32 = 2;
 
-pub const ZXSTKJT_KEMPSTON: u32 = 1;
-pub const ZXSTKJT_FULLER: u32 = 2;
-pub const ZXSTKJT_CURSOR: u32 = 4;
-pub const ZXSTKJT_SINCLAIR1: u32 = 8;
-pub const ZXSTKJT_SINCLAIR2: u32 = 16;
-pub const ZXSTKJT_SPECTRUMPLUS: u32 = 32;
+const ZXSTKJT_KEMPSTON: u32 = 1;
 
-pub const ZXSTM_AMX: u32 = 1;
-pub const ZXSTM_KEMPSTON: u32 = 2;
+const ZXSTM_KEMPSTON: u32 = 2;
 
-pub const ZXSTRF_COMPRESSED: u32 = 1;
+const ZXSTRF_COMPRESSED: u32 = 1;
 
-pub const ZXSTKF_ISSUE2: u32 = 1;
-pub const ZXSTMF_ALTERNATETIMINGS: u32 = 1;
-
-pub const SZX_VERSION_SUPPORTED_MAJOR: u32 = 1;
-pub const SZX_VERSION_SUPPORTED_MINOR: u32 = 5;
-
-pub const ZXST_HEADER_SIZE: usize = 8; // The zx-state header
-pub const ZXST_BLOCK_HEADER_SIZE: usize = 8; // The header for each block
+const ZXST_HEADER_SIZE: usize = 8; // The zx-state header
+const ZXST_BLOCK_HEADER_SIZE: usize = 8; // The header for each block
 
 // Process Creator (CRTR) block
-fn process_crtr_block<H: Host>(emulator: &mut Emulator<H>, block_data: &[u8]) {
+fn process_crtr_block<H: Host>(_: &mut Emulator<H>, block_data: &[u8]) {
     let crtr_name_bytes = &block_data[0..33];
-    let crtr_str = from_utf8(crtr_name_bytes).unwrap();
-    println!("\tCreator name: {crtr_str}");
-    let major_version = u16::from_le_bytes([block_data[33], block_data[34]]);
-    let minor_version = u16::from_le_bytes([block_data[35], block_data[36]]);
-    //println!("\tCreator version: {major_version}.{minor_version}");
+    let _ = from_utf8(crtr_name_bytes).unwrap();
+    let _ = u16::from_le_bytes([block_data[33], block_data[34]]);
+    let _ = u16::from_le_bytes([block_data[35], block_data[36]]);
 }
 
 // Process ZXSTZ80REGS (Z80R) block
@@ -212,7 +170,7 @@ fn process_z80r_block<H: Host>(emulator: &mut Emulator<H>, block_data: &[u8]) {
 // Process ZXSTSPECREGS (SPCR) block
 fn process_spcr_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, block_data: &[u8]) {
     // ch7ffd
-    if machine_id < ZxType::Zxstmid128k as u32 {
+    if machine_id < ZXST_MID_128K {
         emulator.controller.write_7ffd(0); // Always 0 for 16k and 48k
     } else {
         emulator.controller.write_7ffd(block_data[1]);
@@ -240,16 +198,14 @@ fn process_spcr_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, bloc
 fn process_ay_block<H: Host>(emulator: &mut Emulator<H>, machine_id: u32, block_data: &[u8]) {
     // chFlags
     let flags = block_data[0] as u32;
-    if machine_id < ZxType::Zxstmid128k as u32 {
+    if machine_id < ZXST_MID_128K {
         // If AY needs enabling and it isn't enabled already, enable it.
         if (flags & ZXSTAYF_128AY != 0) && (!emulator.settings.ay_enabled) {
-            emulator.enable_ay(true);
-            emulator.controller.change_mixer(&emulator.settings);
+            emulator.set_ay_enabled(true);
         }
         // AY needs disabling and is enabled currently, disable it.
         else if (flags & ZXSTAYF_128AY == 0) && (emulator.settings.ay_enabled) {
-            emulator.enable_ay(false);
-            emulator.controller.change_mixer(&emulator.settings);
+            emulator.set_ay_enabled(false);
         }
     }
 
@@ -306,7 +262,7 @@ fn process_ramp_block<H: Host>(
     // chPageNo
     let mut page_num = block_data[2];
     // Remap page numbers for 16k/48k machines
-    if machine_id < ZxType::Zxstmid128k as u32 {
+    if machine_id < ZXST_MID_128K {
         page_num = match page_num {
             5 => 0,
             2 => 1,
@@ -319,15 +275,20 @@ fn process_ramp_block<H: Host>(
 
     if flags & ZXSTRF_COMPRESSED != 0 {
         if cfg!(not(feature = "zlib")) {
-            //eprintln!("zlib decompression requires zlib feature to be enabled!");
             return Err(SnapshotLoadError::ZlibNotSupported.into());
         }
         #[cfg(feature = "zlib")]
         {
-            //let compressed_size = block_data[3..].len();
             let compressed_data: Vec<u8> = block_data[3..].to_vec();
-            let data = decode_zlib_stream(compressed_data).unwrap();
-            page_data.copy_from_slice(&data[..page_data.len()]);
+            match decompress_zlib_stream(&compressed_data) {
+                Ok(data) => {
+                    return {
+                        page_data.copy_from_slice(&data[..page_data.len()]);
+                        Ok(())
+                    }
+                }
+                Err(_) => return Err(SnapshotLoadError::InvalidSZXFile.into()),
+            }
         }
     } else {
         let uncompressed_data: Vec<u8> = block_data[3..].to_vec();
@@ -338,13 +299,13 @@ fn process_ramp_block<H: Host>(
 }
 
 #[cfg(feature = "zlib")]
-fn decode_zlib_stream(bytes: Vec<u8>) -> Result<Vec<u8>> {
-    use std::io::Read;
-
-    let mut z = ZlibDecoder::new(&bytes[..]);
-    let mut out = Vec::new();
-    z.read_to_end(&mut out);
-    Ok(out)
+fn decompress_zlib_stream(bytes: &[u8]) -> Result<Vec<u8>> {
+    const MAX_SIZE: usize = 65535;
+    if let Ok(data) = decompress_to_vec_zlib_with_limit(bytes, MAX_SIZE) {
+        Ok(data)
+    } else {
+        Err(SnapshotLoadError::InvalidSZXFile.into())
+    }
 }
 
 /// SZX snapshot loading function
@@ -353,7 +314,7 @@ where
     H: Host,
     A: LoadableAsset + SeekableAsset,
 {
-    let size = asset.seek(SeekFrom::End(0))?;
+    let _ = asset.seek(SeekFrom::End(0))?;
     let mut cursor_pos = 0;
     asset.seek(SeekFrom::Start(0))?;
 
@@ -362,50 +323,51 @@ where
     asset.read_exact(&mut header)?;
     cursor_pos += ZXST_HEADER_SIZE;
     let magic_bytes = &[header[0], header[1], header[2], header[3]];
-    let magic_str = from_utf8(magic_bytes).unwrap();
-    if !magic_str.eq("ZXST") {
-        return Err(SnapshotLoadError::InvalidSZXFile.into());
+    let magic_str = from_utf8(magic_bytes);
+
+    match magic_str {
+        Ok(magic_data) => {
+            if !magic_data.eq("ZXST") {
+                return Err(SnapshotLoadError::InvalidSZXFile.into());
+            }
+        }
+        Err(_) => return Err(SnapshotLoadError::InvalidSZXFile.into()),
     }
-    let major_version = header[4];
-    let minor_version = header[5];
+    let _ = header[4];
+    let _ = header[5];
 
     let machine_id = header[6] as u32;
-    if machine_id > ZxType::Zxstmid128k as u32 {
+    if machine_id > ZXST_MID_128K {
         return Err(SnapshotLoadError::MachineNotSupported.into());
     }
 
-    //let _flags = header[7];
     // ZXST Block Header
     asset.seek(SeekFrom::Start(cursor_pos))?;
     let mut block_header = [0u8; ZXST_BLOCK_HEADER_SIZE];
     while asset.read_exact(&mut block_header).is_ok() {
-        let id: u32 = u32::from_le_bytes([
-            block_header[0],
-            block_header[1],
-            block_header[2],
-            block_header[3],
-        ]);
         let size: u32 = u32::from_le_bytes([
             block_header[4],
             block_header[5],
             block_header[6],
             block_header[7],
         ]);
-        let crtr_bytes = &[
+        let id_bytes = &[
             block_header[0],
             block_header[1],
             block_header[2],
             block_header[3],
         ];
-        let id_str = from_utf8(crtr_bytes).unwrap().to_uppercase();
-        // println!("Block id: {id_str}, size: {size}");
+        let id_str = from_utf8(id_bytes).unwrap().to_uppercase();
         cursor_pos += ZXST_BLOCK_HEADER_SIZE;
 
         // ZXST Block Data
         asset.seek(SeekFrom::Start(cursor_pos))?;
         let mut block_data = vec![0; size as usize];
 
-        asset.read_exact(&mut block_data)?;
+        if asset.read_exact(&mut block_data).is_err() {
+            return Err(SnapshotLoadError::InvalidSZXFile.into());
+        }
+
         match id_str.as_str() {
             "CRTR" => {
                 process_crtr_block(emulator, &block_data);
@@ -438,7 +400,6 @@ where
         asset.seek(SeekFrom::Start(cursor_pos))?;
     }
     emulator.controller.refresh_memory_dependent_devices();
-    //println!("SZX file processed.");
     Ok(())
 }
 
@@ -447,17 +408,6 @@ where
 struct ScopedSnapshotState<'a, H: Host> {
     pub emulator: &'a mut Emulator<H>,
     pub is_48k: bool,
-}
-
-impl<'a, H: Host> ScopedSnapshotState<'a, H> {
-    fn enter(emulator: &'a mut Emulator<H>) -> Self {
-        let is_48k = emulator.settings.machine == ZXMachine::Sinclair48K;
-        if is_48k {
-            emulator.cpu.push_pc_to_stack(&mut emulator.controller);
-        }
-
-        Self { emulator, is_48k }
-    }
 }
 
 impl<'a, H: Host> Drop for ScopedSnapshotState<'a, H> {
@@ -470,10 +420,10 @@ impl<'a, H: Host> Drop for ScopedSnapshotState<'a, H> {
     }
 }
 
-pub fn save<H, R>(emulator: &mut Emulator<H>, mut recorder: R) -> Result<()>
+pub fn save<H, R>(_: &mut Emulator<H>, _: R) -> Result<()>
 where
     H: Host,
     R: DataRecorder,
 {
-    Ok(())
+    Err(SnapshotSaveError::NotSupported.into())
 }
