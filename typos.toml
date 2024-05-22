@@ -7,3 +7,7 @@ extend-exclude = [
 [default.extend-words]
 # DAA is a valid Z80 instruction word
 DAA = "DAA"
+# These are valid Z80 register pairs
+IT = "IT"
+IX = "IX"
+IY = "IY"

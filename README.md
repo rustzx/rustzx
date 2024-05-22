@@ -42,7 +42,7 @@ ZX Spectrum emulator written in Rust
     - Block instruction flags [oddities](https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags) (`LDxR`/`CPxR`/`INxR`/`OTxR`)
 
 ## Install
-1. Sure that you have C compiller and CMake to
+1. Sure that you have C compiler and CMake to
 build bundled `sdl2`
 2. (Linux-specific) Install required development packages: [`libasound2-dev`]
 3. Install it with cargo
