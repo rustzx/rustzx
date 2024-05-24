@@ -85,9 +85,9 @@ If you have choppy audio, try `--sound-latency` option with bigger values.
 ## In joy keyboard layer mode (F9)
 - `<Arrows>` - Kempston joy *arrows*
 - `Alt` - Kempston *fire*
-- `WASD`- Siclair Joy 1 *arrows*
+- `WASD`- Sinclair Joy 1 *arrows*
 - `Caps Lock` - Sinclair Joy 1 *fire*
-- `IJKL`- Siclair Joy 2 *arrows*
+- `IJKL`- Sinclair Joy 2 *arrows*
 - `Enter` - Sinclair Joy 2 *fire*
 
 ## Screenshots
