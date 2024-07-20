@@ -1,5 +1,4 @@
 use crate::error::IoError;
-use core::usize;
 
 type Result<T> = core::result::Result<T, IoError>;
 

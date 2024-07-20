@@ -26,7 +26,7 @@ pub(crate) struct ZXMixer {
     last_sample: SoundSample<f32>,
     master_volume: f64,
     #[cfg(feature = "ay")]
-    use_ay: bool,
+    pub use_ay: bool,
     use_beeper: bool,
     sample_rate: usize,
 }

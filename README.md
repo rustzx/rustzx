@@ -8,7 +8,7 @@ RustZX
 
 ![logo](assets/logo_small.png)
 
-ZX Spectrum emulator written in Rust
+ZX Spectrum emulator written in Rust.
 - Watch [this](https://youtu.be/Xho3GWFyP2I) video showcase (`v0.9.x`)
 - Read [CHANGELOG.md](CHANGELOG.md) for info on the latest version changes
 
@@ -16,15 +16,17 @@ ZX Spectrum emulator written in Rust
 - Written in pure rust
 - Cross-platform
 - Full ZX Spectrum 48K and 128K emulation
-- Perfect emulation of Z80 core
+- Highly accurate emulation of Z80 core
 - Highly precise AY chip emulation
 - Beeper sound emulation
 - Supported formats:
     - `tap` - tape
     - `sna` - snapshot, both 48K and 128K versions supported
+    - `szx` - snapshot, both 48k and 128k versions supported along with 
+        zlib compression.
     - `scr` - screenshot
 - Fast loading of tap files with standard loader
-- Precise timings
+- Very accurate timings
 - Full border emulation
 - Joystick emulation: Kempston, Sinclair
 - Kempston mouse emulation
@@ -34,7 +36,7 @@ ZX Spectrum emulator written in Rust
 - Separate `no_std` core library which can be used to port emulator
   almost anywhere.
     - Global allocator is still needed, but all dynamic
-       allocations were minimized
+       allocations are minimized
     - All resource-heavy features are configurable via cargo `features`
 - Obscure Z80 features emulation:
     - `WZ/memptr` register (`F3/F5` flags obscure behavior in `BIT n, (HL)`)
@@ -42,9 +44,8 @@ ZX Spectrum emulator written in Rust
     - Block instruction flags [oddities](https://github.com/MrKWatkins/ZXSpectrumNextTests/tree/develop/Tests/ZX48_ZX128/Z80BlockInstructionFlags) (`LDxR`/`CPxR`/`INxR`/`OTxR`)
 
 ## Install
-1. Sure that you have C compiller and CMake to
-build bundled `sdl2`
-2. (Linux-specific) Install required development packages: [`libasound2-dev`]
+1. Ensure that you have C compiler and CMake to build bundled `sdl2`
+2. Linux only: Install required development packages: [`libasound2-dev`]
 3. Install it with cargo
 ```bash
 cargo install rustzx
@@ -60,35 +61,39 @@ rustzx --rom tester.rom -s3 # Run with custom rom and 3x screen scaling
 rustzx --nofastload test.tap # Run without fast tape loading
 rustzx --mouse test.tap # Run with Kempston mouse support
 ```
-For loading tape in 48K mode, press `j` then `Ctrl+p` twice, as on real Spectrum.
+For loading tape in 48K mode, press `j` then `Ctrl+p` twice, as on a real Spectrum.
 You should see `LOAD ""` on emulator's screen, then press `Enter` (in 128K mode just press enter).
-In `--nofastload` mode, press `Insert` to play the tape and `Delete` to stop
+In `--nofastload` mode, press `Insert` to play the tape and `Delete` to stop.
 
 If you have choppy audio, try `--sound-latency` option with bigger values.
 
 ## Default key bindings:
-- `F1` - quick save
-- `F2` - quick load
-- `F3` - set normal emulation speed
-- `F4` - set 2x emulation speed
-- `F5` - max possible emulation speed
-- `F6` - enable frame trace info
-- `F9` - enable kempston/sinclair joy keyboard layer
-- `Insert` - start tape
-- `Delete`- stop tape
-- `End` - break command
-- `Caps Lock` - caps lock command
-- `Backspace` - delete
-- `<Arrows>` - 128K arrow keys
-- `Esc` - unlock mouse (if `--mouse` is used)
+Shortcut Key    | Function  
+----------------|-----------
+ `F1` | Quick save
+ `F2` | Quick load
+ `F3` | Set normal emulation speed
+ `F4` | Set 2x emulation speed
+ `F5` | Max possible emulation speed
+ `F6` | Enable frame trace info
+ `F9` | Enable Kempston/Sinclair joy keyboard layer
+ `Insert` | Start tape
+ `Delete`| Stop tape
+ `End` | Break command
+ `Caps Lock` | Caps lock command
+ `Backspace` | Delete
+ `<Arrows>` | 128K arrow keys
+ `Esc` | Unlock mouse (if `--mouse` is used)
 
 ## In joy keyboard layer mode (F9)
-- `<Arrows>` - Kempston joy *arrows*
-- `Alt` - Kempston *fire*
-- `WASD`- Siclair Joy 1 *arrows*
-- `Caps Lock` - Sinclair Joy 1 *fire*
-- `IJKL`- Siclair Joy 2 *arrows*
-- `Enter` - Sinclair Joy 2 *fire*
+Shortcut Key    | Function  
+----------------|-----------
+ `<Arrows>` | Kempston joy *arrows*
+ `Alt` | Kempston *fire*
+ `WASD`| Sinclair Joy 1 *arrows*
+ `Caps Lock` | Sinclair Joy 1 *fire*
+ `IJKL`| Sinclair Joy 2 *arrows*
+ `Enter` | Sinclair Joy 2 *fire*
 
 ## Screenshots
 ![](screenshots/rain.png)
@@ -97,16 +102,16 @@ If you have choppy audio, try `--sound-latency` option with bigger values.
 ![](screenshots/sentinel.png)
 
 ## References
-Many resources were used to find out, how to buildthis emulator.
-Huge thanks to the following resources which helped to figure out a lot of
+Many resources were used to find out how to build this emulator.
+Huge thanks to the following resources that helped figure out a lot of
 defails about ZX Spectrum.
-- Of course [z80.info](http://www.z80.info/)
-    - [Decoding Z80 opcodes](http://www.z80.info/decoding.htm)
-    - [Opcodes list](http://www.z80.info/z80code.txt)
-    - [CPU user manual](http://www.z80.info/zip/z80cpu_um.pdf)
-    - [CPU architecture](http://www.z80.info/z80arki.htm)
-    - [Interrupt behaviour](http://www.z80.info/interrup.htm)
-    - [Z80 undocumented documented](http://www.z80.info/zip/z80-documented.pdf)
+-  [z80.info](http://www.z80.info/) of course!
+- [Decoding Z80 opcodes](http://www.z80.info/decoding.htm)
+- [Opcodes list](http://www.z80.info/z80code.txt)
+- [CPU user manual](http://www.z80.info/zip/z80cpu_um.pdf)
+- [CPU architecture](http://www.z80.info/z80arki.htm)
+- [Interrupt behaviour](http://www.z80.info/interrup.htm)
+- [Z80 undocumented documented](http://www.z80.info/zip/z80-documented.pdf)
 - Instruction table from [ClrHome](http://clrhome.org/table/)
 - "Floating bus explained!" by [Ramsoft](http://ramsoft.bbk.org.omegahg.com/floatingbus.html)
 - 16K / 48K ZX Spectrum [Reference](http://www.worldofspectrum.org/faq/reference/48kreference.htm)
@@ -118,15 +123,17 @@ defails about ZX Spectrum.
 - [zx-modules.de](http://www.zx-modules.de/) - great resource, check it out!
 - [speccy.info](http://speccy.info)
 - [Harlequin](http://www.zxdesign.info/harlequin.shtml)
-- And many other great material, which helped me to make rustzx!
 - [FUSE](http://fuse-emulator.sourceforge.net/) emulator source for finding out correct timings
 - [YAZE test suite](https://www.mathematik.uni-ulm.de/users/ag/yaze-ag/)
 - [z80test test suite](https://github.com/raxoft/z80test)
 - [ROM routines](https://skoolkid.github.io/rom/maps/routines.html)
+- And many other great material, which helped me to make rustzx!
 
-## ROM's
-Emulator contains ROMs, created by by Sinclair Research Ltd (now owned by Amstrad plc),
+## ROMs
+Emulator contains ROMs, created by by Sinclair Research Ltd (now owned by Amstrad plc).
+
 Amstrad has [given](https://groups.google.com/forum/?hl=en#!msg/comp.sys.amstrad.8bit/HtpBU2Bzv_U/HhNDSU3MksAJ)
 permission to distribute their ROM's in conjunction with emulators.
-In RustZX these ROMs included in source of the core emulator library `mod rustzx_core::zx::roms`. Embedded roms
+
+In RustZX these ROMs are included in the source of the core emulator library `mod rustzx_core::zx::roms`. Embedded roms
 can be opted-out from the core library by disabling feature `embedded-roms`.

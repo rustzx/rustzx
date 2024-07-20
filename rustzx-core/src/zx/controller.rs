@@ -49,8 +49,8 @@ pub(crate) struct ZXController<H: Host> {
     pub caps_shift_modifier_mask: u32,
     // current border color
     pub border_color: ZXColor,
-    // clocls count from frame start
-    frame_clocks: usize,
+    // clocks count from frame start
+    pub frame_clocks: usize,
     // frames count, which passed during emulation invocation
     passed_frames: usize,
     events: EmulationEvents,
@@ -59,7 +59,7 @@ pub(crate) struct ZXController<H: Host> {
     current_port_7ffd: u8,
     // Z80 module expected controller implementation without errors,
     // so we need to store the internal errors manually. For sake of simplicity,
-    // Only last error is saved
+    // only last error is saved
     last_emulation_error: Option<Error>,
 }
 
@@ -162,7 +162,7 @@ impl<H: Host> ZXController<H> {
         }
     }
 
-    /// loads builted-in ROM
+    /// loads built-in ROM
     #[cfg(feature = "embedded-roms")]
     fn load_default_rom(&mut self) {
         match self.machine {
@@ -591,9 +591,9 @@ impl<H: Host> Z80Bus for ZXController<H> {
         false
     }
 
-    /// CPU calls it when RETI instruction was processed
+    /// CPU calls it when RETI instruction is processed
     fn reti(&mut self) {}
 
-    /// CPU calls when was being halted
+    /// CPU calls it when halted
     fn halt(&mut self, _: bool) {}
 }
