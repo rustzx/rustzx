@@ -22,7 +22,7 @@ ZX Spectrum emulator written in Rust.
 - Supported formats:
     - `tap` - tape
     - `sna` - snapshot, both 48K and 128K versions supported
-    - `szx` - snapshot, both 48k and 128k versions supported along with 
+    - `szx` - snapshot, both 48k and 128k versions supported along with
         zlib compression.
     - `scr` - screenshot
 - Fast loading of tap files with standard loader
@@ -68,7 +68,7 @@ In `--nofastload` mode, press `Insert` to play the tape and `Delete` to stop.
 If you have choppy audio, try `--sound-latency` option with bigger values.
 
 ## Default key bindings:
-Shortcut Key    | Function  
+Shortcut Key    | Function
 ----------------|-----------
  `F1` | Quick save
  `F2` | Quick load
@@ -86,7 +86,7 @@ Shortcut Key    | Function
  `Esc` | Unlock mouse (if `--mouse` is used)
 
 ## In joy keyboard layer mode (F9)
-Shortcut Key    | Function  
+Shortcut Key    | Function
 ----------------|-----------
  `<Arrows>` | Kempston joy *arrows*
  `Alt` | Kempston *fire*
@@ -104,7 +104,7 @@ Shortcut Key    | Function
 ## References
 Many resources were used to find out how to build this emulator.
 Huge thanks to the following resources that helped figure out a lot of
-defails about ZX Spectrum.
+details about ZX Spectrum.
 -  [z80.info](http://www.z80.info/) of course!
 - [Decoding Z80 opcodes](http://www.z80.info/decoding.htm)
 - [Opcodes list](http://www.z80.info/z80code.txt)
