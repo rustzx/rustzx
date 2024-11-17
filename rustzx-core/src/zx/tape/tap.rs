@@ -19,6 +19,7 @@ const BUFFER_SIZE: usize = 128;
 enum TapeState {
     Stop,
     Play,
+    Process,
     Pilot { pulses_left: usize },
     Sync,
     NextByte,
@@ -158,20 +159,11 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
                     if !self.next_block()? {
                         self.state = TapeState::Stop;
                     } else {
-                        let first_byte = self
-                            .next_block_byte()?
-                            .ok_or(TapeLoadError::InvalidTapFile)?;
-
-                        // Select appropriate pulse count for Pilot sequence
-                        let pulses_left = if first_byte == 0x00 {
-                            PILOT_PULSES_HEADER
-                        } else {
-                            PILOT_PULSES_DATA
-                        };
-                        self.curr_byte = first_byte;
-                        self.curr_bit = true;
-                        self.delay = PILOT_LENGTH;
-                        self.state = TapeState::Pilot { pulses_left };
+                        self.state = TapeState::Process;
+                    }
+                }
+                TapeState::Process => {
+                    if self.process_current_block().is_ok() {
                         break 'state_machine;
                     }
                 }
@@ -245,6 +237,23 @@ impl<A: LoadableAsset + SeekableAsset> TapeImpl for Tap<A> {
         Ok(())
     }
 
+    fn process_current_block(&mut self) -> Result<()> {
+        let first_byte = self
+            .next_block_byte()?
+            .ok_or(TapeLoadError::InvalidTapFile)?;
+
+        // Select appropriate pulse count for Pilot sequence
+        let pulses_left = if first_byte == 0x00 {
+            PILOT_PULSES_HEADER
+        } else {
+            PILOT_PULSES_DATA
+        };
+        self.curr_byte = first_byte;
+        self.curr_bit = true;
+        self.delay = PILOT_LENGTH;
+        self.state = TapeState::Pilot { pulses_left };
+        Ok(())
+    }
     fn stop(&mut self) {
         let state = self.state;
         self.prev_state = state;

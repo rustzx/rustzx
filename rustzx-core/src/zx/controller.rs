@@ -410,6 +410,16 @@ impl<H: Host> ZXController<H> {
             }
         }
     }
+
+    /// returns true if the machine is in 48k mode
+    pub(crate) fn is_48k_mode(&self) -> bool {
+        let is_48k_rom = match self.machine {
+            ZXMachine::Sinclair48K if self.memory.get_bank_type(0) == Page::Rom(0) => true,
+            ZXMachine::Sinclair128K if self.memory.get_bank_type(0) == Page::Rom(1) => true,
+            _ => false,
+        };
+        is_48k_rom
+    }
 }
 
 impl<H: Host> Z80Bus for ZXController<H> {
@@ -521,6 +531,13 @@ impl<H: Host> Z80Bus for ZXController<H> {
             // different zx spectrum "issues" emulation is not planned yet
             if !self.tape.current_bit() {
                 tmp ^= 0x40;
+            }
+
+            #[cfg(feature = "sound")]
+            {
+                let mic = tmp & 0x08 != 0;
+                let ear = tmp & 0x10 != 0;
+                self.mixer.beeper.change_state(ear, mic);
             }
             // 5 and 7 bits are unused
             tmp

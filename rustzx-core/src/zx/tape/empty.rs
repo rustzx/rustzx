@@ -23,6 +23,10 @@ impl TapeImpl for Empty {
         Ok(())
     }
 
+    fn process_current_block(&mut self) -> Result<()> {
+        Ok(())
+    }
+
     fn stop(&mut self) {}
 
     fn play(&mut self) {}

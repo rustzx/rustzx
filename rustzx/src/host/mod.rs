@@ -16,7 +16,7 @@ use rustzx_utils::{
 use std::{collections::VecDeque, fs::File, path::Path};
 
 const SUPPORTED_SNAPSHOT_FORMATS: [&str; 2] = ["sna", "szx"];
-const SUPPORTED_TAPE_FORMATS: [&str; 1] = ["tap"];
+const SUPPORTED_TAPE_FORMATS: [&str; 2] = ["tap", "tzx"];
 const SUPPORTED_SCREEN_FORMATS: [&str; 1] = ["scr"];
 
 pub struct AppHost;
@@ -88,9 +88,22 @@ pub fn load_tape(path: &Path) -> anyhow::Result<Tape<DynamicAsset>> {
         bail!("Provided tape file does not exist");
     }
 
-    load_asset(path)
-        .map(Tape::Tap)
-        .with_context(|| "Failed to load tape file")
+    match path
+        .extension()
+        .unwrap_or_default()
+        .to_str()
+        .unwrap_or_default()
+        .to_lowercase()
+        .as_str()
+    {
+        "tap" => load_asset(path)
+            .map(Tape::Tap)
+            .with_context(|| "Failed to load TAP file"),
+        "tzx" => load_asset(path)
+            .map(Tape::Tzx)
+            .with_context(|| "Failed to load TZX file"),
+        _ => Err(anyhow!("Not supported file format")),
+    }
 }
 
 pub fn load_snapshot(path: &Path) -> anyhow::Result<Snapshot<DynamicAsset>> {

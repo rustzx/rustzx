@@ -21,7 +21,7 @@ use crate::{
         },
         keys::{CompoundKey, ZXKey},
         mouse::kempston::{KempstonMouseButton, KempstonMouseWheelDirection},
-        tape::{Tap, TapeImpl},
+        tape::{Tap, TapeImpl, Tzx},
         video::colors::ZXColor,
     },
     Result,
@@ -145,6 +145,10 @@ impl<H: Host> Emulator<H> {
         match tape {
             Tape::Tap(asset) => {
                 self.controller.tape = Tap::from_asset(asset)?.into();
+            }
+            Tape::Tzx(asset) => {
+                self.controller.tape =
+                    Tzx::from_asset(asset, self.controller.is_48k_mode())?.into();
             }
         }
 

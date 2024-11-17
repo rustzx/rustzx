@@ -1,8 +1,10 @@
 mod empty;
 mod tap;
+mod tzx;
 
 pub use empty::Empty;
 pub use tap::Tap;
+pub use tzx::Tzx;
 
 use crate::{
     host::{LoadableAsset, SeekableAsset},
@@ -15,6 +17,7 @@ use enum_dispatch::enum_dispatch;
 #[enum_dispatch(TapeImpl)]
 pub enum ZXTape<A: LoadableAsset + SeekableAsset> {
     Tap(Tap<A>),
+    Tzx(Tzx<A>),
     Empty(Empty),
 }
 
@@ -35,6 +38,7 @@ pub trait TapeImpl {
     fn current_bit(&self) -> bool;
     /// Perform tape processing emulation within `clocks` time limit
     fn process_clocks(&mut self, clocks: usize) -> Result<()>;
+    fn process_current_block(&mut self) -> Result<()>;
     fn stop(&mut self);
     fn play(&mut self);
     /// Rewinds tape content to the beginning

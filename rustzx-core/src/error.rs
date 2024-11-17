@@ -39,6 +39,8 @@ pub enum RomLoadError {
 pub enum TapeLoadError {
     /// Provided tap file is invalid
     InvalidTapFile,
+    /// Provided tzx file is invalid
+    InvalidTzxFile,
 }
 
 #[derive(Debug, Display)]
@@ -57,6 +59,8 @@ pub enum SnapshotLoadError {
 pub enum SnapshotSaveError {
     /// Save not supported
     NotSupported,
+    /// Provided tzx file is invalid
+    InvalidTzxFile,
 }
 
 #[derive(Debug, Display)]

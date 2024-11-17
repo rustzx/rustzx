@@ -88,10 +88,10 @@ pub struct Settings {
     /// extension of which should end with `.0`
     #[structopt(long, conflicts_with = "file-autodetect")]
     pub rom: Option<PathBuf>,
-    /// Set tape file path. Only `.tap` files are supported currently
+    /// Set tape file path. Only `.tap` and `.tzx` files are supported currently
     #[structopt(long, conflicts_with = "file-autodetect")]
     pub tape: Option<PathBuf>,
-    /// Set snapshot file path. Only `.sna` files are supported currently
+    /// Set snapshot file path. Only `.sna` and `.szx` files are supported currently
     #[structopt(long, conflicts_with = "file-autodetect")]
     pub snap: Option<PathBuf>,
     /// Set screen file to load. Only `.scr` files are supported currently

@@ -23,7 +23,7 @@ pub enum SnapshotRecorder<DataRecorderImpl: DataRecorder> {
 
 pub enum Tape<LoadableAssetImpl: LoadableAsset> {
     Tap(LoadableAssetImpl),
-    // TODO(#56): Implement TZX tape format support
+    Tzx(LoadableAssetImpl),
 }
 
 pub enum Screen<LoadableAssetImpl: LoadableAsset> {
