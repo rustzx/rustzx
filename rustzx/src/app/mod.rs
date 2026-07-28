@@ -1,6 +1,4 @@
 //! This module provides main application class.
-mod events;
-//mod rustzx;
 mod settings;
 pub mod sound;
 pub(crate) mod video;

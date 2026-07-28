@@ -70,7 +70,7 @@ impl ZXMachine {
         if clocks_trough_line >= specs.clocks_screen_row {
             return 0;
         }
-        return self.specs().contention_pattern[clocks_trough_line % 8];
+        self.specs().contention_pattern[clocks_trough_line % 8]
     }
 
     /// Checks port contention on machine
@@ -89,7 +89,7 @@ impl ZXMachine {
             ZXMachine::Sinclair48K => page == 0,
             ZXMachine::Sinclair128K => {
                 let contended_pages = [1, 3, 5, 7];
-                contended_pages.iter().any(|&x| x == page)
+                contended_pages.contains(&page)
             }
         }
     }

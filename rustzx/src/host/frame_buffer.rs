@@ -1,4 +1,4 @@
-use crate::app::video::{Palette, zx_color_to_index};
+use crate::app::video::zx_color_to_index;
 use rustzx_core::{
     host::{FrameBuffer, FrameBufferSource},
     zx::video::colors::{ZXBrightness, ZXColor},
@@ -28,7 +28,7 @@ impl FrameBuffer for IndexedFrameBuffer {
     }
 
     fn set_color(&mut self, x: usize, y: usize, color: ZXColor, brightness: ZXBrightness) {
-        self.buffer[ y * self.row_size + x] = zx_color_to_index(color, brightness);
+        self.buffer[y * self.row_size + x] = zx_color_to_index(color, brightness);
     }
 }
 

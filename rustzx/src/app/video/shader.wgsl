@@ -45,7 +45,7 @@ fn vs_main(
     //   -> SF.x scale is 1.0
     //   -> SF.y scale is SAR/CAR
 
-    // Fit notmalized coordinates [0; 1] to [-1, 1] WegbGL screen space and flip Y axis
+    // Fit normalized coordinates [0; 1] to [-1, 1] WebGL screen space and flip Y axis
     let screen_space_position = position * vec2<f32>(2.0, -2.0) - vec2<f32>(1.0, -1.0);
 
     let sf = select(

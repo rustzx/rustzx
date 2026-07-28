@@ -30,7 +30,7 @@ pub struct ZXSpecs {
     pub rom_pages: u8,
 }
 
-/// Specs builder, used to make static valiables with machines specs
+/// Specs builder, used to make static variables with machines specs
 pub struct ZXSpecsBuilder {
     specs: ZXSpecs,
 }

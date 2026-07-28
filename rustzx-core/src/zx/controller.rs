@@ -252,7 +252,7 @@ impl<H: Host> ZXController<H> {
             && clocks < specs.clocks_screen_row - CLOCKS_PER_COL
             && ((clocks & 0x04) == 0)
         {
-            if clocks % 2 == 0 {
+            if clocks.is_multiple_of(2) {
                 return self.memory.read(bitmap_line_addr(row) + col as u16);
             } else {
                 let byte = (row / 8) * 32 + col;
@@ -524,16 +524,27 @@ impl<H: Host> Z80Bus for ZXController<H> {
             }
             // 5 and 7 bits are unused
             tmp
-        } else if self.mouse.is_some() && (port & 0x0121 == 0x0001) {
-            self.mouse.as_ref().unwrap().buttons_port
-        } else if self.mouse.is_some() && (port & 0x0521 == 0x0101) {
-            self.mouse.as_ref().unwrap().x_pos_port
-        } else if self.mouse.is_some() && (port & 0x0521 == 0x0501) {
-            self.mouse.as_ref().unwrap().y_pos_port
+        } else if let Some(value) = self.mouse.as_ref().and_then(|mouse| {
+            if port & 0x0121 == 0x0001 {
+                Some(mouse.buttons_port)
+            } else if port & 0x0521 == 0x0101 {
+                Some(mouse.x_pos_port)
+            } else if port & 0x0521 == 0x0501 {
+                Some(mouse.y_pos_port)
+            } else {
+                None
+            }
+        }) {
+            value
         } else if port & 0xC002 == 0xC000 {
             self.read_ay_port()
-        } else if self.kempston.is_some() && (port & 0x00E0 == 0) {
-            self.kempston.as_ref().unwrap().read()
+        } else if let Some(value) = self
+            .kempston
+            .as_ref()
+            .filter(|_| port & 0x00E0 == 0)
+            .map(|kempston| kempston.read())
+        {
+            value
         } else {
             self.floating_bus_value()
         };
@@ -551,7 +562,7 @@ impl<H: Host> Z80Bus for ZXController<H> {
         if self
             .io_extender
             .as_ref()
-            .map_or(false, |e| e.extends_port(port))
+            .is_some_and(|e| e.extends_port(port))
         {
             self.io_extender.as_mut().unwrap().write(port, data);
         } else if port & 0xC002 == 0xC000 {

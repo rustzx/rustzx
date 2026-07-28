@@ -165,7 +165,7 @@ where
 }
 
 /// Helper class to place emulator in the state required for
-/// snapshoting and return to normal state afterwards
+/// snapshotting and return to normal state afterwards
 struct ScopedSnapshotState<'a, H: Host> {
     pub emulator: &'a mut Emulator<H>,
     pub is_48k: bool,

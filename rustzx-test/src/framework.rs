@@ -253,8 +253,8 @@ pub mod presets {
 
 impl RustZXTester {
     pub fn new(test_name: &str, settings: RustzxSettings) -> Self {
-        let emulator = Emulator::new(settings, TesterContext::default())
-            .expect("Failed to initialize emulator");
+        let emulator =
+            Emulator::new(settings, TesterContext).expect("Failed to initialize emulator");
 
         Self {
             emulator,
@@ -575,7 +575,7 @@ fn make_png_palette() -> Vec<u8> {
     DEFAULT_PALETTE
         .iter()
         .fold(Vec::with_capacity(4 * 16), |mut buffer, color| {
-            buffer.extend_from_slice(&color[0..3]);
+            buffer.extend_from_slice(&color.to_be_bytes()[0..3]);
             buffer
         })
 }

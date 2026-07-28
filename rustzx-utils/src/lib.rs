@@ -7,5 +7,5 @@ pub mod palette;
 #[cfg(feature = "std")]
 pub mod stopwatch;
 
-#[cfg(all(feature = "std"))]
+#[cfg(feature = "std")]
 pub mod io;

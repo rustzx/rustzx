@@ -1,7 +1,4 @@
-use core::{
-    i16,
-    ops::{Add, Mul, MulAssign, Sub},
-};
+use core::ops::{Add, Mul, MulAssign, Sub};
 
 pub trait RawSample: Clone + Copy + MulAssign + Mul + Add + Sub {}
 impl RawSample for f64 {}

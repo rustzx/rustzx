@@ -24,7 +24,7 @@ pub struct Settings {
     ///   [`128k`, `128`] - Sinclair ZX Spectrum 128K
     #[structopt(verbatim_doc_comment, short, long, default_value = "48k", parse(try_from_str = machine_from_str))]
     pub machine: ZXMachine,
-    /// Set emulation speed at emualtor start-up. Can be specified as deciamal non-zero
+    /// Set emulation speed at emulator start-up. Can be specified as decimal non-zero
     /// value or as a special value `MAX` to run emulator as fast as possible
     #[structopt(long, default_value = "1", parse(try_from_str = emulation_speed_from_str))]
     pub speed: EmulationMode,

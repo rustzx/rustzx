@@ -1,4 +1,3 @@
-
 mod sound_cpal;
 use rustzx_core::zx::sound::sample::SoundSample;
 
@@ -6,7 +5,6 @@ pub use sound_cpal::SoundCpal;
 
 pub const CHANNEL_COUNT: usize = 2;
 pub const DEFAULT_SAMPLE_RATE: usize = 44100;
-pub const DEFAULT_LATENCY: usize = 512;
 
 pub type ZXSample = SoundSample<f32>;
 

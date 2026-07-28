@@ -99,7 +99,7 @@ fn compound_keys() {
     t.sync_target();
     t.emulate_frame();
     // After releasing compound key, overlapping standard key N5 should be still
-    // notified by the emualtor as pressed
+    // notified by the emulator as pressed
     t.emulator()
         .send_compound_key(CompoundKey::ArrowLeft, false);
     out += &t.debug_port().take_text();

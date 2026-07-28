@@ -195,7 +195,7 @@ impl<FB: FrameBuffer> ZXScreen<FB> {
             core::mem::swap(buffer, back_buffer);
         }
         self.last_blocks = BlocksCount::new(0, 0);
-        if self.frame_counter % 16 == 0 {
+        if self.frame_counter.is_multiple_of(16) {
             self.switch_flash();
         }
         self.frame_counter += 1;
