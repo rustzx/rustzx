@@ -7,3 +7,12 @@ extend-exclude = [
 [default.extend-words]
 # DAA is a valid Z80 instruction word
 DAA = "DAA"
+# IY is the Z80 index register Y, not a typo for "it"
+IY = "IY"
+iy = "iy"
+
+[default.extend-identifiers]
+# Z80 index register (IX/IY) related identifiers
+IY = "IY"
+get_iy = "get_iy"
+set_iy = "set_iy"

@@ -73,7 +73,7 @@ impl Vtx {
         self.frame_data.len() / AY_REGISTER_COUNT
     }
 
-    /// Retrurns slice with register values for the given frame or `None` if index is
+    /// Returns slice with register values for the given frame or `None` if index is
     /// out of bounds
     fn frame_registers(&self, index: usize) -> Option<&[u8]> {
         let offset = index * AY_REGISTER_COUNT;

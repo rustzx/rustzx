@@ -49,7 +49,7 @@ Changes:
     - File autodetect from CLI
     - Added configurable sound sample rate
     - Removed redundant args
-- **[Dependencies]** Switched to bundled `sdl` crate mode, making build almost dependency-free (CMake and C compiller are still requird)
+- **[Dependencies]** Switched to bundled `sdl` crate mode, making build almost dependency-free (CMake and C compiler are still required)
 - **[Infrastructure]** Moved CI to _Github Actions_
     - Added `rustfmt` step to CI
     - Added `clippy` step to CI
@@ -89,11 +89,11 @@ Changes:
 - **[06.07.2016]** Base 128K features implemented
 - **[05.07.2016]** v0.8 development started in branch `develop`
 - **[27.06.2016]** Release v0.7.1
-- **[26.06.2016]** Beeper sound implemented :notes:, release planed to July 1 :rocket:
+- **[26.06.2016]** Beeper sound implemented :notes:, release planned to July 1 :rocket:
 - **[12.06.2016]** Some Command line arguments fixes/enchantments
 - **[12.06.2016]** SNA files loading
 - **[11.06.2016]** Command line arguments using **clap** crate
-- **[11.06.2016]** Tap files fast loading implemented, finnaly!
+- **[11.06.2016]** Tap files fast loading implemented, finally!
 - **[07.06.2016]** Speed improvements (maybe :smile:) in flag setting [z80]
 - **[04.06.2016]** Border FX implemented
 - **[28.05.2016]** Some architecture rewrite, working on border

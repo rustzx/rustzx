@@ -25,8 +25,8 @@ simple_logger = "2"
 structopt = "0.3"
 strum = { version = "0.22", default-features = false, features = ["derive", "std"] }
 thiserror = "1"
-wgpu = { version = "0.15", features = ["trace"] }
-winit = "0.28"
+wgpu = { version = "30", features = ["trace"] }
+winit = "0.30"
 
 [features]
 default = []

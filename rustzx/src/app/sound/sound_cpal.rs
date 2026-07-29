@@ -32,7 +32,7 @@ impl SoundCpal {
                 }
 
                 // Find any stereo config
-                (c.channels() as usize % CHANNEL_COUNT == 0) && c.channels() != 0
+                (c.channels() as usize).is_multiple_of(CHANNEL_COUNT) && c.channels() != 0
             })
             .ok_or_else(|| {
                 anyhow::anyhow!("Sound device does not support required configuration")
@@ -46,7 +46,9 @@ impl SoundCpal {
 
         let sample_rate = config.sample_rate().0 as usize;
 
-        let ringbuf_size = ringbuf_size_from_sample_rate(sample_rate);
+        let ringbuf_size = settings
+            .sound_latency
+            .unwrap_or_else(|| ringbuf_size_from_sample_rate(sample_rate));
         let ringbuf = ringbuf::HeapRb::<ZXSample>::new(ringbuf_size);
         let (tx, rx) = ringbuf.split();
 

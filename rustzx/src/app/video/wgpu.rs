@@ -1,18 +1,19 @@
-//! TODO
-//! UNDER CONSTRUCTION
-//! This is a draft and will be refactored & split into multiple files
+//! wgpu-based renderer for the RustZX emulator screen + border.
 
-use crate::app::video::{Palette, PALETTE_SIZE, ColorRgba, ColorIndexed};
+use crate::app::video::{ColorIndexed, Palette, PALETTE_SIZE};
 
+use bytemuck::{Pod, Zeroable};
+use core::mem::size_of;
+use std::sync::Arc;
 use wgpu::{
-    Instance, Surface, Adapter, Device, Queue, RequestAdapterOptions, PowerPreference, DeviceDescriptor, Features, Limits, util::DeviceExt,
+    util::DeviceExt, Device, DeviceDescriptor, Features, Instance, Limits, PowerPreference, Queue,
+    RequestAdapterOptions, Surface,
 };
 use winit::window::Window;
-use core::mem::size_of;
-use bytemuck::{Pod, Zeroable};
 
-use rustzx_core::zx::constants::{SCREEN_WIDTH, SCREEN_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_X, CANVAS_Y};
-use std::num::NonZeroU32;
+use rustzx_core::zx::constants::{
+    CANVAS_HEIGHT, CANVAS_WIDTH, CANVAS_X, CANVAS_Y, SCREEN_HEIGHT, SCREEN_WIDTH,
+};
 
 /// Atlas layout
 /// +-----------------------+
@@ -26,7 +27,6 @@ use std::num::NonZeroU32;
 /// |                       |
 /// +-----------------------+
 const ATLAS_TEXTURE_SIZE: u32 = 512;
-
 
 fn zx_screen_rect() -> Rect {
     Rect {
@@ -48,8 +48,8 @@ fn zx_canvas_rect() -> Rect {
 
 fn zx_screen_tex_rect() -> Rect {
     Rect {
-        x: texture_x(0 as u16),
-        y: texture_y(0 as u16),
+        x: texture_x(0u16),
+        y: texture_y(0u16),
         width: texture_x(SCREEN_WIDTH as u16),
         height: texture_y(SCREEN_HEIGHT as u16),
     }
@@ -57,7 +57,7 @@ fn zx_screen_tex_rect() -> Rect {
 
 fn zx_canvas_tex_rect() -> Rect {
     Rect {
-        x: texture_x(0 as u16),
+        x: texture_x(0u16),
         y: texture_y(SCREEN_HEIGHT as u16),
         width: texture_x(CANVAS_WIDTH as u16),
         height: texture_y(CANVAS_HEIGHT as u16),
@@ -86,8 +86,6 @@ pub enum RenderError {
     CreateSurfaceError(#[from] wgpu::CreateSurfaceError),
     #[error(transparent)]
     RequestDeviceError(#[from] wgpu::RequestDeviceError),
-    #[error(transparent)]
-    SurfaceError(#[from] wgpu::SurfaceError),
 
     #[error("Failed to find an appropriate video adapter!")]
     NoAdapter,
@@ -109,7 +107,6 @@ struct ShaderGlobals {
     screen_aspect_ratio: f32,
 
     texture_atlas_size: [f32; 2],
-
     // NOTE: Align to 16 bytes if adding new fields
 }
 
@@ -119,7 +116,7 @@ impl ShaderGlobals {
             let r = ((color >> 24) & 0xFF) as f32 / 255.0;
             let g = ((color >> 16) & 0xFF) as f32 / 255.0;
             let b = ((color >> 8) & 0xFF) as f32 / 255.0;
-            let a = ((color >> 0) & 0xFF) as f32 / 255.0;
+            let a = (color & 0xFF) as f32 / 255.0;
             [r, g, b, a]
         };
 
@@ -138,39 +135,16 @@ impl ShaderGlobals {
             palette,
             content_aspect_ratio,
             screen_aspect_ratio,
-            texture_atlas_size: [ATLAS_TEXTURE_SIZE as f32; 2]
+            texture_atlas_size: [ATLAS_TEXTURE_SIZE as f32; 2],
         }
     }
 
     fn update_screen_size(&mut self, screen_width: u32, screen_height: u32) {
         self.screen_aspect_ratio = screen_width as f32 / screen_height as f32;
     }
-
-    fn update_palette(&mut self, palette: &Palette) {
-        self.palette = Self::convert_palete(palette);
-    }
-
-    fn convert_palete(palette: &Palette) -> [[f32; 4]; PALETTE_SIZE] {
-        let to_shader_color = |color: u32| {
-            let r = ((color >> 24) & 0xFF) as f32 / 255.0;
-            let g = ((color >> 16) & 0xFF) as f32 / 255.0;
-            let b = ((color >> 8) & 0xFF) as f32 / 255.0;
-            let a = ((color >> 0) & 0xFF) as f32 / 255.0;
-            [r, g, b, a]
-        };
-
-        let mut palette_colors = [[0.0f32; 4]; PALETTE_SIZE];
-        for (idx, color) in palette_colors.iter_mut().enumerate() {
-            *color = to_shader_color(palette.get_color(idx as ColorIndexed));
-        }
-
-        palette_colors
-    }
 }
 
-
-
-// Enforce alignment to 4 bytes for vertexes
+// Enforce alignment to 4 bytes for vertices
 #[repr(C, align(4))]
 #[derive(Default, Clone, Copy, Pod, Zeroable)]
 struct Vertex {
@@ -183,9 +157,7 @@ pub struct ScreenParams {}
 pub struct Screen {
     surface_config: wgpu::SurfaceConfiguration,
 
-    instance: Instance,
-    surface: Surface,
-    adapter: Adapter,
+    surface: Surface<'static>,
     device: Device,
     queue: Queue,
 
@@ -213,8 +185,7 @@ struct Rect {
     pub height: f32,
 }
 
-
-/// Helper struct for building vertexes and their indices for rendering
+/// Helper struct for building vertices and their indices for rendering
 #[derive(Default)]
 struct VertexBuilder {
     pub vertices: Vec<Vertex>,
@@ -235,7 +206,10 @@ impl VertexBuilder {
             },
             Vertex {
                 position: [rect.x + rect.width, rect.y + rect.height],
-                tex_coords: [tex_coords.x + tex_coords.width, tex_coords.y + tex_coords.height],
+                tex_coords: [
+                    tex_coords.x + tex_coords.width,
+                    tex_coords.y + tex_coords.height,
+                ],
             },
             Vertex {
                 position: [rect.x + rect.width, rect.y],
@@ -262,14 +236,11 @@ impl VertexBuilder {
     }
 }
 
-
-
 impl Screen {
     /// Video context initialization code, which is called before event handling loop starts
-    pub async fn init(params: ScreenParams, window: &Window) -> RenderResult<Self> {
+    pub async fn init(_params: ScreenParams, window: Arc<Window>) -> RenderResult<Self> {
         let instance = Instance::default();
-        // Creating surface is 99.9% safe when using winit
-        let surface = unsafe { instance.create_surface(window)? };
+        let surface = instance.create_surface(window.clone())?;
 
         let adapter = instance
             .request_adapter(&RequestAdapterOptions {
@@ -279,20 +250,24 @@ impl Screen {
                 compatible_surface: Some(&surface),
                 // TODO: Check how software render will work
                 force_fallback_adapter: false,
+                apply_limit_buckets: false,
             })
             .await
-            .ok_or(RenderError::NoAdapter)?;
+            .map_err(|_| RenderError::NoAdapter)?;
 
         let (device, queue) = adapter
-            .request_device(
-                &DeviceDescriptor {
-                    label: None,
-                    features: Features::empty(),
-                    // We need to support as many platforms as possible, especially WebGL2
-                    limits: Limits::downlevel_webgl2_defaults(),
-                },
-                None, // TODO: Add tracing here
-            )
+            .request_device(&DeviceDescriptor {
+                label: None,
+                required_features: Features::empty(),
+                // We need to support as many platforms as possible, especially WebGL2, but
+                // resolution-dependent limits (e.g. max texture dimensions) must come from the
+                // real adapter, otherwise large/high-DPI surfaces fail to configure.
+                required_limits: Limits::downlevel_webgl2_defaults()
+                    .using_resolution(adapter.limits()),
+                experimental_features: wgpu::ExperimentalFeatures::default(),
+                memory_hints: wgpu::MemoryHints::default(),
+                trace: wgpu::Trace::Off,
+            })
             .await?;
 
         let size = window.inner_size();
@@ -368,8 +343,7 @@ impl Screen {
             ],
         });
 
-        let atlas_texture_view = atlas_texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        let atlas_texture_view = atlas_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         // Create bind group
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -391,32 +365,25 @@ impl Screen {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("rustzx_pipeline_layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
         });
 
-        let VertexBuilder {
-            vertices,
-            indices,
-        } = VertexBuilder::default()
+        let VertexBuilder { vertices, indices } = VertexBuilder::default()
             .add_quad(zx_screen_rect(), zx_screen_tex_rect())
             .add_quad(zx_canvas_rect(), zx_canvas_tex_rect());
 
-        let vertex_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("rustzx_buffer_vertices"),
-                contents: bytemuck::cast_slice(&vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            }
-        );
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("rustzx_buffer_vertices"),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
 
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("rustzx_buffer_indices"),
-                contents: bytemuck::cast_slice(&indices),
-                usage: wgpu::BufferUsages::INDEX,
-            }
-        );
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("rustzx_buffer_indices"),
+            contents: bytemuck::cast_slice(&indices),
+            usage: wgpu::BufferUsages::INDEX,
+        });
 
         // Vertex Buffer Layout
         let vertex_buffer_layout = wgpu::VertexBufferLayout {
@@ -442,17 +409,19 @@ impl Screen {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main",
-                buffers: &[vertex_buffer_layout],
+                entry_point: Some("vs_main"),
+                buffers: &[Some(vertex_buffer_layout)],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: surface_config.format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
@@ -463,21 +432,16 @@ impl Screen {
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         });
 
-
         let atlas_texture_data = vec![0u8; (ATLAS_TEXTURE_SIZE * ATLAS_TEXTURE_SIZE) as usize];
-        let shader_globals_data = ShaderGlobals::new(
-            size.width,
-            size.height,
-        );
+        let shader_globals_data = ShaderGlobals::new(size.width, size.height);
         queue.write_buffer(&globals_buffer, 0, bytemuck::bytes_of(&shader_globals_data));
 
         Ok(Self {
-            instance,
             surface,
-            adapter,
             device,
             queue,
             globals_buffer,
@@ -502,20 +466,38 @@ impl Screen {
 
         // Resize surface to match window size
         self.surface.configure(&self.device, &self.surface_config);
-        self.queue.write_buffer(&self.globals_buffer, 0, bytemuck::bytes_of(&self.shader_globals_data));
+        self.queue.write_buffer(
+            &self.globals_buffer,
+            0,
+            bytemuck::bytes_of(&self.shader_globals_data),
+        );
     }
 
     /// Render frame
     pub fn render(&self) -> Result<(), RenderError> {
-        let frame = match self.surface.get_current_texture() {
-            Ok(frame) => frame,
-            Err(_) => {
-                // Reconfigure if lost
-                // TODO: More precise error handling
-                self.surface.configure(&self.device, &self.surface_config);
-                self.surface
-                    .get_current_texture()
-                    .expect("Failed to acquire next surface texture!")
+        use wgpu::CurrentSurfaceTexture;
+
+        let acquire = |screen: &Self| screen.surface.get_current_texture();
+
+        let mut surface_texture = acquire(self);
+        // Reconfigure and retry once if the surface became outdated/lost
+        if matches!(
+            surface_texture,
+            CurrentSurfaceTexture::Outdated | CurrentSurfaceTexture::Lost
+        ) {
+            self.surface.configure(&self.device, &self.surface_config);
+            surface_texture = acquire(self);
+        }
+
+        let frame = match surface_texture {
+            CurrentSurfaceTexture::Success(frame) | CurrentSurfaceTexture::Suboptimal(frame) => {
+                frame
+            }
+            CurrentSurfaceTexture::Timeout | CurrentSurfaceTexture::Occluded => return Ok(()),
+            CurrentSurfaceTexture::Outdated
+            | CurrentSurfaceTexture::Lost
+            | CurrentSurfaceTexture::Validation => {
+                return Err(RenderError::NotSupportedSurface);
             }
         };
 
@@ -523,22 +505,28 @@ impl Screen {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("rustzx_cmd_encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("rustzx_cmd_encoder"),
+            });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("rustzx_render_pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                        store: true,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.bind_group, &[]);
@@ -548,7 +536,7 @@ impl Screen {
         }
 
         self.queue.submit(Some(encoder.finish()));
-        frame.present();
+        self.queue.present(frame);
 
         Ok(())
     }
@@ -574,14 +562,19 @@ impl Screen {
     }
 
     fn send_texture_atlas_to_gpu(&self) {
-        self.queue.write_texture(self.atlas_texture.as_image_copy(), &self.atlas_texture_data, wgpu::ImageDataLayout {
-            offset: 0,
-            bytes_per_row: Some(NonZeroU32::new(ATLAS_TEXTURE_SIZE).unwrap()),
-            rows_per_image: None,
-        }, wgpu::Extent3d {
-            width: ATLAS_TEXTURE_SIZE,
-            height: ATLAS_TEXTURE_SIZE,
-            depth_or_array_layers: 1,
-        });
+        self.queue.write_texture(
+            self.atlas_texture.as_image_copy(),
+            &self.atlas_texture_data,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(ATLAS_TEXTURE_SIZE),
+                rows_per_image: None,
+            },
+            wgpu::Extent3d {
+                width: ATLAS_TEXTURE_SIZE,
+                height: ATLAS_TEXTURE_SIZE,
+                depth_or_array_layers: 1,
+            },
+        );
     }
 }
