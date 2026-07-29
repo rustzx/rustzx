@@ -54,9 +54,9 @@ fn vs_main(
         globals.content_aspect_ratio <= globals.screen_aspect_ratio,                // condition
     );
 
-    let position = vec4<f32>(screen_space_position * sf, 1.0, 1.0);
+    let clip_position = vec4<f32>(screen_space_position * sf, 1.0, 1.0);
 
-    return VertexOutput(tex_coord, position);
+    return VertexOutput(tex_coord, clip_position);
 }
 
 @fragment
