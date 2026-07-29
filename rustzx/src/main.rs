@@ -323,9 +323,10 @@ impl App {
     }
 
     fn emulate_and_reschedule(&mut self, event_loop: &ActiveEventLoop) {
-        // Anchor timing to the previously scheduled frame start rather than to "now" measured
-        // after processing, so per-frame overhead doesn't accumulate into a slow-motion drift.
-        let frame_start = self.last_emulated_frame_time;
+        // Each frame is timed independently from its own start (not chained off the previous
+        // frame's scheduled deadline), so a single slow frame can't compound into a runaway
+        // drift; this mirrors the legacy SDL backend's sleep-based pacing.
+        let frame_start = Instant::now();
 
         if let Err(e) = self.emulation.update() {
             log::error!("Emulation error: {:#}", e);
@@ -334,7 +335,8 @@ impl App {
         }
 
         let now = Instant::now();
-        let elapsed = now.duration_since(frame_start);
+        let elapsed = now.duration_since(self.last_emulated_frame_time);
+        self.last_emulated_frame_time = now;
 
         self.fps_samples[self.fps_sample_index] = elapsed.as_millis() as f32;
         self.fps_sample_index = (self.fps_sample_index + 1) % self.fps_samples.len();
@@ -343,19 +345,21 @@ impl App {
             self.update_window_title();
         }
 
+        // Remaining time budget in this frame, after processing.
+        let processing_time = now.duration_since(frame_start);
+        let slack = self.frame_time.saturating_sub(processing_time);
+
         // When sound is enabled, run the emulator slightly ahead of realtime (matching the
-        // legacy SDL backend's behavior) so the audio ring buffer stays topped up and doesn't
-        // underrun, which otherwise produces periodic clicking/repeating audio artifacts.
-        let target_frame_time = if self.emulation.emulator.have_sound() {
-            self.frame_time * 9 / 10
+        // legacy SDL backend's behavior) by only waiting out 90% of the remaining slack, so
+        // the audio ring buffer stays topped up and doesn't underrun, which otherwise produces
+        // periodic clicking/repeating audio artifacts.
+        let wait = if self.emulation.emulator.have_sound() {
+            slack * 9 / 10
         } else {
-            self.frame_time
+            slack
         };
 
-        let next_deadline = frame_start + target_frame_time;
-        self.last_emulated_frame_time = next_deadline;
-
-        event_loop.set_control_flow(ControlFlow::WaitUntil(next_deadline));
+        event_loop.set_control_flow(ControlFlow::WaitUntil(now + wait));
     }
 
     fn handle_key_action(&mut self, code: KeyCode, pressed: bool, repeat: bool) {
