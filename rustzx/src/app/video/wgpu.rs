@@ -259,8 +259,11 @@ impl Screen {
             .request_device(&DeviceDescriptor {
                 label: None,
                 required_features: Features::empty(),
-                // We need to support as many platforms as possible, especially WebGL2
-                required_limits: Limits::downlevel_webgl2_defaults(),
+                // We need to support as many platforms as possible, especially WebGL2, but
+                // resolution-dependent limits (e.g. max texture dimensions) must come from the
+                // real adapter, otherwise large/high-DPI surfaces fail to configure.
+                required_limits: Limits::downlevel_webgl2_defaults()
+                    .using_resolution(adapter.limits()),
                 experimental_features: wgpu::ExperimentalFeatures::default(),
                 memory_hints: wgpu::MemoryHints::default(),
                 trace: wgpu::Trace::Off,
